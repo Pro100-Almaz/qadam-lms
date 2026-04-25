@@ -93,7 +93,29 @@
     "name": "Атауы",
     "description": "Сипаттама",
     "editTitle": "Пәнді өңдеу",
-    "createTitle": "Жаңа пән"
+    "createTitle": "Жаңа пән",
+    "language": "Тілі",
+    "classes": "Сыныптар",
+    "studentsCount": "Оқушылар",
+    "status": "Күйі",
+    "active": "Белсенді пәндер",
+    "processing": "Өңделуде",
+    "archived": "Мұрағатталған пәндер",
+    "archive": "Мұрағаттау",
+    "restore": "Қалпына келтіру",
+    "allLanguages": "Барлық тілдер",
+    "allStatuses": "Барлық күйлер",
+    "allClasses": "Барлық сыныптар",
+    "statusActive": "Белсенді",
+    "statusDraft": "Жоба",
+    "statusReview": "Тексеруде",
+    "confirmDelete": "Бұл пәнді жойғыңыз келетініне сенімдісіз бе?",
+    "confirmArchive": "Бұл пәнді мұрағаттағыңыз келетініне сенімдісіз бе?",
+    "languages": {
+      "kazakh": "Қазақша",
+      "russian": "Орысша",
+      "english": "Ағылшынша"
+    }
   },
   "classes": {
     "title": "Сыныптар",

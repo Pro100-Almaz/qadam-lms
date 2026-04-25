@@ -93,7 +93,29 @@
     "name": "Название",
     "description": "Описание",
     "editTitle": "Редактировать предмет",
-    "createTitle": "Новый предмет"
+    "createTitle": "Новый предмет",
+    "language": "Язык",
+    "classes": "Классы",
+    "studentsCount": "Учеников",
+    "status": "Статус",
+    "active": "Активные предметы",
+    "processing": "В обработке",
+    "archived": "Архивные предметы",
+    "archive": "Архивировать",
+    "restore": "Восстановить",
+    "allLanguages": "Все языки",
+    "allStatuses": "Все статусы",
+    "allClasses": "Все классы",
+    "statusActive": "Активный",
+    "statusDraft": "Черновик",
+    "statusReview": "На проверке",
+    "confirmDelete": "Вы уверены, что хотите удалить этот предмет?",
+    "confirmArchive": "Вы уверены, что хотите архивировать этот предмет?",
+    "languages": {
+      "kazakh": "Казахский",
+      "russian": "Русский",
+      "english": "Английский"
+    }
   },
   "classes": {
     "title": "Классы",

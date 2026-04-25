@@ -93,7 +93,29 @@
     "name": "Name",
     "description": "Description",
     "editTitle": "Edit Subject",
-    "createTitle": "New Subject"
+    "createTitle": "New Subject",
+    "language": "Language",
+    "classes": "Classes",
+    "studentsCount": "Students",
+    "status": "Status",
+    "active": "Active Subjects",
+    "processing": "Under Processing",
+    "archived": "Archived Subjects",
+    "archive": "Archive",
+    "restore": "Restore",
+    "allLanguages": "All Languages",
+    "allStatuses": "All Statuses",
+    "allClasses": "All Classes",
+    "statusActive": "Active",
+    "statusDraft": "Draft",
+    "statusReview": "Under Review",
+    "confirmDelete": "Are you sure you want to delete this subject?",
+    "confirmArchive": "Are you sure you want to archive this subject?",
+    "languages": {
+      "kazakh": "Kazakh",
+      "russian": "Russian",
+      "english": "English"
+    }
   },
   "classes": {
     "title": "Classes",
