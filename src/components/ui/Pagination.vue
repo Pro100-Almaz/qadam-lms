@@ -30,7 +30,7 @@
         >...</span>
         <button
           v-else
-          @click="$emit('update:currentPage', page)"
+          @click="$emit('update:currentPage', page as number)"
           class="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition"
           :class="
             page === currentPage
