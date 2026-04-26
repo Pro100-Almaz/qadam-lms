@@ -111,6 +111,9 @@
     "statusReview": "На проверке",
     "confirmDelete": "Вы уверены, что хотите удалить этот предмет?",
     "confirmArchive": "Вы уверены, что хотите архивировать этот предмет?",
+    "confirmActivate": "Вы уверены, что хотите активировать этот предмет?",
+    "confirmRestore": "Вы уверены, что хотите восстановить этот предмет?",
+    "makeActive": "Сделать акт.",
     "languages": {
       "kazakh": "Казахский",
       "russian": "Русский",
@@ -140,6 +143,10 @@
     "room": "Кабинет",
     "editTitle": "Редактировать урок",
     "createTitle": "Новый урок",
+    "today": "Сегодня",
+    "viewMonth": "Месяц",
+    "viewWeek": "Неделя",
+    "viewDay": "День",
     "days": {
       "monday": "Понедельник",
       "tuesday": "Вторник",
@@ -159,7 +166,12 @@
     "subjects": "Предметы",
     "schedule": "Расписание",
     "editTitle": "Редактировать учителя",
-    "createTitle": "Новый учитель"
+    "createTitle": "Новый учитель",
+    "fullName": "ФИО",
+    "position": "Должность",
+    "class": "Класс",
+    "allPositions": "Все должности",
+    "confirmDelete": "Вы уверены, что хотите удалить этого учителя?"
   },
   "students": {
     "title": "Ученики",
@@ -171,6 +183,15 @@
     "enrollmentDate": "Дата зачисления",
     "grades": "Оценки",
     "editTitle": "Редактировать ученика",
-    "createTitle": "Новый ученик"
+    "createTitle": "Новый ученик",
+    "fullName": "ФИО",
+    "yearOfEducation": "Учебный год",
+    "allClasses": "Все классы",
+    "allYears": "Все годы"
+  },
+  "pagination": {
+    "show": "Показать",
+    "of": "из",
+    "entries": "записей"
   }
 }

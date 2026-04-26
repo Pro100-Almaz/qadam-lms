@@ -111,6 +111,9 @@
     "statusReview": "Under Review",
     "confirmDelete": "Are you sure you want to delete this subject?",
     "confirmArchive": "Are you sure you want to archive this subject?",
+    "confirmActivate": "Are you sure you want to activate this subject?",
+    "confirmRestore": "Are you sure you want to restore this subject?",
+    "makeActive": "Make Active",
     "languages": {
       "kazakh": "Kazakh",
       "russian": "Russian",
@@ -140,6 +143,10 @@
     "room": "Room",
     "editTitle": "Edit Lesson",
     "createTitle": "New Lesson",
+    "today": "Today",
+    "viewMonth": "Month",
+    "viewWeek": "Week",
+    "viewDay": "Day",
     "days": {
       "monday": "Monday",
       "tuesday": "Tuesday",
@@ -159,7 +166,12 @@
     "subjects": "Subjects",
     "schedule": "Schedule",
     "editTitle": "Edit Teacher",
-    "createTitle": "New Teacher"
+    "createTitle": "New Teacher",
+    "fullName": "Full Name",
+    "position": "Position",
+    "class": "Class",
+    "allPositions": "All Positions",
+    "confirmDelete": "Are you sure you want to delete this teacher?"
   },
   "students": {
     "title": "Students",
@@ -171,6 +183,15 @@
     "enrollmentDate": "Enrollment Date",
     "grades": "Grades",
     "editTitle": "Edit Student",
-    "createTitle": "New Student"
+    "createTitle": "New Student",
+    "fullName": "Full Name",
+    "yearOfEducation": "Year of Education",
+    "allClasses": "All Classes",
+    "allYears": "All Years"
+  },
+  "pagination": {
+    "show": "Show",
+    "of": "of",
+    "entries": "entries"
   }
 }

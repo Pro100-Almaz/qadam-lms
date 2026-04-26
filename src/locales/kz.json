@@ -111,6 +111,9 @@
     "statusReview": "Тексеруде",
     "confirmDelete": "Бұл пәнді жойғыңыз келетініне сенімдісіз бе?",
     "confirmArchive": "Бұл пәнді мұрағаттағыңыз келетініне сенімдісіз бе?",
+    "confirmActivate": "Бұл пәнді белсендіргіңіз келетініне сенімдісіз бе?",
+    "confirmRestore": "Бұл пәнді қалпына келтіргіңіз келетініне сенімдісіз бе?",
+    "makeActive": "Белсенді ету",
     "languages": {
       "kazakh": "Қазақша",
       "russian": "Орысша",
@@ -140,6 +143,10 @@
     "room": "Кабинет",
     "editTitle": "Сабақты өңдеу",
     "createTitle": "Жаңа сабақ",
+    "today": "Бүгін",
+    "viewMonth": "Ай",
+    "viewWeek": "Апта",
+    "viewDay": "Күн",
     "days": {
       "monday": "Дүйсенбі",
       "tuesday": "Сейсенбі",
@@ -159,7 +166,12 @@
     "subjects": "Пәндер",
     "schedule": "Сабақ кестесі",
     "editTitle": "Мұғалімді өңдеу",
-    "createTitle": "Жаңа мұғалім"
+    "createTitle": "Жаңа мұғалім",
+    "fullName": "Аты-жөні",
+    "position": "Лауазымы",
+    "class": "Сынып",
+    "allPositions": "Барлық лауазымдар",
+    "confirmDelete": "Бұл мұғалімді жойғыңыз келетініне сенімдісіз бе?"
   },
   "students": {
     "title": "Оқушылар",
@@ -171,6 +183,15 @@
     "enrollmentDate": "Қабылдау күні",
     "grades": "Бағалар",
     "editTitle": "Оқушыны өңдеу",
-    "createTitle": "Жаңа оқушы"
+    "createTitle": "Жаңа оқушы",
+    "fullName": "Аты-жөні",
+    "yearOfEducation": "Оқу жылы",
+    "allClasses": "Барлық сыныптар",
+    "allYears": "Барлық жылдар"
+  },
+  "pagination": {
+    "show": "Көрсету",
+    "of": "из",
+    "entries": "жазба"
   }
 }

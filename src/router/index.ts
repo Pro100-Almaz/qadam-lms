@@ -27,90 +27,78 @@ const router = createRouter({
       meta: { title: '404', guest: true },
     },
 
-    // Protected routes
+    // Protected routes — Subjects
+    {
+      path: '/subjects/active',
+      name: 'SubjectsActive',
+      component: () => import('../views/Subjects/SubjectsActive.vue'),
+      meta: { title: 'Subjects — Active' },
+    },
+    {
+      path: '/subjects/processing',
+      name: 'SubjectsProcessing',
+      component: () => import('../views/Subjects/SubjectsProcessing.vue'),
+      meta: { title: 'Subjects — Processing' },
+    },
+    {
+      path: '/subjects/archived',
+      name: 'SubjectsArchived',
+      component: () => import('../views/Subjects/SubjectsArchived.vue'),
+      meta: { title: 'Subjects — Archived' },
+    },
+
+    // Lessons
+    {
+      path: '/lessons',
+      name: 'Lessons',
+      component: () => import('../views/Lessons/LessonsList.vue'),
+      meta: { title: 'Lessons' },
+    },
+
+    // Teachers
+    {
+      path: '/teachers',
+      name: 'Teachers',
+      component: () => import('../views/Teachers/TeachersList.vue'),
+      meta: { title: 'Teachers' },
+    },
+
+    // Students
+    {
+      path: '/students',
+      name: 'Students',
+      component: () => import('../views/Students/StudentsList.vue'),
+      meta: { title: 'Students' },
+    },
+
+    // Personal
+    {
+      path: '/my-student',
+      name: 'MyStudent',
+      component: () => import('../views/Personal/MyStudent.vue'),
+      meta: { title: 'My Student' },
+    },
+    {
+      path: '/my-class',
+      name: 'MyClass',
+      component: () => import('../views/Personal/MyClass.vue'),
+      meta: { title: 'My Class' },
+    },
+    {
+      path: '/my-lessons',
+      name: 'MyLessons',
+      component: () => import('../views/Personal/MyLessons.vue'),
+      meta: { title: 'My Lessons' },
+    },
+
+    // Fallback
     {
       path: '/',
-      name: 'Dashboard',
-      component: () => import('../views/Ecommerce.vue'),
-      meta: { title: 'Dashboard' },
+      redirect: '/subjects/active',
     },
     {
-      path: '/calendar',
-      name: 'Calendar',
-      component: () => import('../views/Others/Calendar.vue'),
-      meta: { title: 'Calendar' },
-    },
-    {
-      path: '/profile',
-      name: 'Profile',
-      component: () => import('../views/Others/UserProfile.vue'),
-      meta: { title: 'Profile' },
-    },
-    {
-      path: '/form-elements',
-      name: 'Form Elements',
-      component: () => import('../views/Forms/FormElements.vue'),
-      meta: { title: 'Form Elements' },
-    },
-    {
-      path: '/basic-tables',
-      name: 'Basic Tables',
-      component: () => import('../views/Tables/BasicTables.vue'),
-      meta: { title: 'Basic Tables' },
-    },
-    {
-      path: '/line-chart',
-      name: 'Line Chart',
-      component: () => import('../views/Chart/LineChart/LineChart.vue'),
-      meta: { title: 'Line Chart' },
-    },
-    {
-      path: '/bar-chart',
-      name: 'Bar Chart',
-      component: () => import('../views/Chart/BarChart/BarChart.vue'),
-      meta: { title: 'Bar Chart' },
-    },
-    {
-      path: '/alerts',
-      name: 'Alerts',
-      component: () => import('../views/UiElements/Alerts.vue'),
-      meta: { title: 'Alerts' },
-    },
-    {
-      path: '/avatars',
-      name: 'Avatars',
-      component: () => import('../views/UiElements/Avatars.vue'),
-      meta: { title: 'Avatars' },
-    },
-    {
-      path: '/badge',
-      name: 'Badge',
-      component: () => import('../views/UiElements/Badges.vue'),
-      meta: { title: 'Badge' },
-    },
-    {
-      path: '/buttons',
-      name: 'Buttons',
-      component: () => import('../views/UiElements/Buttons.vue'),
-      meta: { title: 'Buttons' },
-    },
-    {
-      path: '/images',
-      name: 'Images',
-      component: () => import('../views/UiElements/Images.vue'),
-      meta: { title: 'Images' },
-    },
-    {
-      path: '/videos',
-      name: 'Videos',
-      component: () => import('../views/UiElements/Videos.vue'),
-      meta: { title: 'Videos' },
-    },
-    {
-      path: '/blank',
-      name: 'Blank',
-      component: () => import('../views/Pages/BlankPage.vue'),
-      meta: { title: 'Blank' },
+      path: '/:pathMatch(.*)*',
+      redirect: '/error-404',
     },
   ],
 })
@@ -122,7 +110,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.guest) {
     if (isAuthenticated.value && (to.name === 'Signin' || to.name === 'Signup')) {
-      return next('/')
+      return next('/subjects/active')
     }
     return next()
   }
