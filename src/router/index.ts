@@ -21,6 +21,24 @@ const router = createRouter({
       meta: { title: 'Sign Up', guest: true },
     },
     {
+      path: '/forgot-password',
+      name: 'ForgotPassword',
+      component: () => import('../views/Auth/ForgotPassword.vue'),
+      meta: { title: 'Forgot Password', guest: true },
+    },
+    {
+      path: '/verify-code',
+      name: 'VerifyCode',
+      component: () => import('../views/Auth/VerifyCode.vue'),
+      meta: { title: 'Verify Code', guest: true },
+    },
+    {
+      path: '/reset-password',
+      name: 'ResetPassword',
+      component: () => import('../views/Auth/ResetPassword.vue'),
+      meta: { title: 'Reset Password', guest: true },
+    },
+    {
       path: '/error-404',
       name: '404 Error',
       component: () => import('../views/Errors/FourZeroFour.vue'),
@@ -69,6 +87,14 @@ const router = createRouter({
       name: 'Students',
       component: () => import('../views/Students/StudentsList.vue'),
       meta: { title: 'Students' },
+    },
+
+    // Profile
+    {
+      path: '/profile',
+      name: 'Profile',
+      component: () => import('../views/Others/UserProfile.vue'),
+      meta: { title: 'Profile' },
     },
 
     // Personal

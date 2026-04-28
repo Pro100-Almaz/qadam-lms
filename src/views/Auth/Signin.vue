@@ -21,6 +21,12 @@
                 <form @submit.prevent="handleSubmit">
                   <div class="space-y-5">
                     <div
+                      v-if="successMessage"
+                      class="rounded-lg border border-success-300 bg-success-50 px-4 py-3 text-sm text-success-600 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400"
+                    >
+                      {{ successMessage }}
+                    </div>
+                    <div
                       v-if="error"
                       class="rounded-lg border border-error-300 bg-error-50 px-4 py-3 text-sm text-error-600 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"
                     >
@@ -40,8 +46,12 @@
                         id="username"
                         name="username"
                         :placeholder="$t('auth.usernamePlaceholder')"
-                        class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                        :class="fieldErrors.username ? 'border-error-500 dark:border-error-500' : 'border-gray-300 dark:border-gray-700 focus:border-brand-300 dark:focus:border-brand-800'"
+                        class="dark:bg-dark-900 h-11 w-full rounded-lg border bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                       />
+                      <p v-if="fieldErrors.username" class="mt-1.5 text-sm text-error-500">
+                        {{ fieldErrors.username[0] }}
+                      </p>
                     </div>
                     <!-- Password -->
                     <div>
@@ -57,7 +67,8 @@
                           :type="showPassword ? 'text' : 'password'"
                           id="password"
                           :placeholder="$t('auth.passwordPlaceholder')"
-                          class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                          :class="fieldErrors.password ? 'border-error-500 dark:border-error-500' : 'border-gray-300 dark:border-gray-700 focus:border-brand-300 dark:focus:border-brand-800'"
+                          class="dark:bg-dark-900 h-11 w-full rounded-lg border bg-transparent py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                         />
                         <span
                           @click="togglePasswordVisibility"
@@ -97,6 +108,9 @@
                           </svg>
                         </span>
                       </div>
+                      <p v-if="fieldErrors.password" class="mt-1.5 text-sm text-error-500">
+                        {{ fieldErrors.password[0] }}
+                      </p>
                     </div>
                     <!-- Checkbox -->
                     <div class="flex items-center justify-between">
@@ -143,7 +157,7 @@
                         </label>
                       </div>
                       <router-link
-                        to="/reset-password"
+                        to="/forgot-password"
                         class="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
                         >{{ $t('auth.forgotPassword') }}</router-link
                       >
@@ -152,9 +166,30 @@
                     <div>
                       <button
                         type="submit"
-                        class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+                        :disabled="isLoading"
+                        class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {{ $t('auth.signIn') }}
+                        <svg
+                          v-if="isLoading"
+                          class="mr-2 h-4 w-4 animate-spin"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                          />
+                          <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                        {{ isLoading ? $t('common.loading') : $t('auth.signIn') }}
                       </button>
                     </div>
                   </div>
@@ -262,12 +297,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 const { login } = useAuth()
 
@@ -276,6 +312,9 @@ const password = ref('')
 const showPassword = ref(false)
 const keepLoggedIn = ref(false)
 const error = ref('')
+const fieldErrors = ref<Record<string, string[]>>({})
+const isLoading = ref(false)
+const successMessage = ref(route.query.reset === 'success' ? t('auth.passwordResetSuccess') : '')
 const mouseX = ref(0)
 const mouseY = ref(0)
 
@@ -283,17 +322,25 @@ const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   error.value = ''
+  fieldErrors.value = {}
   if (!username.value || !password.value) {
     error.value = t('auth.fillAllFields')
     return
   }
-  const success = login(username.value, password.value)
-  if (success) {
-    router.push('/')
-  } else {
-    error.value = t('auth.invalidCredentials')
+  isLoading.value = true
+  try {
+    const result = await login(username.value, password.value)
+    if (result.success) {
+      router.push('/')
+    } else if (result.errors) {
+      fieldErrors.value = result.errors
+    }
+  } catch {
+    error.value = t('auth.serverError')
+  } finally {
+    isLoading.value = false
   }
 }
 

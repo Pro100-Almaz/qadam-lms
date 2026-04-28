@@ -81,8 +81,8 @@ const closeDropdown = () => {
   dropdownOpen.value = false
 }
 
-const signOut = () => {
-  logout()
+const signOut = async () => {
+  await logout()
   closeDropdown()
   router.push('/signin')
 }
