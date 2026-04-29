@@ -23,75 +23,81 @@
             class="h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
           />
         </div>
-        <!-- Class filter -->
-        <div class="relative" ref="classDropdownRef">
-          <button
-            @click="classDropdownOpen = !classDropdownOpen"
-            class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
-          >
-            <Filter class="h-4 w-4 text-gray-400" />
-            {{ selectedClass || $t('students.allClasses') }}
-            <ChevronDown class="h-4 w-4 text-gray-400" />
-          </button>
-          <div
-            v-show="classDropdownOpen"
-            class="absolute left-0 z-20 mt-1 max-h-60 w-44 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
-          >
-            <button
-              @click="selectedClass = ''; classDropdownOpen = false"
-              class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedClass }"
-            >
-              {{ $t('students.allClasses') }}
-            </button>
-            <button
-              v-for="cls in classOptions"
-              :key="cls"
-              @click="selectedClass = cls; classDropdownOpen = false"
-              class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedClass === cls }"
-            >
-              {{ cls }}
-            </button>
-          </div>
-        </div>
-        <!-- Year filter -->
+        <!-- Academic year filter -->
         <div class="relative" ref="yearDropdownRef">
           <button
             @click="yearDropdownOpen = !yearDropdownOpen"
             class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
           >
             <CalendarDays class="h-4 w-4 text-gray-400" />
-            {{ selectedYear || $t('students.allYears') }}
+            {{ selectedYearLabel || $t('students.allYears') }}
             <ChevronDown class="h-4 w-4 text-gray-400" />
           </button>
           <div
             v-show="yearDropdownOpen"
-            class="absolute left-0 z-20 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+            class="absolute left-0 z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
           >
             <button
-              @click="selectedYear = ''; yearDropdownOpen = false"
+              @click="selectedYearId = null; yearDropdownOpen = false"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedYear }"
+              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedYearId }"
             >
               {{ $t('students.allYears') }}
             </button>
             <button
-              v-for="year in yearOptions"
-              :key="year"
-              @click="selectedYear = year; yearDropdownOpen = false"
+              v-for="year in academicYears"
+              :key="year.id"
+              @click="selectedYearId = year.id; yearDropdownOpen = false"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedYear === year }"
+              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedYearId === year.id }"
             >
-              {{ year }}
+              {{ year.year }}
+              <span v-if="year.is_active" class="ml-auto text-xs text-success-600 dark:text-success-400">{{ $t('common.current') }}</span>
+            </button>
+          </div>
+        </div>
+        <!-- Class group filter -->
+        <div class="relative" ref="classDropdownRef">
+          <button
+            @click="classDropdownOpen = !classDropdownOpen"
+            class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
+          >
+            <Filter class="h-4 w-4 text-gray-400" />
+            {{ selectedClassLabel || $t('students.allClasses') }}
+            <ChevronDown class="h-4 w-4 text-gray-400" />
+          </button>
+          <div
+            v-show="classDropdownOpen"
+            class="absolute left-0 z-50 mt-1 max-h-60 w-44 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+          >
+            <button
+              @click="selectedClassGroupId = null; classDropdownOpen = false"
+              class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedClassGroupId }"
+            >
+              {{ $t('students.allClasses') }}
+            </button>
+            <button
+              v-for="cg in classGroups"
+              :key="cg.id"
+              @click="selectedClassGroupId = cg.id; classDropdownOpen = false"
+              class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedClassGroupId === cg.id }"
+            >
+              {{ cg.display_name }}
             </button>
           </div>
         </div>
       </div>
 
+      <!-- Loading -->
+      <div v-if="loading" class="py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+        {{ $t('common.loading') }}
+      </div>
+
       <!-- Table -->
-      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-        <div class="overflow-x-auto">
+      <div v-else class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <div class="overflow-x-visible">
           <table class="w-full">
             <thead>
               <tr class="border-b border-gray-200 dark:border-gray-800">
@@ -116,28 +122,39 @@
                 class="border-b border-gray-100 last:border-0 dark:border-gray-800"
               >
                 <td class="px-5 py-4">
-                  <div class="flex items-center gap-3">
+                  <div class="flex cursor-pointer items-center gap-3" @click="viewStudent(student)">
                     <div
-                      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                      :class="avatarColorClasses(student.avatarColor)"
+                      v-if="student.user.avatar"
+                      class="h-10 w-10 shrink-0 overflow-hidden rounded-full"
                     >
-                      {{ student.initials }}
+                      <img :src="student.user.avatar" :alt="fullName(student)" class="h-full w-full object-cover" />
+                    </div>
+                    <div
+                      v-else
+                      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                      :class="avatarColorClass(student.user.id)"
+                    >
+                      {{ initials(student) }}
                     </div>
                     <div>
-                      <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ student.fullName }}</p>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">{{ student.email }}</p>
+                      <p class="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">{{ fullName(student) }}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">{{ student.user.email }}</p>
                     </div>
                   </div>
                 </td>
                 <td class="px-5 py-4">
                   <span
+                    v-if="student.current_class_group"
                     class="inline-flex rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300"
                   >
-                    {{ student.className }}
+                    {{ student.current_class_group.display_name }}
                   </span>
+                  <span v-else class="text-sm text-gray-400">—</span>
                 </td>
                 <td class="px-5 py-4">
-                  <span class="text-sm text-gray-700 dark:text-gray-300">{{ student.yearOfEducation }}</span>
+                  <span class="text-sm text-gray-700 dark:text-gray-300">
+                    {{ student.current_class_group?.academic_year?.year || '—' }}
+                  </span>
                 </td>
                 <td class="px-5 py-4 text-right">
                   <div class="relative inline-block" :ref="el => setActionRef(el, student.id)">
@@ -149,7 +166,7 @@
                     </button>
                     <div
                       v-show="openActionId === student.id"
-                      class="absolute right-0 z-20 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+                      class="absolute right-0 z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
                     >
                       <button
                         @click="viewStudent(student)"
@@ -181,6 +198,7 @@
 
       <!-- Pagination -->
       <Pagination
+        v-if="!loading"
         :total="filteredStudents.length"
         v-model:currentPage="currentPage"
         v-model:pageSize="pageSize"
@@ -191,6 +209,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   Search,
   Filter,
@@ -202,76 +221,129 @@ import {
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Pagination from '@/components/ui/Pagination.vue'
+import { getStudentsApi } from '@/api/students'
+import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
+import type { Student } from '@/types/student'
+import type { AcademicYear, ClassGroup } from '@/types/academic'
 
-interface Student {
-  id: string
-  fullName: string
-  initials: string
-  email: string
-  className: string
-  yearOfEducation: string
-  avatarColor: string
-}
+const router = useRouter()
 
-const students = ref<Student[]>([
-  { id: '1', fullName: 'Алтынбек Арман Ерланұлы', initials: 'АА', email: 'altynbek@qadam.edu.kz', className: '5А', yearOfEducation: '2024-2025', avatarColor: 'blue' },
-  { id: '2', fullName: 'Бекболатова Аяна Серікқызы', initials: 'БА', email: 'bekbolatova@qadam.edu.kz', className: '5А', yearOfEducation: '2024-2025', avatarColor: 'pink' },
-  { id: '3', fullName: 'Ғалымжанов Тимур Бауыржанұлы', initials: 'ҒТ', email: 'galymzhanov@qadam.edu.kz', className: '5Б', yearOfEducation: '2024-2025', avatarColor: 'green' },
-  { id: '4', fullName: 'Досымова Камила Нұрланқызы', initials: 'ДК', email: 'dossymova@qadam.edu.kz', className: '6А', yearOfEducation: '2024-2025', avatarColor: 'purple' },
-  { id: '5', fullName: 'Ерболатов Дамир Асқарұлы', initials: 'ЕД', email: 'erbolatov@qadam.edu.kz', className: '6А', yearOfEducation: '2024-2025', avatarColor: 'orange' },
-  { id: '6', fullName: 'Жұмабекова Інжу Мұратқызы', initials: 'ЖІ', email: 'zhumabekova@qadam.edu.kz', className: '6Б', yearOfEducation: '2024-2025', avatarColor: 'teal' },
-  { id: '7', fullName: 'Қасенов Алдияр Ерікұлы', initials: 'ҚА', email: 'kassenov@qadam.edu.kz', className: '7А', yearOfEducation: '2024-2025', avatarColor: 'red' },
-  { id: '8', fullName: 'Мұратова Дарина Қайратқызы', initials: 'МД', email: 'muratova@qadam.edu.kz', className: '7А', yearOfEducation: '2024-2025', avatarColor: 'amber' },
-  { id: '9', fullName: 'Нұрланов Ерасыл Бекзатұлы', initials: 'НЕ', email: 'nurlanov@qadam.edu.kz', className: '7Б', yearOfEducation: '2024-2025', avatarColor: 'cyan' },
-  { id: '10', fullName: 'Оразбекова Сабина Дәуренқызы', initials: 'ОС', email: 'orazbekova@qadam.edu.kz', className: '8А', yearOfEducation: '2024-2025', avatarColor: 'indigo' },
-  { id: '11', fullName: 'Петрова Анна Дмитриевна', initials: 'ПА', email: 'petrova@qadam.edu.kz', className: '8А', yearOfEducation: '2024-2025', avatarColor: 'rose' },
-  { id: '12', fullName: 'Сатыбалдиев Нұрсұлтан Маратұлы', initials: 'СН', email: 'satybaldiev@qadam.edu.kz', className: '8Б', yearOfEducation: '2024-2025', avatarColor: 'emerald' },
-  { id: '13', fullName: 'Тасболатова Жансая Ержанқызы', initials: 'ТЖ', email: 'tasbolatova@qadam.edu.kz', className: '5Б', yearOfEducation: '2023-2024', avatarColor: 'blue' },
-  { id: '14', fullName: 'Уалиханов Асан Талғатұлы', initials: 'УА', email: 'ualihanov@qadam.edu.kz', className: '9А', yearOfEducation: '2023-2024', avatarColor: 'green' },
-  { id: '15', fullName: 'Хасенова Мадина Бақытқызы', initials: 'ХМ', email: 'khasenova@qadam.edu.kz', className: '9А', yearOfEducation: '2023-2024', avatarColor: 'purple' },
-])
+const students = ref<Student[]>([])
+const academicYears = ref<AcademicYear[]>([])
+const classGroups = ref<ClassGroup[]>([])
+const loading = ref(false)
 
 const searchQuery = ref('')
-const selectedClass = ref('')
-const selectedYear = ref('')
+const selectedYearId = ref<number | null>(null)
+const selectedClassGroupId = ref<number | null>(null)
 const classDropdownOpen = ref(false)
 const yearDropdownOpen = ref(false)
-const openActionId = ref<string | null>(null)
+const openActionId = ref<number | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-const classOptions = computed(() => {
-  const classes = new Set(students.value.map((s) => s.className))
-  return Array.from(classes).sort()
-})
-
-const yearOptions = computed(() => {
-  const years = new Set(students.value.map((s) => s.yearOfEducation))
-  return Array.from(years).sort().reverse()
-})
-
 const classDropdownRef = ref<HTMLElement>()
 const yearDropdownRef = ref<HTMLElement>()
-const actionRefs: Record<string, HTMLElement | null> = {}
+const actionRefs: Record<number, HTMLElement | null> = {}
 
-function setActionRef(el: any, id: string) {
+function setActionRef(el: any, id: number) {
   actionRefs[id] = el
 }
 
+const selectedYearLabel = computed(() => {
+  if (!selectedYearId.value) return ''
+  return academicYears.value.find((y) => y.id === selectedYearId.value)?.year || ''
+})
+
+const selectedClassLabel = computed(() => {
+  if (!selectedClassGroupId.value) return ''
+  return classGroups.value.find((c) => c.id === selectedClassGroupId.value)?.display_name || ''
+})
+
+async function fetchFilters() {
+  try {
+    const [yearsRes, classesRes] = await Promise.all([
+      getAcademicYearsApi(),
+      getClassGroupsApi(),
+    ])
+    academicYears.value = yearsRes.data
+    classGroups.value = classesRes.data
+
+    const activeYear = academicYears.value.find((y) => y.is_active)
+    if (activeYear) selectedYearId.value = activeYear.id
+  } catch {
+    // filters stay empty
+  }
+}
+
+async function fetchStudents() {
+  loading.value = true
+  try {
+    const params: Record<string, number> = {}
+    if (selectedYearId.value) params.year = selectedYearId.value
+    if (selectedClassGroupId.value) params.class_group = selectedClassGroupId.value
+    const { data } = await getStudentsApi(params)
+    students.value = data
+  } catch {
+    students.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+function fullName(student: Student) {
+  return `${student.user.last_name} ${student.user.first_name}`
+}
+
+function initials(student: Student) {
+  const first = student.user.first_name?.[0] || ''
+  const last = student.user.last_name?.[0] || ''
+  return (last + first).toUpperCase()
+}
+
+const avatarColors = [
+  'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
+  'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300',
+  'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
+  'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300',
+  'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300',
+  'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300',
+  'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300',
+  'bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300',
+]
+
+function avatarColorClass(userId: number) {
+  return avatarColors[userId % avatarColors.length]
+}
+
 const filteredStudents = computed(() => {
+  if (!searchQuery.value) return students.value
+  const q = searchQuery.value.toLowerCase()
   return students.value.filter((s) => {
-    const matchesSearch =
-      !searchQuery.value ||
-      s.fullName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      s.email.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesClass = !selectedClass.value || s.className === selectedClass.value
-    const matchesYear = !selectedYear.value || s.yearOfEducation === selectedYear.value
-    return matchesSearch && matchesClass && matchesYear
+    const name = fullName(s).toLowerCase()
+    const email = s.user.email.toLowerCase()
+    return name.includes(q) || email.includes(q)
   })
 })
 
-watch([searchQuery, selectedClass, selectedYear, pageSize], () => {
+watch([searchQuery, pageSize], () => {
   currentPage.value = 1
+})
+
+watch([selectedYearId, selectedClassGroupId], () => {
+  currentPage.value = 1
+  fetchStudents()
+})
+
+watch(selectedYearId, (yearId) => {
+  selectedClassGroupId.value = null
+  if (yearId) {
+    getClassGroupsApi({ year: yearId }).then(({ data }) => {
+      classGroups.value = data
+    }).catch(() => { /* keep existing */ })
+  }
 })
 
 const paginatedStudents = computed(() => {
@@ -279,34 +351,17 @@ const paginatedStudents = computed(() => {
   return filteredStudents.value.slice(start, start + pageSize.value)
 })
 
-function toggleActions(id: string) {
+function toggleActions(id: number) {
   openActionId.value = openActionId.value === id ? null : id
 }
 
 function viewStudent(student: Student) {
   openActionId.value = null
+  router.push(`/students/${student.user.id}`)
 }
 
 function editStudent(student: Student) {
   openActionId.value = null
-}
-
-function avatarColorClasses(color: string): string {
-  const map: Record<string, string> = {
-    blue: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
-    green: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300',
-    purple: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
-    orange: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300',
-    red: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300',
-    teal: 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300',
-    emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
-    amber: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
-    cyan: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300',
-    indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300',
-    pink: 'bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-300',
-    rose: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
-  }
-  return map[color] || map.blue
 }
 
 function handleClickOutside(e: MouseEvent) {
@@ -325,6 +380,10 @@ function handleClickOutside(e: MouseEvent) {
   }
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside))
+onMounted(async () => {
+  document.addEventListener('click', handleClickOutside)
+  await fetchFilters()
+  await fetchStudents()
+})
 onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 </script>

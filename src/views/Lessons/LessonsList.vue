@@ -20,6 +20,42 @@
         </button>
       </div>
 
+      <!-- Filters -->
+      <div class="flex flex-wrap items-center gap-3">
+        <select
+          v-model="filterClassGroup"
+          @change="fetchLessons()"
+          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-gray-400 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600"
+        >
+          <option value="all">{{ $t('lessons.allClasses') }}</option>
+          <option v-for="cg in classGroups" :key="cg.id" :value="cg.id">
+            {{ cg.display_name }}
+          </option>
+        </select>
+
+        <select
+          v-model="filterSubject"
+          @change="fetchLessons()"
+          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-gray-400 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600"
+        >
+          <option value="all">{{ $t('lessons.allSubjects') }}</option>
+          <option v-for="s in subjects" :key="s.id" :value="s.name">
+            {{ s.name }}
+          </option>
+        </select>
+
+        <select
+          v-model="filterQuarter"
+          @change="fetchLessons()"
+          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-gray-400 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600"
+        >
+          <option value="all">{{ $t('lessons.allQuarters') }}</option>
+          <option v-for="q in [1, 2, 3, 4]" :key="q" :value="q">
+            {{ $t('lessons.quarter') }} {{ q }}
+          </option>
+        </select>
+      </div>
+
       <!-- Calendar toolbar -->
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <!-- Navigation -->
@@ -65,8 +101,13 @@
         </div>
       </div>
 
+      <!-- Loading state -->
+      <div v-if="loading" class="flex items-center justify-center py-20">
+        <Loader2 class="h-8 w-8 animate-spin text-brand-500" />
+      </div>
+
       <!-- Month View -->
-      <div v-if="currentView === 'month'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+      <div v-else-if="currentView === 'month'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
         <!-- Day headers -->
         <div class="grid grid-cols-7 border-b border-gray-200 dark:border-gray-800">
           <div
@@ -123,7 +164,7 @@
       </div>
 
       <!-- Week View -->
-      <div v-if="currentView === 'week'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+      <div v-else-if="currentView === 'week'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
         <div class="overflow-x-auto">
           <div class="min-w-[700px]">
             <!-- Day headers -->
@@ -173,7 +214,7 @@
                     :style="eventPositionStyle(event, hour)"
                   >
                     <div class="text-[10px] font-semibold leading-tight sm:text-xs">{{ event.subjectName }}</div>
-                    <div class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ event.room }} · {{ event.teacherName }}</div>
+                    <div class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ event.className }}</div>
                   </div>
                 </div>
               </div>
@@ -183,7 +224,7 @@
       </div>
 
       <!-- Day View -->
-      <div v-if="currentView === 'day'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+      <div v-else-if="currentView === 'day'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
         <div
           v-for="hour in timeSlots"
           :key="hour"
@@ -210,12 +251,20 @@
                 </div>
                 <div class="ml-auto text-right text-xs opacity-80">
                   <div>{{ event.className }}</div>
-                  <div>{{ event.room }} · {{ event.teacherName }}</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Empty state -->
+      <div
+        v-if="!loading && allEvents.length === 0"
+        class="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white py-16 dark:border-gray-800 dark:bg-gray-900"
+      >
+        <CalendarDays class="h-12 w-12 text-gray-300 dark:text-gray-600" />
+        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ $t('lessons.noLessons') }}</p>
       </div>
 
       <!-- Event detail modal -->
@@ -234,7 +283,7 @@
                 {{ selectedEvent.subjectName }}
               </div>
               <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-                {{ selectedEvent.subjectName }}
+                {{ selectedEvent.title || selectedEvent.subjectName }}
               </h3>
             </div>
             <button
@@ -245,6 +294,9 @@
             </button>
           </div>
           <div class="mt-4 space-y-3">
+            <div v-if="selectedEvent.description" class="text-sm text-gray-600 dark:text-gray-400">
+              {{ selectedEvent.description }}
+            </div>
             <div class="flex items-center gap-3 text-sm">
               <Clock class="h-4 w-4 text-gray-400" />
               <span class="text-gray-700 dark:text-gray-300">
@@ -261,15 +313,38 @@
               <Users class="h-4 w-4 text-gray-400" />
               <span class="text-gray-700 dark:text-gray-300">{{ selectedEvent.className }}</span>
             </div>
-            <div class="flex items-center gap-3 text-sm">
-              <User class="h-4 w-4 text-gray-400" />
-              <span class="text-gray-700 dark:text-gray-300">{{ selectedEvent.teacherName }}</span>
-            </div>
-            <div class="flex items-center gap-3 text-sm">
-              <MapPin class="h-4 w-4 text-gray-400" />
-              <span class="text-gray-700 dark:text-gray-300">{{ selectedEvent.room }}</span>
+            <div v-if="selectedEvent.status" class="flex items-center gap-3 text-sm">
+              <BookOpen class="h-4 w-4 text-gray-400" />
+              <span class="text-gray-700 dark:text-gray-300">
+                {{ $t('lessons.quarter') }} {{ selectedEvent.quarter }} &middot;
+                {{ selectedEvent.status }}
+              </span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Create Lesson Modal (placeholder) -->
+      <div
+        v-if="showAddModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+        @click.self="showAddModal = false"
+      >
+        <div class="mx-4 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
+              {{ $t('lessons.addNew') }}
+            </h3>
+            <button
+              @click="showAddModal = false"
+              class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
+            >
+              <X class="h-5 w-5" />
+            </button>
+          </div>
+          <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+            {{ $t('lessons.createModalPlaceholder') }}
+          </p>
         </div>
       </div>
     </div>
@@ -277,7 +352,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Plus,
@@ -287,10 +362,16 @@ import {
   Clock,
   CalendarDays,
   Users,
-  User,
-  MapPin,
+  BookOpen,
+  Loader2,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import { getLessonsApi } from '@/api/lessons'
+import { getClassGroupsApi } from '@/api/academic'
+import { getSubjectsApi } from '@/api/subjects'
+import type { Lesson } from '@/types/lesson'
+import type { ClassGroup } from '@/types/academic'
+import type { Subject } from '@/types/subject'
 
 const { t, locale } = useI18n()
 
@@ -299,14 +380,27 @@ const views: ViewType[] = ['month', 'week', 'day']
 const currentView = ref<ViewType>('week')
 const currentDate = ref(new Date())
 const showAddModal = ref(false)
+const loading = ref(false)
+
+// Filter state
+const filterClassGroup = ref<number | 'all'>('all')
+const filterSubject = ref<string>('all')
+const filterQuarter = ref<number | 'all'>('all')
+
+// Data from API
+const lessons = ref<Lesson[]>([])
+const classGroups = ref<ClassGroup[]>([])
+const subjects = ref<Subject[]>([])
 
 interface CalendarEvent {
   id: string
   subjectName: string
   subjectColor: string
   className: string
-  teacherName: string
-  room: string
+  title: string
+  description: string
+  status: string
+  quarter: number
   date: Date
   startTime: number
   endTime: number
@@ -314,6 +408,88 @@ interface CalendarEvent {
 }
 
 const selectedEvent = ref<CalendarEvent | null>(null)
+
+// Color palette for subject-based hashing
+const colorPalette = [
+  'blue', 'green', 'purple', 'orange', 'red',
+  'teal', 'emerald', 'amber', 'cyan', 'indigo',
+] as const
+
+function hashSubjectColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0
+  }
+  return colorPalette[Math.abs(hash) % colorPalette.length]
+}
+
+function mapLessonToEvent(lesson: Lesson): CalendarEvent {
+  const lessonDate = new Date(lesson.date + 'T00:00:00')
+  // Use lesson order to derive a time slot (order 1 = 8:00, order 2 = 9:00, etc.)
+  const startTime = 7 + (lesson.order || 1)
+  const endTime = startTime + 1
+
+  return {
+    id: String(lesson.id),
+    subjectName: lesson.offering.subject_name,
+    subjectColor: hashSubjectColor(lesson.offering.subject_name),
+    className: lesson.offering.class_group_name,
+    title: lesson.title,
+    description: lesson.description,
+    status: lesson.status,
+    quarter: lesson.quarter,
+    date: lessonDate,
+    startTime,
+    endTime,
+    dayOfWeek: (lessonDate.getDay() + 6) % 7, // Monday = 0
+  }
+}
+
+const allEvents = computed<CalendarEvent[]>(() => {
+  return lessons.value.map(mapLessonToEvent)
+})
+
+async function fetchLessons() {
+  loading.value = true
+  try {
+    const params: Record<string, string | number> = {}
+    if (filterClassGroup.value !== 'all') params.class_group = filterClassGroup.value
+    if (filterSubject.value !== 'all') params.subject = filterSubject.value
+    if (filterQuarter.value !== 'all') params.quarter = filterQuarter.value
+
+    const { data } = await getLessonsApi(params)
+    lessons.value = data
+  } catch (error) {
+    console.error('Failed to fetch lessons:', error)
+    lessons.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+async function fetchFilterData() {
+  try {
+    const [classGroupsRes, subjectsRes] = await Promise.all([
+      getClassGroupsApi(),
+      getSubjectsApi(),
+    ])
+    classGroups.value = classGroupsRes.data
+    subjects.value = subjectsRes.data
+  } catch (error) {
+    console.error('Failed to fetch filter data:', error)
+  }
+}
+
+onMounted(() => {
+  fetchFilterData()
+  fetchLessons()
+})
+
+// Refetch when the calendar view/date changes (to potentially fetch a different range)
+watch(currentDate, () => {
+  // Data is already fetched — no server-side date filtering needed currently.
+  // If the API later supports date range params, add refetch logic here.
+})
 
 function getMonday(d: Date): Date {
   const date = new Date(d)
@@ -323,73 +499,6 @@ function getMonday(d: Date): Date {
   date.setHours(0, 0, 0, 0)
   return date
 }
-
-function generateWeekEvents(weekStart: Date): CalendarEvent[] {
-  const templates = [
-    { subjectName: 'Математика', subjectColor: 'blue', className: '5А', teacherName: 'Назарова А.К.', room: 'Каб. 201' },
-    { subjectName: 'Қазақ тілі', subjectColor: 'green', className: '5А', teacherName: 'Сейтова Б.М.', room: 'Каб. 105' },
-    { subjectName: 'Русский язык', subjectColor: 'purple', className: '5Б', teacherName: 'Иванова Н.П.', room: 'Каб. 302' },
-    { subjectName: 'English', subjectColor: 'orange', className: '6А', teacherName: 'Smith J.', room: 'Каб. 410' },
-    { subjectName: 'Физика', subjectColor: 'red', className: '7А', teacherName: 'Ахметов Д.С.', room: 'Каб. 215' },
-    { subjectName: 'Химия', subjectColor: 'teal', className: '8А', teacherName: 'Жанбырова К.Е.', room: 'Каб. 310' },
-    { subjectName: 'Биология', subjectColor: 'emerald', className: '6Б', teacherName: 'Тұрсынова Г.А.', room: 'Каб. 208' },
-    { subjectName: 'История Казахстана', subjectColor: 'amber', className: '7Б', teacherName: 'Қасымов М.Т.', room: 'Каб. 112' },
-    { subjectName: 'География', subjectColor: 'cyan', className: '6А', teacherName: 'Бекенова С.Ж.', room: 'Каб. 304' },
-    { subjectName: 'Информатика', subjectColor: 'indigo', className: '8Б', teacherName: 'Ли В.С.', room: 'Каб. 401' },
-  ]
-
-  const schedule: { day: number; startTime: number; endTime: number; templateIdx: number }[] = [
-    { day: 0, startTime: 8, endTime: 9, templateIdx: 0 },
-    { day: 0, startTime: 9, endTime: 10, templateIdx: 1 },
-    { day: 0, startTime: 10, endTime: 11, templateIdx: 3 },
-    { day: 0, startTime: 13, endTime: 14, templateIdx: 6 },
-    { day: 1, startTime: 8, endTime: 9, templateIdx: 2 },
-    { day: 1, startTime: 9, endTime: 10, templateIdx: 4 },
-    { day: 1, startTime: 11, endTime: 12, templateIdx: 7 },
-    { day: 1, startTime: 14, endTime: 15, templateIdx: 9 },
-    { day: 2, startTime: 8, endTime: 9, templateIdx: 0 },
-    { day: 2, startTime: 9, endTime: 10, templateIdx: 5 },
-    { day: 2, startTime: 10, endTime: 11, templateIdx: 8 },
-    { day: 2, startTime: 13, endTime: 14, templateIdx: 1 },
-    { day: 3, startTime: 8, endTime: 9, templateIdx: 3 },
-    { day: 3, startTime: 9, endTime: 10, templateIdx: 2 },
-    { day: 3, startTime: 11, endTime: 12, templateIdx: 4 },
-    { day: 3, startTime: 14, endTime: 15, templateIdx: 6 },
-    { day: 4, startTime: 8, endTime: 9, templateIdx: 7 },
-    { day: 4, startTime: 9, endTime: 10, templateIdx: 0 },
-    { day: 4, startTime: 10, endTime: 11, templateIdx: 5 },
-    { day: 4, startTime: 13, endTime: 14, templateIdx: 9 },
-    { day: 5, startTime: 9, endTime: 10, templateIdx: 8 },
-    { day: 5, startTime: 10, endTime: 11, templateIdx: 1 },
-  ]
-
-  const events: CalendarEvent[] = []
-  schedule.forEach((s, i) => {
-    const tmpl = templates[s.templateIdx]
-    const date = new Date(weekStart)
-    date.setDate(date.getDate() + s.day)
-    events.push({
-      id: `${weekStart.getTime()}-${i}`,
-      ...tmpl,
-      date: new Date(date),
-      startTime: s.startTime,
-      endTime: s.endTime,
-      dayOfWeek: s.day,
-    })
-  })
-  return events
-}
-
-const allEvents = computed(() => {
-  const events: CalendarEvent[] = []
-  const monday = getMonday(currentDate.value)
-  for (let w = -5; w <= 5; w++) {
-    const weekStart = new Date(monday)
-    weekStart.setDate(weekStart.getDate() + w * 7)
-    events.push(...generateWeekEvents(weekStart))
-  }
-  return events
-})
 
 const timeSlots = computed(() => {
   const slots: number[] = []

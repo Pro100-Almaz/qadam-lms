@@ -44,7 +44,7 @@
           </button>
           <div
             v-show="langDropdownOpen"
-            class="absolute left-0 z-20 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+            class="absolute left-0 z-50 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
           >
             <button
               @click="selectedLanguage = ''; langDropdownOpen = false"
@@ -64,43 +64,16 @@
             </button>
           </div>
         </div>
-        <!-- Status filter -->
-        <div class="relative" ref="statusDropdownRef">
-          <button
-            @click="statusDropdownOpen = !statusDropdownOpen"
-            class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
-          >
-            <Filter class="h-4 w-4 text-gray-400" />
-            {{ selectedStatus ? $t('subjects.status' + capitalize(selectedStatus)) : $t('subjects.allStatuses') }}
-            <ChevronDown class="h-4 w-4 text-gray-400" />
-          </button>
-          <div
-            v-show="statusDropdownOpen"
-            class="absolute left-0 z-20 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
-          >
-            <button
-              @click="selectedStatus = ''; statusDropdownOpen = false"
-              class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedStatus }"
-            >
-              {{ $t('subjects.allStatuses') }}
-            </button>
-            <button
-              v-for="status in statusOptions"
-              :key="status"
-              @click="selectedStatus = status; statusDropdownOpen = false"
-              class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedStatus === status }"
-            >
-              {{ $t('subjects.status' + capitalize(status)) }}
-            </button>
-          </div>
-        </div>
+      </div>
+
+      <!-- Loading -->
+      <div v-if="loading" class="py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+        {{ $t('common.loading') }}
       </div>
 
       <!-- Table -->
-      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-        <div class="overflow-x-auto">
+      <div v-else class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <div class="overflow-x-visible">
           <table class="w-full">
             <thead>
               <tr class="border-b border-gray-200 dark:border-gray-800">
@@ -111,13 +84,10 @@
                   {{ $t('subjects.language') }}
                 </th>
                 <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {{ $t('subjects.classes') }}
-                </th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {{ $t('subjects.studentsCount') }}
-                </th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
                   {{ $t('subjects.status') }}
+                </th>
+                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {{ $t('subjects.addedBy') }}
                 </th>
                 <th class="px-5 py-3.5 text-right text-sm font-medium text-gray-500 dark:text-gray-400">
                   {{ $t('common.actions') }}
@@ -131,36 +101,23 @@
                 class="border-b border-gray-100 last:border-0 dark:border-gray-800"
               >
                 <td class="px-5 py-4">
-                  <div>
-                    <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ subject.name }}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ subject.code }}</p>
-                  </div>
+                  <p class="cursor-pointer text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300" @click="viewSubject(subject)">{{ subject.name }}</p>
                 </td>
                 <td class="px-5 py-4">
                   <span class="text-sm text-gray-700 dark:text-gray-300">
-                    {{ $t('subjects.languages.' + subject.language) }}
+                    {{ $t('subjects.languages.' + subject.language_group) }}
                   </span>
                 </td>
                 <td class="px-5 py-4">
-                  <div class="flex flex-wrap gap-1">
-                    <span
-                      v-for="cls in subject.classes"
-                      :key="cls"
-                      class="inline-flex rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300"
-                    >
-                      {{ cls }}
-                    </span>
-                  </div>
-                </td>
-                <td class="px-5 py-4">
-                  <span class="text-sm text-gray-700 dark:text-gray-300">{{ subject.studentsCount }}</span>
-                </td>
-                <td class="px-5 py-4">
                   <span
-                    class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
-                    :class="statusClasses(subject.status)"
+                    class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
                   >
-                    {{ $t('subjects.status' + capitalize(subject.status)) }}
+                    {{ $t('subjects.statusActive') }}
+                  </span>
+                </td>
+                <td class="px-5 py-4">
+                  <span class="text-sm text-gray-700 dark:text-gray-300">
+                    {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
                   </span>
                 </td>
                 <td class="px-5 py-4 text-right">
@@ -173,8 +130,15 @@
                     </button>
                     <div
                       v-show="openActionId === subject.id"
-                      class="absolute right-0 z-20 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+                      class="absolute right-0 z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
                     >
+                      <button
+                        @click="viewSubject(subject)"
+                        class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                      >
+                        <Eye class="h-3.5 w-3.5" />
+                        {{ $t('common.view') }}
+                      </button>
                       <button
                         @click="editSubject(subject)"
                         class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
@@ -201,7 +165,7 @@
                 </td>
               </tr>
               <tr v-if="filteredSubjects.length === 0">
-                <td colspan="6" class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colspan="5" class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                   {{ $t('common.noData') }}
                 </td>
               </tr>
@@ -212,10 +176,125 @@
 
       <!-- Pagination -->
       <Pagination
+        v-if="!loading"
         :total="filteredSubjects.length"
         v-model:currentPage="currentPage"
         v-model:pageSize="pageSize"
       />
+
+      <!-- Add Subject Modal -->
+      <Teleport to="body">
+        <Transition
+          enter-active-class="transition duration-200 ease-out"
+          enter-from-class="opacity-0"
+          enter-to-class="opacity-100"
+          leave-active-class="transition duration-150 ease-in"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
+        >
+          <div
+            v-if="showAddModal"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            @click.self="showAddModal = false"
+          >
+            <div class="mx-4 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
+                  {{ $t('subjects.createTitle') }}
+                </h3>
+                <button @click="showAddModal = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5">
+                  <X class="h-5 w-5" />
+                </button>
+              </div>
+              <form @submit.prevent="handleCreateSubject" class="mt-4 space-y-4">
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.name') }}</label>
+                  <input
+                    v-model="createForm.name"
+                    type="text"
+                    required
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.language') }}</label>
+                  <select
+                    v-model="createForm.language_group"
+                    required
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  >
+                    <option value="kaz">{{ $t('subjects.languages.kazakh') }}</option>
+                    <option value="rus">{{ $t('subjects.languages.russian') }}</option>
+                    <option value="eng">{{ $t('subjects.languages.english') }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.status') }}</label>
+                  <select
+                    v-model="createForm.status"
+                    required
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  >
+                    <option value="active">{{ $t('subjects.statusActive') }}</option>
+                    <option value="planned">{{ $t('subjects.statusPlanned') }}</option>
+                    <option value="disabled">{{ $t('subjects.statusDisabled') }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('academicYears.title') }}</label>
+                  <select
+                    v-model="createForm.academic_year"
+                    required
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  >
+                    <option :value="null" disabled>{{ $t('common.selectOption') }}</option>
+                    <option v-for="year in academicYears" :key="year.id" :value="year.id">
+                      {{ year.year }}
+                    </option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.classes') }}</label>
+                  <div class="max-h-40 overflow-y-auto rounded-lg border border-gray-300 p-2 dark:border-gray-700">
+                    <label
+                      v-for="group in classGroups"
+                      :key="group.id"
+                      class="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="group.id"
+                        v-model="createForm.class_groups"
+                        class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
+                      />
+                      {{ group.display_name }}
+                    </label>
+                    <p v-if="!classGroups.length" class="text-xs text-gray-400 dark:text-gray-500 py-2 text-center">
+                      {{ $t('common.noData') }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    @click="showAddModal = false"
+                    class="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+                  >
+                    {{ $t('common.cancel') }}
+                  </button>
+                  <button
+                    type="submit"
+                    :disabled="savingSubject"
+                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 transition"
+                  >
+                    {{ $t('common.save') }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
     </div>
   </AdminLayout>
 </template>
@@ -223,80 +302,85 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import {
   Plus,
   Search,
   Globe,
-  Filter,
   ChevronDown,
   MoreVertical,
   Pencil,
   Archive,
   Trash2,
+  Eye,
+  X,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Pagination from '@/components/ui/Pagination.vue'
+import { getSubjectsApi, changeSubjectStatusApi, deleteSubjectApi, createSubjectApi } from '@/api/subjects'
+import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
+import type { Subject, LanguageGroup, SubjectStatus } from '@/types/subject'
+import type { AcademicYear, ClassGroup } from '@/types/academic'
 
 const { t } = useI18n()
+const router = useRouter()
 
-interface Subject {
-  id: string
-  name: string
-  code: string
-  language: 'kazakh' | 'russian' | 'english'
-  classes: string[]
-  studentsCount: number
-  status: 'active' | 'draft' | 'review'
-}
-
-const subjects = ref<Subject[]>([
-  { id: '1', name: 'Математика', code: 'MATH-101', language: 'kazakh', classes: ['5А', '5Б', '6А'], studentsCount: 78, status: 'active' },
-  { id: '2', name: 'Қазақ тілі', code: 'KAZ-101', language: 'kazakh', classes: ['5А', '5Б', '6А', '6Б'], studentsCount: 104, status: 'active' },
-  { id: '3', name: 'Русский язык', code: 'RUS-101', language: 'russian', classes: ['5А', '5Б'], studentsCount: 52, status: 'active' },
-  { id: '4', name: 'English Language', code: 'ENG-101', language: 'english', classes: ['5А', '6А', '7А'], studentsCount: 81, status: 'active' },
-  { id: '5', name: 'Физика', code: 'PHY-101', language: 'russian', classes: ['7А', '7Б', '8А'], studentsCount: 69, status: 'review' },
-  { id: '6', name: 'Химия', code: 'CHEM-101', language: 'kazakh', classes: ['8А', '8Б'], studentsCount: 48, status: 'active' },
-  { id: '7', name: 'Биология', code: 'BIO-101', language: 'kazakh', classes: ['6А', '6Б', '7А'], studentsCount: 72, status: 'draft' },
-  { id: '8', name: 'История Казахстана', code: 'HIST-101', language: 'kazakh', classes: ['5А', '5Б', '6А', '6Б', '7А'], studentsCount: 130, status: 'active' },
-  { id: '9', name: 'География', code: 'GEO-101', language: 'russian', classes: ['6А', '7А'], studentsCount: 55, status: 'active' },
-  { id: '10', name: 'Информатика', code: 'IT-101', language: 'russian', classes: ['5А', '5Б', '6А'], studentsCount: 78, status: 'review' },
-])
-
+const subjects = ref<Subject[]>([])
+const loading = ref(false)
 const searchQuery = ref('')
 const selectedLanguage = ref('')
-const selectedStatus = ref('')
 const langDropdownOpen = ref(false)
-const statusDropdownOpen = ref(false)
-const openActionId = ref<string | null>(null)
+const openActionId = ref<number | null>(null)
 const showAddModal = ref(false)
+const savingSubject = ref(false)
+const academicYears = ref<AcademicYear[]>([])
+const classGroups = ref<ClassGroup[]>([])
+const createForm = ref({
+  name: '',
+  language_group: 'kaz' as LanguageGroup,
+  status: 'active' as SubjectStatus,
+  academic_year: null as number | null,
+  class_groups: [] as number[],
+})
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-const languageOptions = ['kazakh', 'russian', 'english']
-const statusOptions = ['active', 'draft', 'review']
+const languageOptions = ['kaz', 'rus', 'eng']
 
 const langDropdownRef = ref<HTMLElement>()
-const statusDropdownRef = ref<HTMLElement>()
-const actionRefs: Record<string, HTMLElement | null> = {}
+const actionRefs: Record<number, HTMLElement | null> = {}
 
-function setActionRef(el: any, id: string) {
+function setActionRef(el: any, id: number) {
   actionRefs[id] = el
 }
 
+async function fetchSubjects() {
+  loading.value = true
+  try {
+    const params: Record<string, string> = { status: 'active' }
+    if (selectedLanguage.value) params.lang = selectedLanguage.value
+    const { data } = await getSubjectsApi(params)
+    subjects.value = data
+  } catch {
+    subjects.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
 const filteredSubjects = computed(() => {
-  return subjects.value.filter((s) => {
-    const matchesSearch =
-      !searchQuery.value ||
-      s.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      s.code.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesLang = !selectedLanguage.value || s.language === selectedLanguage.value
-    const matchesStatus = !selectedStatus.value || s.status === selectedStatus.value
-    return matchesSearch && matchesLang && matchesStatus
-  })
+  if (!searchQuery.value) return subjects.value
+  const q = searchQuery.value.toLowerCase()
+  return subjects.value.filter((s) => s.name.toLowerCase().includes(q))
 })
 
-watch([searchQuery, selectedLanguage, selectedStatus, pageSize], () => {
+watch([searchQuery, pageSize], () => {
   currentPage.value = 1
+})
+
+watch(selectedLanguage, () => {
+  currentPage.value = 1
+  fetchSubjects()
 })
 
 const paginatedSubjects = computed(() => {
@@ -304,43 +388,40 @@ const paginatedSubjects = computed(() => {
   return filteredSubjects.value.slice(start, start + pageSize.value)
 })
 
-function capitalize(str: string) {
-  return str.charAt(0).toUpperCase() + str.slice(1)
-}
-
-function statusClasses(status: string) {
-  switch (status) {
-    case 'active':
-      return 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400'
-    case 'draft':
-      return 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300'
-    case 'review':
-      return 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400'
-    default:
-      return ''
-  }
-}
-
-function toggleActions(id: string) {
+function toggleActions(id: number) {
   openActionId.value = openActionId.value === id ? null : id
+}
+
+function viewSubject(subject: Subject) {
+  openActionId.value = null
+  router.push(`/subjects/${subject.id}`)
 }
 
 function editSubject(subject: Subject) {
   openActionId.value = null
-  // TODO: navigate to edit
 }
 
-function archiveSubject(subject: Subject) {
+async function archiveSubject(subject: Subject) {
   openActionId.value = null
   if (confirm(t('subjects.confirmArchive'))) {
-    subjects.value = subjects.value.filter((s) => s.id !== subject.id)
+    try {
+      await changeSubjectStatusApi(subject.id, 'archive')
+      subjects.value = subjects.value.filter((s) => s.id !== subject.id)
+    } catch {
+      // error handled by interceptor
+    }
   }
 }
 
-function deleteSubject(subject: Subject) {
+async function deleteSubject(subject: Subject) {
   openActionId.value = null
   if (confirm(t('subjects.confirmDelete'))) {
-    subjects.value = subjects.value.filter((s) => s.id !== subject.id)
+    try {
+      await deleteSubjectApi(subject.id)
+      subjects.value = subjects.value.filter((s) => s.id !== subject.id)
+    } catch {
+      // error handled by interceptor
+    }
   }
 }
 
@@ -348,9 +429,6 @@ function handleClickOutside(e: MouseEvent) {
   const target = e.target as Node
   if (langDropdownRef.value && !langDropdownRef.value.contains(target)) {
     langDropdownOpen.value = false
-  }
-  if (statusDropdownRef.value && !statusDropdownRef.value.contains(target)) {
-    statusDropdownOpen.value = false
   }
   if (openActionId.value) {
     const ref = actionRefs[openActionId.value]
@@ -360,6 +438,46 @@ function handleClickOutside(e: MouseEvent) {
   }
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside))
+async function fetchFormData() {
+  try {
+    const [yearsRes, groupsRes] = await Promise.all([getAcademicYearsApi(), getClassGroupsApi()])
+    academicYears.value = yearsRes.data
+    classGroups.value = groupsRes.data
+    const activeYear = academicYears.value.find(y => y.is_active)
+    if (activeYear) createForm.value.academic_year = activeYear.id
+  } catch {
+    // silent
+  }
+}
+
+async function handleCreateSubject() {
+  if (!createForm.value.name || !createForm.value.academic_year) return
+  savingSubject.value = true
+  try {
+    await createSubjectApi({
+      name: createForm.value.name,
+      language_group: createForm.value.language_group,
+      status: createForm.value.status,
+      academic_year: createForm.value.academic_year,
+      class_groups: createForm.value.class_groups,
+    })
+    showAddModal.value = false
+    createForm.value = { name: '', language_group: 'kaz', status: 'active', academic_year: academicYears.value.find(y => y.is_active)?.id ?? null, class_groups: [] }
+    await fetchSubjects()
+  } catch {
+    // error handled by interceptor
+  } finally {
+    savingSubject.value = false
+  }
+}
+
+watch(showAddModal, (val) => {
+  if (val && !academicYears.value.length) fetchFormData()
+})
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  fetchSubjects()
+})
 onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 </script>

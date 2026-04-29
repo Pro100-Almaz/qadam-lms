@@ -65,12 +65,32 @@ const router = createRouter({
       meta: { title: 'Subjects — Archived' },
     },
 
+    // Subject detail
+    {
+      path: '/subjects/:id',
+      name: 'SubjectDetail',
+      component: () => import('../views/Subjects/SubjectDetail.vue'),
+      meta: { title: 'Subject Detail' },
+    },
+
     // Lessons
     {
       path: '/lessons',
       name: 'Lessons',
       component: () => import('../views/Lessons/LessonsList.vue'),
       meta: { title: 'Lessons' },
+    },
+    {
+      path: '/lessons/:id',
+      name: 'LessonDetail',
+      component: () => import('../views/Lessons/LessonDetail.vue'),
+      meta: { title: 'Lesson Detail' },
+    },
+    {
+      path: '/lessons/:id/grading',
+      name: 'LessonGrading',
+      component: () => import('../views/Lessons/LessonGrading.vue'),
+      meta: { title: 'Lesson Grading' },
     },
 
     // Teachers
@@ -80,6 +100,12 @@ const router = createRouter({
       component: () => import('../views/Teachers/TeachersList.vue'),
       meta: { title: 'Teachers' },
     },
+    {
+      path: '/teachers/:userId',
+      name: 'TeacherDetail',
+      component: () => import('../views/Teachers/TeacherDetail.vue'),
+      meta: { title: 'Teacher Detail' },
+    },
 
     // Students
     {
@@ -87,6 +113,20 @@ const router = createRouter({
       name: 'Students',
       component: () => import('../views/Students/StudentsList.vue'),
       meta: { title: 'Students' },
+    },
+    {
+      path: '/students/:userId',
+      name: 'StudentDetail',
+      component: () => import('../views/Students/StudentDetail.vue'),
+      meta: { title: 'Student Detail' },
+    },
+
+    // Register (admin-only)
+    {
+      path: '/register',
+      name: 'RegisterUser',
+      component: () => import('../views/Auth/RegisterUser.vue'),
+      meta: { title: 'Register User' },
     },
 
     // Profile

@@ -208,6 +208,7 @@ import {
   BookMarked,
   School,
   ClipboardList,
+  UserPlus,
 } from "lucide-vue-next";
 
 import {
@@ -248,6 +249,11 @@ const menuGroups = computed(() => [
         icon: GraduationCap,
         name: t("nav.students"),
         path: "/students",
+      },
+      {
+        icon: UserPlus,
+        name: t("nav.register"),
+        path: "/register",
       },
     ],
   },
