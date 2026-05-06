@@ -1,5 +1,5 @@
 import api from './client'
-import type { LoginRequest, LoginResponse, User } from '@/types/auth'
+import type { LoginRequest, LoginResponse, User, ForgotPasswordResponse, VerifyCodeResponse } from '@/types/auth'
 
 export type RegisterRole =
   | 'Admin'
@@ -38,6 +38,7 @@ export interface SchoolGroup {
   id: number
   name: string
   avatar: string
+  color: string
 }
 
 export function registerUserApi(data: RegisterUserRequest) {
@@ -85,22 +86,19 @@ export function updateProfileApi(data: Partial<Pick<User, 'email' | 'first_name'
   return api.patch<User>('/auth/me/', data)
 }
 
-export function forgetPasswordApi(username: string) {
-  return api.post<{ username: string; signed_code: string }>('/auth/forget-password/', { username })
+export function forgetPasswordApi(identifier: string) {
+  return api.post<ForgotPasswordResponse>('/auth/forget-password/', { identifier })
 }
 
-export function verifyCodeApi(username: string, signedCode: string, verificationCode: string) {
-  return api.post<{ username: string; signed_code: string; verified: boolean }>(
-    `/auth/verify-code/${encodeURIComponent(username)}/${encodeURIComponent(signedCode)}/`,
-    { verification_code: verificationCode },
-  )
+export function verifyCodeApi(username: string, code: string) {
+  return api.post<VerifyCodeResponse>('/auth/verify-code/', { username, code })
 }
 
-export function changePasswordApi(username: string, signedCode: string, password1: string, password2: string) {
-  return api.post<{ detail: string }>(
-    `/auth/change-password/${encodeURIComponent(username)}/${encodeURIComponent(signedCode)}/`,
-    { password1, password2 },
-  )
+export function changePasswordApi(token: string, newPassword: string) {
+  return api.post<{ detail: string }>('/auth/change-password/', {
+    token,
+    new_password: newPassword,
+  })
 }
 
 export function uploadAvatarApi(file: File) {
@@ -109,4 +107,8 @@ export function uploadAvatarApi(file: File) {
   return api.post<{ avatar: string }>('/auth/me/avatar/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
+}
+
+export function getSchoolGroupApi(id: number) {
+  return api.get<SchoolGroup>(`/auth/school-groups/${id}/`)
 }

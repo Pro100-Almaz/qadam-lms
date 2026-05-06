@@ -1,8 +1,16 @@
+export interface QuarterDates {
+  quarter: number
+  start: string
+  end: string
+}
+
 export interface AcademicYear {
   id: number
   year: string
   is_active: boolean
   archived: boolean
+  current_quarter?: number
+  quarters?: QuarterDates[]
 }
 
 export interface GradeLevel {

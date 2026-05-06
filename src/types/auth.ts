@@ -37,3 +37,17 @@ export interface LoginResponse {
   tokens: AuthTokens
   user: User
 }
+
+export interface ForgotPasswordResponse {
+  message: string
+  username: string
+}
+
+export interface VerifyCodeResponse {
+  token: string
+}
+
+export interface ChangePasswordRequest {
+  token: string
+  new_password: string
+}

@@ -1,3 +1,18 @@
+export interface CalendarLesson {
+  id: number
+  title: string
+  date: string
+  status: string
+  quarter: number
+  unit: number
+  order: number
+  subject_name: string
+  subject_id: number
+  class_group_name: string
+  class_group_id: number
+  teacher: { id: number; full_name: string } | null
+}
+
 export interface LessonOffering {
   id: number
   subject_name: string
@@ -76,11 +91,11 @@ export interface CreateLessonRequest {
   offering: number
   title: string
   description?: string
-  date: string
+  date?: string
   order?: number
   status?: string
   quarter: number
-  unit?: number
+  unit: number
 }
 
 export interface CreateTopicRequest {

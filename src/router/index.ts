@@ -1,5 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import type { UserRole } from '@/types/auth'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    title?: string
+    guest?: boolean
+    roles?: UserRole[]
+  }
+}
+
+const staffRoles: UserRole[] = ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal']
+const adminRoles: UserRole[] = ['admin', 'supervisor', 'principal']
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,35 +57,33 @@ const router = createRouter({
       meta: { title: '404', guest: true },
     },
 
-    // Protected routes — Subjects
+    // Protected routes — Subjects (staff only)
     {
       path: '/subjects/active',
       name: 'SubjectsActive',
       component: () => import('../views/Subjects/SubjectsActive.vue'),
-      meta: { title: 'Subjects — Active' },
+      meta: { title: 'Subjects — Active', roles: staffRoles },
     },
     {
       path: '/subjects/processing',
       name: 'SubjectsProcessing',
       component: () => import('../views/Subjects/SubjectsProcessing.vue'),
-      meta: { title: 'Subjects — Processing' },
+      meta: { title: 'Subjects — Processing', roles: staffRoles },
     },
     {
       path: '/subjects/archived',
       name: 'SubjectsArchived',
       component: () => import('../views/Subjects/SubjectsArchived.vue'),
-      meta: { title: 'Subjects — Archived' },
+      meta: { title: 'Subjects — Archived', roles: staffRoles },
     },
-
-    // Subject detail
     {
       path: '/subjects/:id',
       name: 'SubjectDetail',
       component: () => import('../views/Subjects/SubjectDetail.vue'),
-      meta: { title: 'Subject Detail' },
+      meta: { title: 'Subject Detail', roles: staffRoles },
     },
 
-    // Lessons
+    // Lessons / Calendar (all authenticated users)
     {
       path: '/lessons',
       name: 'Lessons',
@@ -84,52 +94,52 @@ const router = createRouter({
       path: '/lessons/:id',
       name: 'LessonDetail',
       component: () => import('../views/Lessons/LessonDetail.vue'),
-      meta: { title: 'Lesson Detail' },
+      meta: { title: 'Lesson Detail', roles: staffRoles },
     },
     {
       path: '/lessons/:id/grading',
       name: 'LessonGrading',
       component: () => import('../views/Lessons/LessonGrading.vue'),
-      meta: { title: 'Lesson Grading' },
+      meta: { title: 'Lesson Grading', roles: staffRoles },
     },
 
-    // Teachers
+    // Teachers (staff only)
     {
       path: '/teachers',
       name: 'Teachers',
       component: () => import('../views/Teachers/TeachersList.vue'),
-      meta: { title: 'Teachers' },
+      meta: { title: 'Teachers', roles: staffRoles },
     },
     {
       path: '/teachers/:userId',
       name: 'TeacherDetail',
       component: () => import('../views/Teachers/TeacherDetail.vue'),
-      meta: { title: 'Teacher Detail' },
+      meta: { title: 'Teacher Detail', roles: staffRoles },
     },
 
-    // Students
+    // Students (staff only)
     {
       path: '/students',
       name: 'Students',
       component: () => import('../views/Students/StudentsList.vue'),
-      meta: { title: 'Students' },
+      meta: { title: 'Students', roles: staffRoles },
     },
     {
       path: '/students/:userId',
       name: 'StudentDetail',
       component: () => import('../views/Students/StudentDetail.vue'),
-      meta: { title: 'Student Detail' },
+      meta: { title: 'Student Detail', roles: staffRoles },
     },
 
-    // Register (admin-only)
+    // Register (admin only)
     {
       path: '/register',
       name: 'RegisterUser',
       component: () => import('../views/Auth/RegisterUser.vue'),
-      meta: { title: 'Register User' },
+      meta: { title: 'Register User', roles: adminRoles },
     },
 
-    // Profile
+    // Profile (all authenticated users)
     {
       path: '/profile',
       name: 'Profile',
@@ -137,29 +147,98 @@ const router = createRouter({
       meta: { title: 'Profile' },
     },
 
-    // Personal
+    // Student self-service pages
+    {
+      path: '/my-subjects',
+      name: 'MySubjects',
+      component: () => import('../views/Personal/MySubjects.vue'),
+      meta: { title: 'My Subjects', roles: ['student'] },
+    },
+    {
+      path: '/my-teachers',
+      name: 'MyTeachers',
+      component: () => import('../views/Personal/MyTeachers.vue'),
+      meta: { title: 'My Teachers', roles: ['student'] },
+    },
+    {
+      path: '/my-classmates',
+      name: 'MyClassmates',
+      component: () => import('../views/Personal/MyClassmates.vue'),
+      meta: { title: 'My Classmates', roles: ['student'] },
+    },
+
+    // Parent self-service pages
+    {
+      path: '/my-children',
+      name: 'MyChildren',
+      component: () => import('../views/Personal/MyChildren.vue'),
+      meta: { title: 'My Children', roles: ['parent'] },
+    },
+    {
+      path: '/my-children/:id',
+      name: 'MyChildDetail',
+      component: () => import('../views/Personal/MyChildDetail.vue'),
+      meta: { title: 'Child Detail', roles: ['parent'] },
+    },
+    {
+      path: '/parent-teachers',
+      name: 'ParentTeachers',
+      component: () => import('../views/Personal/ParentTeachers.vue'),
+      meta: { title: 'My Teachers', roles: ['parent'] },
+    },
+
+    // Teacher dashboard & sub-pages
+    {
+      path: '/teacher',
+      name: 'TeacherDashboard',
+      component: () => import('../views/Teacher/TeacherDashboard.vue'),
+      meta: { title: 'Teacher Dashboard', roles: staffRoles },
+    },
+    {
+      path: '/teacher/workload',
+      name: 'TeacherWorkload',
+      component: () => import('../views/Teacher/TeacherWorkload.vue'),
+      meta: { title: 'Teacher Workload', roles: staffRoles },
+    },
+    {
+      path: '/teacher/psychologist/:studentId',
+      name: 'PsychStudentDetail',
+      component: () => import('../views/Teacher/PsychStudentDetail.vue'),
+      meta: { title: 'Student Psych Detail', roles: staffRoles },
+    },
+
+    // AI Reports
+    {
+      path: '/reports/:id',
+      name: 'ReportDetail',
+      component: () => import('../views/Reports/ReportPage.vue'),
+      meta: { title: 'AI Report', roles: [...staffRoles, 'parent'] },
+    },
+
+    // Personal (staff)
     {
       path: '/my-student',
       name: 'MyStudent',
       component: () => import('../views/Personal/MyStudent.vue'),
-      meta: { title: 'My Student' },
+      meta: { title: 'My Student', roles: [...staffRoles, 'parent'] },
     },
     {
       path: '/my-class',
       name: 'MyClass',
       component: () => import('../views/Personal/MyClass.vue'),
-      meta: { title: 'My Class' },
+      meta: { title: 'My Class', roles: staffRoles },
     },
     {
       path: '/my-lessons',
       name: 'MyLessons',
       component: () => import('../views/Personal/MyLessons.vue'),
-      meta: { title: 'My Lessons' },
+      meta: { title: 'My Lessons', roles: staffRoles },
     },
 
-    // Fallback
+    // Fallback — redirect handled in beforeEach based on role
     {
       path: '/',
+      name: 'Home',
       redirect: '/subjects/active',
     },
     {
@@ -169,20 +248,37 @@ const router = createRouter({
   ],
 })
 
+function getDefaultRoute(role?: UserRole): string {
+  if (role === 'student') return '/my-subjects'
+  if (role === 'parent') return '/my-children'
+  return '/subjects/active'
+}
+
 router.beforeEach((to, from, next) => {
   document.title = `${to.meta.title ?? 'Qadam'} | Qadam LMS`
 
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+  const role = user.value?.role
 
   if (to.meta.guest) {
     if (isAuthenticated.value && (to.name === 'Signin' || to.name === 'Signup')) {
-      return next('/subjects/active')
+      return next(getDefaultRoute(role))
     }
     return next()
   }
 
   if (!isAuthenticated.value) {
     return next('/signin')
+  }
+
+  // Role-based home redirect
+  if (to.name === 'Home') {
+    return next(getDefaultRoute(role))
+  }
+
+  // Role-based route guard
+  if (to.meta.roles && role && !to.meta.roles.includes(role)) {
+    return next(getDefaultRoute(role))
   }
 
   next()

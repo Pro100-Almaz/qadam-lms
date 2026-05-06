@@ -4,8 +4,11 @@
       class="flex items-center text-gray-700 dark:text-gray-400"
       @click.prevent="toggleDropdown"
     >
-      <span class="mr-3 overflow-hidden rounded-full h-11 w-11">
-        <img src="/images/user/owner.jpg" alt="User" />
+      <span class="mr-3 flex items-center justify-center overflow-hidden rounded-full h-11 w-11 bg-brand-100 dark:bg-brand-500/20">
+        <img v-if="user?.avatar" :src="user.avatar" alt="User" class="h-full w-full object-cover" />
+        <span v-else class="text-sm font-semibold text-brand-600 dark:text-brand-400">
+          {{ (user?.first_name ?? user?.name ?? '?').charAt(0).toUpperCase() }}
+        </span>
       </span>
 
       <span class="block mr-1 font-medium text-theme-sm">{{ user?.name ?? '' }} </span>

@@ -2,14 +2,7 @@
   <AdminLayout>
     <div class="space-y-6">
 
-      <!-- Back button -->
-      <button
-        @click="$router.back()"
-        class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90 transition-colors"
-      >
-        <ArrowLeft class="h-4 w-4" />
-        {{ t('common.back') }}
-      </button>
+      <Breadcrumb backTo="/lessons" :crumbs="[{ label: t('lessons.title'), to: '/lessons' }, { label: t('grading.title') }]" />
 
       <!-- Loading -->
       <div v-if="loading" class="flex items-center justify-center py-20">
@@ -159,7 +152,7 @@
         >
           <div
             v-if="showModal && modalStudent"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-[100000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
             @click.self="showModal = false"
           >
             <div class="mx-4 w-full max-w-5xl rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900 max-h-[90vh] flex flex-col">
@@ -374,7 +367,7 @@
         >
           <div
             v-if="showCommentModalVisible"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-[100000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
             @click.self="showCommentModalVisible = false"
           >
             <div class="mx-4 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
@@ -402,7 +395,7 @@
         >
           <div
             v-if="showDeleteConfirm"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-[100000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
             @click.self="showDeleteConfirm = false"
           >
             <div class="mx-4 w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900 text-center">
@@ -440,7 +433,6 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
-  ArrowLeft,
   Loader2,
   AlertTriangle,
   Pencil,
@@ -450,6 +442,7 @@ import {
   ChevronRight,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import { getGradingApi, submitGradingApi, updateGradingApi, deleteStudentGradingApi } from '@/api/grading'
 import type { GradingData } from '@/types/grading'
 import type { LessonStudent, Topic, Subtopic } from '@/types/lesson'

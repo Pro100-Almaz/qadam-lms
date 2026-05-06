@@ -13,25 +13,13 @@
       >
         <AlertTriangle class="h-12 w-12 text-red-400" />
         <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ error }}</p>
-        <router-link
-          to="/lessons"
-          class="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition"
-        >
-          <ArrowLeft class="h-4 w-4" />
-          {{ t('common.back') }}
-        </router-link>
+        <Breadcrumb backTo="/lessons" :crumbs="[{ label: t('lessons.title'), to: '/lessons' }]" />
       </div>
 
       <!-- Content -->
       <template v-else-if="lesson">
         <!-- Back button -->
-        <button
-          @click="$router.back()"
-          class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90 transition-colors"
-        >
-          <ArrowLeft class="h-4 w-4" />
-          {{ t('common.back') }}
-        </button>
+        <Breadcrumb backTo="/lessons" :crumbs="[{ label: t('lessons.title'), to: '/lessons' }, { label: lesson.offering.subject_name || t('lessons.lessonDetail') }]" />
 
         <!-- Header -->
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -699,7 +687,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
-  ArrowLeft,
   Plus,
   Pencil,
   Trash2,
@@ -714,6 +701,7 @@ import {
   ListOrdered,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import {
   getLessonDetailApi,
   createTopicApi,

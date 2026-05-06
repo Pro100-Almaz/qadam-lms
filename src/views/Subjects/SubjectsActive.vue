@@ -12,6 +12,7 @@
           </p>
         </div>
         <button
+          v-if="isAdmin"
           @click="showAddModal = true"
           class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
         >
@@ -123,12 +124,14 @@
                 <td class="px-5 py-4 text-right">
                   <div class="relative inline-block" :ref="el => setActionRef(el, subject.id)">
                     <button
-                      @click="toggleActions(subject.id)"
+                      @click="isAdmin ? toggleActions(subject.id) : viewSubject(subject)"
                       class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
                     >
-                      <MoreVertical class="h-4 w-4" />
+                      <Eye v-if="!isAdmin" class="h-4 w-4" />
+                      <MoreVertical v-else class="h-4 w-4" />
                     </button>
                     <div
+                      v-if="isAdmin"
                       v-show="openActionId === subject.id"
                       class="absolute right-0 z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
                     >
@@ -321,8 +324,11 @@ import { getSubjectsApi, changeSubjectStatusApi, deleteSubjectApi, createSubject
 import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
 import type { Subject, LanguageGroup, SubjectStatus } from '@/types/subject'
 import type { AcademicYear, ClassGroup } from '@/types/academic'
+import { useAuth } from '@/composables/useAuth'
 
 const { t } = useI18n()
+const { user: authUser } = useAuth()
+const isAdmin = computed(() => ['admin', 'supervisor', 'principal'].includes(authUser.value?.role ?? ''))
 const router = useRouter()
 
 const subjects = ref<Subject[]>([])

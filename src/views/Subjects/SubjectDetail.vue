@@ -2,14 +2,7 @@
   <AdminLayout>
     <div class="space-y-6">
 
-      <!-- Back button -->
-      <button
-        @click="$router.back()"
-        class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90 transition-colors"
-      >
-        <ArrowLeft class="h-4 w-4" />
-        {{ $t('common.back') }}
-      </button>
+      <Breadcrumb backTo="/subjects/active" :crumbs="[{ label: $t('subjects.title'), to: '/subjects' }, { label: subject?.name || '' }]" />
 
       <!-- Loading skeleton -->
       <template v-if="loadingDetail">
@@ -87,6 +80,16 @@
               </span>
             </div>
           </div>
+
+          <!-- Add Lesson button (admin + teacher only) -->
+          <button
+            v-if="canAddLesson"
+            @click="openAddLessonModal"
+            class="inline-flex items-center gap-2 self-start rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
+          >
+            <Plus class="h-4 w-4" />
+            {{ $t('subjects.addLesson') }}
+          </button>
         </div>
 
         <!-- ── Stats row ──────────────────────────────────────── -->
@@ -342,15 +345,149 @@
         </div>
       </template>
     </div>
+
+    <!-- Add Lesson Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="showAddLessonModal"
+          class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+          @click.self="showAddLessonModal = false"
+        >
+          <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $t('lessons.createTitle') }}</h3>
+              <button @click="showAddLessonModal = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5">
+                <X class="h-4 w-4" />
+              </button>
+            </div>
+            <form @submit.prevent="handleCreateLesson" class="mt-4 space-y-4">
+              <!-- Offering (class group) -->
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.classGroup') }}</label>
+                <select
+                  v-model="lessonForm.offering"
+                  required
+                  class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                >
+                  <option :value="null" disabled>{{ $t('common.select') }}</option>
+                  <option v-for="o in subject?.offerings" :key="o.id" :value="o.id">
+                    {{ o.class_group.display_name }}
+                  </option>
+                </select>
+              </div>
+              <!-- Title -->
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.name') }}</label>
+                <input
+                  v-model="lessonForm.title"
+                  type="text"
+                  required
+                  class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  :placeholder="$t('lessons.createTitle')"
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <!-- Date -->
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('lessons.date') }}</label>
+                  <input
+                    v-model="lessonForm.date"
+                    type="text"
+                    placeholder="YYYY-MM-DD"
+                    pattern="\d{4}-\d{2}-\d{2}"
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  />
+                </div>
+                <!-- Quarter -->
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('lessons.quarter') }}</label>
+                  <select
+                    v-model="lessonForm.quarter"
+                    required
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  >
+                    <option v-for="q in [1, 2, 3, 4]" :key="q" :value="q">Q{{ q }}</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <!-- Unit -->
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('lessons.unit') }}</label>
+                  <input
+                    v-model.number="lessonForm.unit"
+                    type="number"
+                    min="1"
+                    max="15"
+                    required
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  />
+                </div>
+                <!-- Order -->
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('lessons.order') }}</label>
+                  <input
+                    v-model.number="lessonForm.order"
+                    type="number"
+                    min="0"
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  />
+                </div>
+              </div>
+              <!-- Status -->
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.status') }}</label>
+                <select
+                  v-model="lessonForm.status"
+                  class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                >
+                  <option value="pending">{{ $t('lessons.statusPending') }}</option>
+                  <option value="completed">{{ $t('lessons.statusCompleted') }}</option>
+                  <option value="delayed">{{ $t('lessons.statusDelayed') }}</option>
+                  <option value="on schedule">{{ $t('lessons.statusOnSchedule') }}</option>
+                </select>
+              </div>
+              <!-- Description -->
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.description') }}</label>
+                <textarea
+                  v-model="lessonForm.description"
+                  rows="2"
+                  class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                />
+              </div>
+              <!-- Actions -->
+              <div class="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  @click="showAddLessonModal = false"
+                  class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+                >
+                  {{ $t('common.cancel') }}
+                </button>
+                <button
+                  type="submit"
+                  :disabled="savingLesson"
+                  class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 transition"
+                >
+                  <Loader2 v-if="savingLesson" class="h-4 w-4 animate-spin" />
+                  {{ $t('common.save') }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
-  ArrowLeft,
   AlertCircle,
   RefreshCw,
   Loader2,
@@ -361,13 +498,20 @@ import {
   GraduationCap,
   User as UserIcon,
   Trophy,
+  Plus,
+  X,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import { getSubjectDetailApi, getSubjectGradesApi } from '@/api/subjects'
+import { createLessonApi } from '@/api/lessons'
+import { useAuth } from '@/composables/useAuth'
 import type { SubjectDetail, SubjectGrades } from '@/types/subject'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
+const { user: authUser } = useAuth()
 
 const subjectId = computed(() => Number(route.params.id))
 
@@ -377,6 +521,59 @@ const loadingDetail = ref(false)
 const loadingGrades = ref(false)
 const detailError = ref<string | null>(null)
 const activeQuarter = ref(1)
+
+const canAddLesson = computed(() =>
+  ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'].includes(authUser.value?.role ?? '')
+)
+const showAddLessonModal = ref(false)
+const savingLesson = ref(false)
+const lessonForm = ref({
+  offering: null as number | null,
+  title: '',
+  date: '',
+  quarter: 1,
+  unit: 1,
+  order: 0,
+  status: 'pending',
+  description: '',
+})
+
+function openAddLessonModal() {
+  lessonForm.value = {
+    offering: subject.value?.offerings[0]?.id ?? null,
+    title: '',
+    date: new Date().toISOString().split('T')[0],
+    quarter: activeQuarter.value,
+    unit: 1,
+    order: 0,
+    status: 'pending',
+    description: '',
+  }
+  showAddLessonModal.value = true
+}
+
+async function handleCreateLesson() {
+  if (!lessonForm.value.offering || !lessonForm.value.title) return
+  savingLesson.value = true
+  try {
+    const { data } = await createLessonApi({
+      offering: lessonForm.value.offering,
+      title: lessonForm.value.title,
+      date: lessonForm.value.date || undefined,
+      quarter: lessonForm.value.quarter,
+      unit: lessonForm.value.unit,
+      order: lessonForm.value.order || undefined,
+      status: lessonForm.value.status,
+      description: lessonForm.value.description || undefined,
+    })
+    showAddLessonModal.value = false
+    router.push(`/lessons/${data.id}`)
+  } catch {
+    // handled by global interceptor
+  } finally {
+    savingLesson.value = false
+  }
+}
 
 // ── Data fetching ──────────────────────────────────────────────────────────────
 

@@ -1,12 +1,6 @@
 import api from './client'
+import { type PaginatedResponse } from './client'
 import type { Notification } from '@/types/notification'
-
-interface PaginatedResponse<T> {
-  count: number
-  next: string | null
-  previous: string | null
-  results: T[]
-}
 
 export async function getNotificationsApi(page?: number) {
   const params = page ? { page } : undefined

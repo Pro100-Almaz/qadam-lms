@@ -1,12 +1,6 @@
 import api from './client'
+import { type PaginatedResponse } from './client'
 import type { Subject, SubjectDetail, SubjectGrades, CreateSubjectRequest, StatusAction } from '@/types/subject'
-
-interface PaginatedResponse<T> {
-  count: number
-  next: string | null
-  previous: string | null
-  results: T[]
-}
 
 export async function getSubjectsApi(params?: { status?: string; year?: number; lang?: string }) {
   const { data } = await api.get<PaginatedResponse<Subject>>('/subjects/', { params })

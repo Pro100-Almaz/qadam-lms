@@ -1,16 +1,22 @@
 import api from './client'
-import type { Lesson, LessonDetail, CreateLessonRequest, Topic, Subtopic, CreateTopicRequest, CreateSubtopicRequest, UpdateTopicRequest } from '@/types/lesson'
-
-interface PaginatedResponse<T> {
-  count: number
-  next: string | null
-  previous: string | null
-  results: T[]
-}
+import { type PaginatedResponse } from './client'
+import type { Lesson, LessonDetail, CreateLessonRequest, Topic, Subtopic, CreateTopicRequest, CreateSubtopicRequest, UpdateTopicRequest, CalendarLesson } from '@/types/lesson'
 
 export async function getLessonsApi(params?: { class_group?: number | string; subject?: string; quarter?: number | string }) {
   const { data } = await api.get<PaginatedResponse<Lesson>>('/lessons/', { params })
   return { data: data.results }
+}
+
+export async function getCalendarLessonsApi(params: {
+  start_date: string
+  end_date: string
+  class_group?: number
+  subject?: number
+  quarter?: number
+  student?: number
+}) {
+  const { data } = await api.get<CalendarLesson[]>('/calendar/lessons/', { params })
+  return { data: Array.isArray(data) ? data : [] }
 }
 
 export function getLessonDetailApi(id: number) {

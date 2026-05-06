@@ -1,12 +1,6 @@
 import api from './client'
+import { type PaginatedResponse } from './client'
 import type { Student, StudentDetail, UpdateStudentRequest, CreatePsychologicalStateRequest, PsychologicalState, PsychologicalStateTemplate } from '@/types/student'
-
-interface PaginatedResponse<T> {
-  count: number
-  next: string | null
-  previous: string | null
-  results: T[]
-}
 
 export async function getStudentsApi(params?: { year?: number; class_group?: number }) {
   const { data } = await api.get<PaginatedResponse<Student>>('/students/', { params })

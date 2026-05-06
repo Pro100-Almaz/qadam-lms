@@ -209,6 +209,8 @@ import {
   School,
   ClipboardList,
   UserPlus,
+  LayoutDashboard,
+  Briefcase,
 } from "lucide-vue-next";
 
 import {
@@ -216,68 +218,147 @@ import {
   HorizontalDots,
 } from "../../icons";
 import { useSidebar } from "@/composables/useSidebar";
+import { useAuth } from "@/composables/useAuth";
 
 const route = useRoute();
 const { t } = useI18n();
+const { user } = useAuth();
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
 
-const menuGroups = computed(() => [
-  {
-    title: t("nav.management"),
-    items: [
+const role = computed(() => user.value?.role);
+const isStudent = computed(() => role.value === 'student');
+const isParent = computed(() => role.value === 'parent');
+const isAdmin = computed(() => ['admin', 'supervisor', 'principal'].includes(role.value ?? ''));
+
+const menuGroups = computed(() => {
+  if (isStudent.value) {
+    return [
       {
-        icon: BookOpen,
-        name: t("nav.subjects"),
-        subItems: [
-          { name: t("nav.subjectsActive"), path: "/subjects/active" },
-          { name: t("nav.subjectsProcessing"), path: "/subjects/processing" },
-          { name: t("nav.subjectsArchived"), path: "/subjects/archived" },
+        title: t("nav.personal"),
+        items: [
+          {
+            icon: BookOpen,
+            name: t("nav.mySubjects"),
+            path: "/my-subjects",
+          },
+          {
+            icon: CalendarDays,
+            name: t("nav.calendar"),
+            path: "/lessons",
+          },
+          {
+            icon: Users,
+            name: t("nav.myTeachers"),
+            path: "/my-teachers",
+          },
+          {
+            icon: GraduationCap,
+            name: t("nav.myClassmates"),
+            path: "/my-classmates",
+          },
         ],
       },
+    ];
+  }
+
+  if (isParent.value) {
+    return [
       {
-        icon: CalendarDays,
-        name: t("nav.lessons"),
-        path: "/lessons",
+        title: t("nav.personal"),
+        items: [
+          {
+            icon: GraduationCap,
+            name: t("nav.myChildren"),
+            path: "/my-children",
+          },
+          {
+            icon: CalendarDays,
+            name: t("nav.calendar"),
+            path: "/lessons",
+          },
+          {
+            icon: Users,
+            name: t("nav.myTeachers"),
+            path: "/parent-teachers",
+          },
+        ],
       },
-      {
-        icon: Users,
-        name: t("nav.teachers"),
-        path: "/teachers",
-      },
-      {
-        icon: GraduationCap,
-        name: t("nav.students"),
-        path: "/students",
-      },
-      {
-        icon: UserPlus,
-        name: t("nav.register"),
-        path: "/register",
-      },
-    ],
-  },
-  {
-    title: t("nav.personal"),
-    items: [
-      {
-        icon: UserCircle,
-        name: t("nav.myStudent"),
-        path: "/my-student",
-      },
-      {
-        icon: School,
-        name: t("nav.myClass"),
-        path: "/my-class",
-      },
-      {
-        icon: ClipboardList,
-        name: t("nav.myLessons"),
-        path: "/my-lessons",
-      },
-    ],
-  },
-]);
+    ];
+  }
+
+  const managementItems = [
+    {
+      icon: BookOpen,
+      name: t("nav.subjects"),
+      subItems: [
+        { name: t("nav.subjectsActive"), path: "/subjects/active" },
+        { name: t("nav.subjectsProcessing"), path: "/subjects/processing" },
+        { name: t("nav.subjectsArchived"), path: "/subjects/archived" },
+      ],
+    },
+    {
+      icon: CalendarDays,
+      name: t("nav.lessons"),
+      path: "/lessons",
+    },
+    {
+      icon: Users,
+      name: t("nav.teachers"),
+      path: "/teachers",
+    },
+    {
+      icon: GraduationCap,
+      name: t("nav.students"),
+      path: "/students",
+    },
+  ];
+
+  if (isAdmin.value) {
+    managementItems.push({
+      icon: UserPlus,
+      name: t("nav.register"),
+      path: "/register",
+    });
+  }
+
+  return [
+    {
+      title: t("nav.management"),
+      items: managementItems,
+    },
+    {
+      title: t("nav.personal"),
+      items: [
+        {
+          icon: LayoutDashboard,
+          name: t("nav.teacherDashboard"),
+          path: "/teacher",
+        },
+        {
+          icon: Briefcase,
+          name: t("nav.workload"),
+          path: "/teacher/workload",
+        },
+        {
+          icon: UserCircle,
+          name: t("nav.myStudent"),
+          path: "/my-student",
+        },
+        {
+          icon: School,
+          name: t("nav.myClass"),
+          path: "/my-class",
+        },
+        {
+          icon: ClipboardList,
+          name: t("nav.myLessons"),
+          path: "/my-lessons",
+        },
+      ],
+    },
+  ];
+});
 
 const isActive = (path) => route.path === path;
 

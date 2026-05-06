@@ -12,6 +12,7 @@
           </p>
         </div>
         <button
+          v-if="canAddLesson"
           @click="showAddModal = true"
           class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
         >
@@ -39,7 +40,7 @@
           class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-gray-400 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600"
         >
           <option value="all">{{ $t('lessons.allSubjects') }}</option>
-          <option v-for="s in subjects" :key="s.id" :value="s.name">
+          <option v-for="s in subjects" :key="s.id" :value="s.id">
             {{ s.name }}
           </option>
         </select>
@@ -294,9 +295,6 @@
             </button>
           </div>
           <div class="mt-4 space-y-3">
-            <div v-if="selectedEvent.description" class="text-sm text-gray-600 dark:text-gray-400">
-              {{ selectedEvent.description }}
-            </div>
             <div class="flex items-center gap-3 text-sm">
               <Clock class="h-4 w-4 text-gray-400" />
               <span class="text-gray-700 dark:text-gray-300">
@@ -313,40 +311,173 @@
               <Users class="h-4 w-4 text-gray-400" />
               <span class="text-gray-700 dark:text-gray-300">{{ selectedEvent.className }}</span>
             </div>
+            <div v-if="selectedEvent.teacher" class="flex items-center gap-3 text-sm">
+              <User class="h-4 w-4 text-gray-400" />
+              <span class="text-gray-700 dark:text-gray-300">{{ selectedEvent.teacher }}</span>
+            </div>
             <div v-if="selectedEvent.status" class="flex items-center gap-3 text-sm">
               <BookOpen class="h-4 w-4 text-gray-400" />
               <span class="text-gray-700 dark:text-gray-300">
-                {{ $t('lessons.quarter') }} {{ selectedEvent.quarter }} &middot;
-                {{ selectedEvent.status }}
+                {{ $t('lessons.quarter') }} {{ selectedEvent.quarter }}
+                · {{ $t('lessons.unit') }} {{ selectedEvent.unit }}
+                · {{ selectedEvent.status }}
               </span>
             </div>
+          </div>
+          <div class="mt-5 flex gap-3">
+            <router-link
+              :to="`/lessons/${selectedEvent.lessonId}`"
+              class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
+            >
+              {{ $t('common.view') }}
+            </router-link>
+            <button
+              @click="selectedEvent = null"
+              class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+            >
+              {{ $t('common.cancel') }}
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Create Lesson Modal (placeholder) -->
-      <div
-        v-if="showAddModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-        @click.self="showAddModal = false"
-      >
-        <div class="mx-4 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-              {{ $t('lessons.addNew') }}
-            </h3>
-            <button
-              @click="showAddModal = false"
-              class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"
-            >
-              <X class="h-5 w-5" />
-            </button>
+      <!-- Create Lesson Modal -->
+      <Teleport to="body">
+        <Transition name="fade">
+          <div
+            v-if="showAddModal"
+            class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+            @click.self="showAddModal = false"
+          >
+            <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900 max-h-[90vh] overflow-y-auto">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $t('lessons.createTitle') }}</h3>
+                <button @click="showAddModal = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5">
+                  <X class="h-5 w-5" />
+                </button>
+              </div>
+              <!-- Loading offerings -->
+              <div v-if="loadingOfferings" class="flex items-center justify-center py-8">
+                <Loader2 class="h-6 w-6 animate-spin text-brand-500" />
+              </div>
+              <form v-else @submit.prevent="handleCreateLesson" class="mt-4 space-y-4">
+                <!-- Offering -->
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('lessons.subject') }} / {{ $t('lessons.class') }}</label>
+                  <select
+                    v-model="lessonForm.offering"
+                    required
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  >
+                    <option :value="null" disabled>{{ $t('common.select') }}</option>
+                    <option v-for="o in teacherOfferings" :key="o.id" :value="o.id">
+                      {{ o.subject.name }} — {{ o.class_group.display_name }}
+                    </option>
+                  </select>
+                </div>
+                <!-- Title -->
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.name') }}</label>
+                  <input
+                    v-model="lessonForm.title"
+                    type="text"
+                    required
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <!-- Date -->
+                  <div>
+                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('lessons.date') }}</label>
+                    <input
+                      v-model="lessonForm.date"
+                      type="text"
+                      placeholder="YYYY-MM-DD"
+                      pattern="\d{4}-\d{2}-\d{2}"
+                      class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    />
+                  </div>
+                  <!-- Quarter -->
+                  <div>
+                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('lessons.quarter') }}</label>
+                    <select
+                      v-model="lessonForm.quarter"
+                      required
+                      class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    >
+                      <option v-for="q in [1, 2, 3, 4]" :key="q" :value="q">Q{{ q }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <!-- Unit -->
+                  <div>
+                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('lessons.unit') }}</label>
+                    <input
+                      v-model.number="lessonForm.unit"
+                      type="number"
+                      min="1"
+                      max="15"
+                      required
+                      class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    />
+                  </div>
+                  <!-- Order -->
+                  <div>
+                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('lessons.order') }}</label>
+                    <input
+                      v-model.number="lessonForm.order"
+                      type="number"
+                      min="0"
+                      class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    />
+                  </div>
+                </div>
+                <!-- Status -->
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.status') }}</label>
+                  <select
+                    v-model="lessonForm.status"
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  >
+                    <option value="pending">{{ $t('lessons.statusPending') }}</option>
+                    <option value="completed">{{ $t('lessons.statusCompleted') }}</option>
+                    <option value="delayed">{{ $t('lessons.statusDelayed') }}</option>
+                    <option value="on schedule">{{ $t('lessons.statusOnSchedule') }}</option>
+                  </select>
+                </div>
+                <!-- Description -->
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.description') }}</label>
+                  <textarea
+                    v-model="lessonForm.description"
+                    rows="2"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  />
+                </div>
+                <!-- Actions -->
+                <div class="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    @click="showAddModal = false"
+                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+                  >
+                    {{ $t('common.cancel') }}
+                  </button>
+                  <button
+                    type="submit"
+                    :disabled="savingLesson"
+                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 transition"
+                  >
+                    <Loader2 v-if="savingLesson" class="h-4 w-4 animate-spin" />
+                    {{ $t('common.save') }}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-          <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-            {{ $t('lessons.createModalPlaceholder') }}
-          </p>
-        </div>
-      </div>
+        </Transition>
+      </Teleport>
     </div>
   </AdminLayout>
 </template>
@@ -362,18 +493,24 @@ import {
   Clock,
   CalendarDays,
   Users,
+  User,
   BookOpen,
   Loader2,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import { getLessonsApi } from '@/api/lessons'
+import { getCalendarLessonsApi, createLessonApi } from '@/api/lessons'
 import { getClassGroupsApi } from '@/api/academic'
-import { getSubjectsApi } from '@/api/subjects'
-import type { Lesson } from '@/types/lesson'
+import { getSubjectsApi, getMySubjectsApi } from '@/api/subjects'
+import type { CalendarLesson } from '@/types/lesson'
 import type { ClassGroup } from '@/types/academic'
-import type { Subject } from '@/types/subject'
+import type { Subject, SubjectOffering } from '@/types/subject'
+import { useAuth } from '@/composables/useAuth'
+import { useRouter } from 'vue-router'
 
 const { t, locale } = useI18n()
+const router = useRouter()
+const { user: authUser } = useAuth()
+const canAddLesson = computed(() => authUser.value?.role !== 'parent')
 
 type ViewType = 'month' | 'week' | 'day'
 const views: ViewType[] = ['month', 'week', 'day']
@@ -381,26 +518,86 @@ const currentView = ref<ViewType>('week')
 const currentDate = ref(new Date())
 const showAddModal = ref(false)
 const loading = ref(false)
+const loadingOfferings = ref(false)
+const savingLesson = ref(false)
+const teacherOfferings = ref<SubjectOffering[]>([])
+const lessonForm = ref({
+  offering: null as number | null,
+  title: '',
+  date: new Date().toISOString().split('T')[0],
+  quarter: 1,
+  unit: 1,
+  order: 0,
+  status: 'pending',
+  description: '',
+})
+
+watch(showAddModal, async (val) => {
+  if (val && teacherOfferings.value.length === 0) {
+    loadingOfferings.value = true
+    try {
+      const { data } = await getMySubjectsApi({ status: 'active' })
+      const offerings: SubjectOffering[] = []
+      for (const subj of data) {
+        if ('offerings' in subj && Array.isArray((subj as any).offerings)) {
+          for (const o of (subj as any).offerings) {
+            offerings.push(o)
+          }
+        }
+      }
+      teacherOfferings.value = offerings
+    } catch {
+      // handled by global interceptor
+    } finally {
+      loadingOfferings.value = false
+    }
+  }
+})
+
+async function handleCreateLesson() {
+  if (!lessonForm.value.offering || !lessonForm.value.title) return
+  savingLesson.value = true
+  try {
+    const { data } = await createLessonApi({
+      offering: lessonForm.value.offering,
+      title: lessonForm.value.title,
+      date: lessonForm.value.date || undefined,
+      quarter: lessonForm.value.quarter,
+      unit: lessonForm.value.unit,
+      order: lessonForm.value.order || undefined,
+      status: lessonForm.value.status,
+      description: lessonForm.value.description || undefined,
+    })
+    showAddModal.value = false
+    router.push(`/lessons/${data.id}`)
+  } catch {
+    // handled by global interceptor
+  } finally {
+    savingLesson.value = false
+  }
+}
 
 // Filter state
 const filterClassGroup = ref<number | 'all'>('all')
-const filterSubject = ref<string>('all')
+const filterSubject = ref<number | 'all'>('all')
 const filterQuarter = ref<number | 'all'>('all')
 
 // Data from API
-const lessons = ref<Lesson[]>([])
+const calendarLessons = ref<CalendarLesson[]>([])
 const classGroups = ref<ClassGroup[]>([])
 const subjects = ref<Subject[]>([])
 
 interface CalendarEvent {
+  lessonId: number
   id: string
   subjectName: string
   subjectColor: string
   className: string
   title: string
-  description: string
+  teacher: string
   status: string
   quarter: number
+  unit: number
   date: Date
   startTime: number
   endTime: number
@@ -423,45 +620,77 @@ function hashSubjectColor(name: string): string {
   return colorPalette[Math.abs(hash) % colorPalette.length]
 }
 
-function mapLessonToEvent(lesson: Lesson): CalendarEvent {
+function mapLessonToEvent(lesson: CalendarLesson): CalendarEvent {
   const lessonDate = new Date(lesson.date + 'T00:00:00')
-  // Use lesson order to derive a time slot (order 1 = 8:00, order 2 = 9:00, etc.)
   const startTime = 7 + (lesson.order || 1)
   const endTime = startTime + 1
 
   return {
+    lessonId: lesson.id,
     id: String(lesson.id),
-    subjectName: lesson.offering.subject_name,
-    subjectColor: hashSubjectColor(lesson.offering.subject_name),
-    className: lesson.offering.class_group_name,
+    subjectName: lesson.subject_name,
+    subjectColor: hashSubjectColor(lesson.subject_name),
+    className: lesson.class_group_name,
     title: lesson.title,
-    description: lesson.description,
+    teacher: lesson.teacher?.full_name || '',
     status: lesson.status,
     quarter: lesson.quarter,
+    unit: lesson.unit,
     date: lessonDate,
     startTime,
     endTime,
-    dayOfWeek: (lessonDate.getDay() + 6) % 7, // Monday = 0
+    dayOfWeek: (lessonDate.getDay() + 6) % 7,
   }
 }
 
 const allEvents = computed<CalendarEvent[]>(() => {
-  return lessons.value.map(mapLessonToEvent)
+  return calendarLessons.value.map(mapLessonToEvent)
 })
+
+function formatDateParam(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function getDateRange(): { start_date: string; end_date: string } {
+  if (currentView.value === 'month') {
+    const year = currentDate.value.getFullYear()
+    const month = currentDate.value.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const startDay = firstDay.getDay() - 1 < 0 ? 6 : firstDay.getDay() - 1
+    const start = new Date(firstDay)
+    start.setDate(start.getDate() - startDay)
+    const lastDay = new Date(year, month + 1, 0)
+    const end = new Date(lastDay)
+    end.setDate(end.getDate() + (6 - ((lastDay.getDay() + 6) % 7)))
+    return { start_date: formatDateParam(start), end_date: formatDateParam(end) }
+  }
+  if (currentView.value === 'week') {
+    const monday = getMonday(currentDate.value)
+    const saturday = new Date(monday)
+    saturday.setDate(saturday.getDate() + 5)
+    return { start_date: formatDateParam(monday), end_date: formatDateParam(saturday) }
+  }
+  // day
+  return { start_date: formatDateParam(currentDate.value), end_date: formatDateParam(currentDate.value) }
+}
 
 async function fetchLessons() {
   loading.value = true
   try {
-    const params: Record<string, string | number> = {}
+    const range = getDateRange()
+    const params: Record<string, string | number> = { ...range }
     if (filterClassGroup.value !== 'all') params.class_group = filterClassGroup.value
     if (filterSubject.value !== 'all') params.subject = filterSubject.value
     if (filterQuarter.value !== 'all') params.quarter = filterQuarter.value
 
-    const { data } = await getLessonsApi(params)
-    lessons.value = data
+    const { data } = await getCalendarLessonsApi(params as any)
+    calendarLessons.value = data
   } catch (error) {
     console.error('Failed to fetch lessons:', error)
-    lessons.value = []
+    calendarLessons.value = []
   } finally {
     loading.value = false
   }
@@ -485,10 +714,8 @@ onMounted(() => {
   fetchLessons()
 })
 
-// Refetch when the calendar view/date changes (to potentially fetch a different range)
-watch(currentDate, () => {
-  // Data is already fetched — no server-side date filtering needed currently.
-  // If the API later supports date range params, add refetch logic here.
+watch([currentDate, currentView], () => {
+  fetchLessons()
 })
 
 function getMonday(d: Date): Date {

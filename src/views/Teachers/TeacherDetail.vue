@@ -2,25 +2,7 @@
   <AdminLayout>
     <div class="space-y-6">
 
-      <!-- Back button + breadcrumb row -->
-      <div class="flex items-center gap-3">
-        <button
-          @click="router.push('/teachers')"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
-        >
-          <ArrowLeft class="h-4 w-4" />
-          {{ t('common.back') }}
-        </button>
-        <span class="text-sm text-gray-400 dark:text-gray-600">/</span>
-        <router-link
-          to="/teachers"
-          class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          {{ t('teachers.title') }}
-        </router-link>
-        <span class="text-sm text-gray-400 dark:text-gray-600">/</span>
-        <span class="text-sm text-gray-800 dark:text-white/90">{{ fullName }}</span>
-      </div>
+      <Breadcrumb backTo="/teachers" :crumbs="[{ label: t('teachers.title'), to: '/teachers' }, { label: fullName }]" />
 
       <!-- Loading skeleton -->
       <template v-if="loading">
@@ -368,7 +350,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
-  ArrowLeft,
   BookOpen,
   ClipboardList,
   User,
@@ -379,6 +360,7 @@ import {
   RefreshCw,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import { getTeacherDetailApi } from '@/api/teachers'
 import type { TeacherDetail } from '@/types/teacher'
 import type { LanguageGroup, SubjectStatus } from '@/types/subject'

@@ -62,10 +62,30 @@
                     </button>
                   </div>
                   <div class="text-center">
-                    <router-link
-                      to="/forgot-password"
-                      class="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                    <button
+                      v-if="resendCooldown > 0"
+                      type="button"
+                      disabled
+                      class="text-sm text-gray-400 cursor-not-allowed"
                     >
+                      {{ $t('auth.resendCode') }} ({{ resendCooldown }}s)
+                    </button>
+                    <button
+                      v-else
+                      type="button"
+                      :disabled="isResending"
+                      class="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                      @click="handleResend"
+                    >
+                      {{ $t('auth.resendCode') }}
+                    </button>
+                  </div>
+                  <div
+                    v-if="failedAttempts >= 5"
+                    class="rounded-lg border border-warning-300 bg-warning-50 px-4 py-3 text-sm text-warning-600 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-400"
+                  >
+                    {{ $t('auth.tooManyAttempts') }}
+                    <router-link to="/forgot-password" class="font-medium underline">
                       {{ $t('auth.resendCode') }}
                     </router-link>
                   </div>
@@ -80,11 +100,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import FullScreenLayout from '@/components/layout/FullScreenLayout.vue'
-import { verifyCodeApi } from '@/api/auth'
+import { verifyCodeApi, forgetPasswordApi } from '@/api/auth'
 import axios from 'axios'
 
 const router = useRouter()
@@ -92,22 +112,42 @@ const route = useRoute()
 const { t } = useI18n()
 
 const username = computed(() => (route.query.username as string) || '')
-const signedCode = computed(() => (route.query.signed_code as string) || '')
 
 const digits = reactive(['', '', '', '', '', ''])
 const digitRefs = ref<HTMLInputElement[]>([])
 const error = ref('')
 const isLoading = ref(false)
+const isResending = ref(false)
+const failedAttempts = ref(0)
+const resendCooldown = ref(60)
+let cooldownInterval: ReturnType<typeof setInterval> | null = null
 
 const code = computed(() => digits.join(''))
 
 onMounted(() => {
-  if (!username.value || !signedCode.value) {
+  if (!username.value) {
     router.replace('/forgot-password')
     return
   }
   digitRefs.value[0]?.focus()
+  startCooldown()
 })
+
+onUnmounted(() => {
+  if (cooldownInterval) clearInterval(cooldownInterval)
+})
+
+function startCooldown() {
+  resendCooldown.value = 60
+  if (cooldownInterval) clearInterval(cooldownInterval)
+  cooldownInterval = setInterval(() => {
+    resendCooldown.value--
+    if (resendCooldown.value <= 0 && cooldownInterval) {
+      clearInterval(cooldownInterval)
+      cooldownInterval = null
+    }
+  }, 1000)
+}
 
 function onDigitInput(index: number) {
   digits[index] = digits[index].replace(/\D/g, '').slice(0, 1)
@@ -135,24 +175,39 @@ function onPaste(event: ClipboardEvent) {
 const handleSubmit = async () => {
   error.value = ''
   if (code.value.length < 6) return
+  if (failedAttempts.value >= 5) return
+
   isLoading.value = true
   try {
-    const { data } = await verifyCodeApi(username.value, signedCode.value, code.value)
+    const { data } = await verifyCodeApi(username.value, code.value)
+    // Store reset token in memory via router state (not localStorage)
     router.push({
       name: 'ResetPassword',
-      query: {
-        username: data.username,
-        signed_code: data.signed_code,
-      },
+      state: { resetToken: data.token },
     })
   } catch (err) {
-    if (axios.isAxiosError(err) && err.response?.status === 400) {
-      error.value = err.response.data.detail
+    failedAttempts.value++
+    if (axios.isAxiosError(err) && err.response?.status === 429) {
+      error.value = t('auth.tooManyAttempts')
+    } else if (axios.isAxiosError(err) && err.response?.status === 400) {
+      error.value = err.response.data.detail || t('auth.serverError')
     } else {
       error.value = t('auth.serverError')
     }
   } finally {
     isLoading.value = false
+  }
+}
+
+const handleResend = async () => {
+  isResending.value = true
+  try {
+    await forgetPasswordApi(username.value)
+    startCooldown()
+  } catch {
+    error.value = t('auth.serverError')
+  } finally {
+    isResending.value = false
   }
 }
 </script>

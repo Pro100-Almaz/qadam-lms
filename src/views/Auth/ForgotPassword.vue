@@ -18,6 +18,12 @@
               <form @submit.prevent="handleSubmit">
                 <div class="space-y-5">
                   <div
+                    v-if="successMessage"
+                    class="rounded-lg border border-success-300 bg-success-50 px-4 py-3 text-sm text-success-600 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-400"
+                  >
+                    {{ successMessage }}
+                  </div>
+                  <div
                     v-if="error"
                     class="rounded-lg border border-error-300 bg-error-50 px-4 py-3 text-sm text-error-600 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"
                   >
@@ -25,15 +31,15 @@
                   </div>
                   <div>
                     <label
-                      for="username"
+                      for="identifier"
                       class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
                     >
                       {{ $t('auth.email') }}<span class="text-error-500">*</span>
                     </label>
                     <input
-                      v-model="username"
-                      type="email"
-                      id="username"
+                      v-model="identifier"
+                      type="text"
+                      id="identifier"
                       :placeholder="$t('auth.emailPlaceholder')"
                       class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                     />
@@ -85,29 +91,31 @@ import axios from 'axios'
 const router = useRouter()
 const { t } = useI18n()
 
-const username = ref('')
+const identifier = ref('')
 const error = ref('')
+const successMessage = ref('')
 const isLoading = ref(false)
 
 const handleSubmit = async () => {
   error.value = ''
-  if (!username.value) {
+  successMessage.value = ''
+  if (!identifier.value) {
     error.value = t('auth.fillAllFields')
     return
   }
   isLoading.value = true
   try {
-    const { data } = await forgetPasswordApi(username.value)
+    const { data } = await forgetPasswordApi(identifier.value)
+    successMessage.value = t('auth.codeSent')
     router.push({
       name: 'VerifyCode',
-      query: {
-        username: data.username,
-        signed_code: data.signed_code,
-      },
+      query: { username: data.username },
     })
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.status === 404) {
       error.value = err.response.data.detail
+    } else if (axios.isAxiosError(err) && err.response?.status === 429) {
+      error.value = t('common.rateLimited')
     } else {
       error.value = t('auth.serverError')
     }
