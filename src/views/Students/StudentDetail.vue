@@ -653,39 +653,7 @@
           </button>
         </div>
 
-        <!-- Inline report view -->
-        <div v-if="activeReport?.report_data" class="space-y-4">
-          <div class="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2 dark:bg-gray-800/50">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Q{{ activeReport.quarter }} · {{ activeReport.academic_year_label }}
-            </span>
-            <button @click="activeReport = null" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              {{ t('common.back') }}
-            </button>
-          </div>
-          <ReportView
-            :report-data="activeReport.report_data"
-            :student-name="activeReport.student_name || fullName"
-            :class-group="activeReport.class_group || student.current_class_group?.display_name || '—'"
-            :academic-year="activeReport.academic_year_label"
-            :quarter-label="`Q${activeReport.quarter}`"
-            :generated-by="activeReport.generated_by_name ?? undefined"
-            :generated-at="formatDateTime(activeReport.created_at)"
-          />
-          <div class="flex items-center gap-4 text-xs text-gray-400">
-            <span v-if="activeReport.generation_time_ms">
-              Generated in {{ (activeReport.generation_time_ms / 1000).toFixed(1) }}s
-            </span>
-            <span v-if="activeReport.tokens_used">
-              {{ activeReport.tokens_used.toLocaleString() }} tokens
-            </span>
-          </div>
-        </div>
-
-        <!-- Report history list -->
-        <div v-else>
-          <ReportHistoryList ref="reportHistoryRef" :student-id="studentPk" />
-        </div>
+        <ReportHistoryList ref="reportHistoryRef" :student-id="studentPk" />
       </div>
 
       <!-- TAB: Personal Info -->
@@ -1215,7 +1183,6 @@ import { getSchoolGroupApi, type SchoolGroup } from '@/api/auth'
 import { useAuth } from '@/composables/useAuth'
 import GenerateReportModal from '@/components/reports/GenerateReportModal.vue'
 import ReportHistoryList from '@/components/reports/ReportHistoryList.vue'
-import ReportView from '@/components/reports/ReportView.vue'
 import type { StudentReport } from '@/types/report'
 
 // ─── i18n / route ────────────────────────────────────────────────────────────
@@ -1232,18 +1199,12 @@ const canGenerateReport = computed(() =>
 )
 
 const showReportModal = ref(false)
-const activeReport = ref<StudentReport | null>(null)
 const reportHistoryRef = ref<InstanceType<typeof ReportHistoryList> | null>(null)
 const currentQuarter = ref(1)
 
-function onReportGenerated(report: StudentReport) {
+function onReportGenerated(_report: StudentReport) {
   showReportModal.value = false
-  activeReport.value = report
   reportHistoryRef.value?.refresh()
-}
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString()
 }
 
 // ─── State ───────────────────────────────────────────────────────────────────

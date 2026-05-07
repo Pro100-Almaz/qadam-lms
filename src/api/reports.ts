@@ -24,10 +24,12 @@ export async function getReportApi(reportId: number): Promise<StudentReport> {
 export async function getStudentReportsApi(
   studentId: number,
 ): Promise<StudentReportListItem[]> {
-  const { data } = await api.get<StudentReportListItem[]>(
+  const { data } = await api.get(
     `/students/${studentId}/reports/`,
   )
-  return Array.isArray(data) ? data : []
+  if (Array.isArray(data)) return data
+  if (data && Array.isArray(data.results)) return data.results
+  return []
 }
 
 export async function downloadReportPdfApi(reportId: number): Promise<Blob> {

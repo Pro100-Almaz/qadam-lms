@@ -17,7 +17,7 @@
         :class="report.status === 'completed'
           ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50'
           : 'opacity-60'"
-        @click="report.status === 'completed' && viewReport(report.id)"
+        @click="report.status === 'completed' ? viewReport(report.id) : undefined"
       >
         <div class="flex items-center gap-3">
           <span

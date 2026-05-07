@@ -493,31 +493,7 @@
       <div v-show="activeTab === 'reports'" class="space-y-5">
         <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('reports.aiReports') }}</h2>
 
-        <!-- Inline report view -->
-        <div v-if="activeReport?.report_data" class="space-y-4">
-          <div class="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2 dark:bg-gray-800/50">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Q{{ activeReport.quarter }} · {{ activeReport.academic_year_label }}
-            </span>
-            <button @click="activeReport = null" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              {{ t('common.back') }}
-            </button>
-          </div>
-          <ReportView
-            :report-data="activeReport.report_data"
-            :student-name="activeReport.student_name || fullName"
-            :class-group="activeReport.class_group || student.current_class_group?.display_name || '—'"
-            :academic-year="activeReport.academic_year_label"
-            :quarter-label="`Q${activeReport.quarter}`"
-            :generated-by="activeReport.generated_by_name ?? undefined"
-            :generated-at="formatDateTime(activeReport.created_at)"
-          />
-        </div>
-
-        <!-- Report history list -->
-        <div v-else>
-          <ReportHistoryList :student-id="studentPk" />
-        </div>
+        <ReportHistoryList :student-id="studentPk" />
       </div>
 
       <!-- TAB: Personal Info (read-only) -->
@@ -711,9 +687,6 @@ import {
 import type { StudentDetail, PsychologicalState } from '@/types/student'
 import type { Achievement, ReadingEntry, ClubEntry, AchievementCategory, Attachment } from '@/types/achievement'
 import ReportHistoryList from '@/components/reports/ReportHistoryList.vue'
-import ReportView from '@/components/reports/ReportView.vue'
-import { getReportApi } from '@/api/reports'
-import type { StudentReport } from '@/types/report'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -786,17 +759,6 @@ function downloadFile(url: string, name: string) {
   a.click()
 }
 
-const activeReport = ref<StudentReport | null>(null)
-
-async function viewReport(reportId: number) {
-  try {
-    activeReport.value = await getReportApi(reportId)
-  } catch { /* silent */ }
-}
-
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString()
-}
 
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
