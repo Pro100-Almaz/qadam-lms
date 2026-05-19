@@ -2,7 +2,7 @@
   <AdminLayout>
     <div class="space-y-6">
 
-      <Breadcrumb backTo="/subjects/active" :crumbs="[{ label: $t('subjects.title'), to: '/subjects' }, { label: subject?.name || '' }]" />
+      <Breadcrumb backTo="/subjects/active" :crumbs="[{ label: $t('subjects.title'), to: '/subjects/active' }, { label: subject?.name || '' }]" />
 
       <!-- Loading skeleton -->
       <template v-if="loadingDetail">
@@ -345,6 +345,7 @@
         </div>
       </template>
     </div>
+
 
     <!-- Add Lesson Modal -->
     <Teleport to="body">

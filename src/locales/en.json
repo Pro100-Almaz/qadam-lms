@@ -190,6 +190,7 @@
         "createTitle": "New Subject",
         "language": "Language",
         "classes": "Classes",
+        "classGroup": "Class Group",
         "studentsCount": "Students",
         "status": "Status",
         "active": "Active Subjects",
