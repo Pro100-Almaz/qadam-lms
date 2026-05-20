@@ -10,8 +10,8 @@
           {{ theme === 'dark' ? '☀' : '🌙' }}
         </button>
         <button class="btn-download" @click="downloadPdf" :disabled="downloadingPdf || !report?.report_data">
-        <span class="download-icon">↓</span>
-        {{ downloadingPdf ? t('common.loading') : t('reports.downloadPdf') }}
+          <span class="download-icon">↓</span>
+          {{ downloadingPdf ? t('common.loading') : t('reports.downloadPdf') }}
         </button>
       </div>
     </div>
@@ -50,11 +50,11 @@
           <div class="header-meta">
             <div class="meta-item">
               <span class="meta-label">{{ t('students.student') }}:</span>
-              <span class="meta-value">{{ report.student_name }}</span>
+              <span class="meta-value">{{ snapshot?.personal?.full_name || report.student_name }}</span>
             </div>
             <div class="meta-item">
               <span class="meta-label">{{ t('students.class') }}:</span>
-              <span class="meta-value">{{ report.class_group }}</span>
+              <span class="meta-value">{{ snapshot?.personal?.class_group || report.class_group }}</span>
             </div>
             <div class="meta-item">
               <span class="meta-label">{{ t('reports.quarter') }}:</span>
@@ -62,18 +62,22 @@
             </div>
             <div class="meta-item">
               <span class="meta-label">{{ t('academicYears.title') }}:</span>
-              <span class="meta-value">{{ report.academic_year_label }}</span>
+              <span class="meta-value">{{ snapshot?.personal?.academic_year || report.academic_year_label }}</span>
+            </div>
+            <div v-if="totalGrade != null" class="meta-item">
+              <span class="meta-label">{{ t('reports.totalGrade') }}:</span>
+              <span class="meta-value">{{ totalGrade.toFixed(1) }}%</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- BODY -->
-      <div v-if="data" class="report-body">
+      <div v-if="ai" class="report-body">
         <!-- Summary -->
         <div class="summary-card">
           <div class="summary-label">{{ t('reports.summary') }}</div>
-          <p class="summary-text">{{ data.summary }}</p>
+          <p class="summary-text">{{ ai.summary }}</p>
         </div>
 
         <!-- Overall Assessment -->
@@ -82,59 +86,76 @@
             <h2 class="section-title">{{ t('reports.overallAssessment') }}</h2>
             <div class="section-line" />
           </div>
-          <span :class="['badge', badgeClass(data.overall_assessment.score_label)]">
-            {{ data.overall_assessment.score_label }}
-          </span>
-          <p class="assessment-text">{{ data.overall_assessment.description }}</p>
+          <div class="assessment-row">
+            <span :class="['badge', badgeClass(ai.overall_assessment.score_label)]">
+              {{ ai.overall_assessment.score_label }}
+            </span>
+            <div v-if="quarterGrades" class="quarter-badges">
+              <span v-for="(label, qKey) in quarterGrades" :key="qKey" class="quarter-badge">
+                {{ qKey.toUpperCase() }}: {{ label || '—' }}
+              </span>
+            </div>
+          </div>
+          <p class="assessment-text">{{ ai.overall_assessment.description }}</p>
         </div>
 
         <!-- Academic Performance -->
-        <div class="section">
+        <div v-if="subjectRows.length" class="section">
           <div class="section-header">
             <h2 class="section-title">{{ t('reports.academicPerformance') }}</h2>
             <div class="section-line" />
           </div>
-          <p class="assessment-text" style="margin-bottom: 20px">
-            {{ data.academic_performance.overview }}
-          </p>
 
           <div class="subject-grid">
             <div
-              v-for="s in data.academic_performance.subject_analyses"
-              :key="s.subject"
+              v-for="s in subjectRows"
+              :key="s.name"
               class="subject-card"
             >
               <div class="subject-top">
-                <span class="subject-name">{{ s.subject }}</span>
+                <span class="subject-name">{{ s.name }}</span>
                 <span :class="['subject-trend', trendInfo(s.trend).class]">
-                  {{ trendInfo(s.trend).icon }} {{ t(`reports.${s.trend}`) }}
+                  {{ trendInfo(s.trend).icon }}
+                  {{ s.trendChange !== 0 ? `${s.trendChange > 0 ? '+' : ''}${s.trendChange.toFixed(1)}` : '' }}
+                  {{ t(`reports.${s.trend}`) }}
                 </span>
               </div>
+
+              <!-- Quarter grades row -->
+              <div class="quarter-row">
+                <span v-if="s.q1 != null" class="q-chip">Q1: {{ s.q1.toFixed(1) }}</span>
+                <span v-if="s.q2 != null" class="q-chip">Q2: {{ s.q2.toFixed(1) }}</span>
+                <span v-if="s.q3 != null" class="q-chip">Q3: {{ s.q3.toFixed(1) }}</span>
+                <span v-if="s.q4 != null" class="q-chip">Q4: {{ s.q4.toFixed(1) }}</span>
+              </div>
+
               <div class="subject-scores">
-                <span :class="['score-main', `score-${gradeColor(s.grade_percentage)}`]">
-                  {{ s.grade_percentage }}%
+                <span v-if="s.cumulative != null" :class="['score-main', `score-${gradeColor(s.cumulative)}`]">
+                  {{ s.cumulative.toFixed(1) }}%
                 </span>
-                <span class="score-avg">{{ t('reports.classAverage') }}: {{ s.class_average }}%</span>
+                <span v-if="s.classAvg != null" class="score-avg">{{ t('reports.classAverage') }}: {{ s.classAvg.toFixed(1) }}%</span>
               </div>
-              <div class="bar-wrap">
+
+              <div v-if="s.cumulative != null" class="bar-wrap">
                 <div class="bar-track bar-track-main">
                   <div
                     class="bar-fill"
                     :style="{
-                      width: barWidth(s.grade_percentage),
-                      background: `var(--grade-${gradeColor(s.grade_percentage)})`
+                      width: barWidth(s.cumulative),
+                      background: `var(--grade-${gradeColor(s.cumulative)})`
                     }"
                   />
                 </div>
-                <div class="bar-track bar-track-avg">
+                <div v-if="s.classAvg != null" class="bar-track bar-track-avg">
                   <div
                     class="bar-fill bar-fill-avg"
-                    :style="{ width: barWidth(s.class_average) }"
+                    :style="{ width: barWidth(s.classAvg) }"
                   />
                 </div>
               </div>
-              <p class="subject-analysis">{{ s.analysis }}</p>
-              <div class="tip-box">💡 {{ s.recommendation }}</div>
+
+              <p v-if="s.analysis" class="subject-analysis">{{ s.analysis }}</p>
+              <div v-if="s.recommendation" class="tip-box">💡 {{ s.recommendation }}</div>
             </div>
           </div>
         </div>
@@ -145,8 +166,8 @@
             <h2 class="section-title">{{ t('reports.strengths') }}</h2>
             <div class="section-line" />
           </div>
-          <div v-if="data.strengths.length" class="strength-list">
-            <div v-for="item in data.strengths" :key="item.area" class="strength-item">
+          <div v-if="ai.strengths.length" class="strength-list">
+            <div v-for="item in ai.strengths" :key="item.area" class="strength-item">
               <div class="strength-icon">✓</div>
               <div>
                 <div class="strength-title">{{ item.area }}</div>
@@ -163,8 +184,8 @@
             <h2 class="section-title">{{ t('reports.areasForImprovement') }}</h2>
             <div class="section-line" />
           </div>
-          <div v-if="data.areas_for_improvement.length" class="improve-list">
-            <div v-for="item in data.areas_for_improvement" :key="item.area" class="improve-card">
+          <div v-if="ai.areas_for_improvement.length" class="improve-list">
+            <div v-for="item in ai.areas_for_improvement" :key="item.area" class="improve-card">
               <div class="improve-header">
                 <span class="improve-icon">△</span>
                 <span class="improve-title">{{ item.area }}</span>
@@ -182,21 +203,21 @@
             <h2 class="section-title">{{ t('reports.psychologicalProfile') }}</h2>
             <div class="section-line" />
           </div>
-          <p class="psych-summary">{{ data.psychological_profile.summary }}</p>
+          <p class="psych-summary">{{ ai.psychological_profile.summary }}</p>
 
-          <template v-if="data.psychological_profile.observations?.length">
+          <template v-if="ai.psychological_profile.observations?.length">
             <div class="psych-group-label">{{ t('reports.observations') }}</div>
             <div class="psych-list">
-              <div v-for="obs in data.psychological_profile.observations" :key="obs" class="psych-item">
+              <div v-for="obs in ai.psychological_profile.observations" :key="obs" class="psych-item">
                 <span class="psych-bullet">•</span> {{ obs }}
               </div>
             </div>
           </template>
 
-          <template v-if="data.psychological_profile.recommendations?.length">
+          <template v-if="ai.psychological_profile.recommendations?.length">
             <div class="psych-group-label">{{ t('reports.recommendations') }}</div>
             <div class="psych-list">
-              <div v-for="rec in data.psychological_profile.recommendations" :key="rec" class="psych-item">
+              <div v-for="rec in ai.psychological_profile.recommendations" :key="rec" class="psych-item">
                 <span class="psych-rec-bullet">▸</span> {{ rec }}
               </div>
             </div>
@@ -209,9 +230,9 @@
             <h2 class="section-title">{{ t('reports.extracurricular') }}</h2>
             <div class="section-line" />
           </div>
-          <p class="extra-summary">{{ data.extracurricular.summary }}</p>
-          <div v-if="data.extracurricular.highlights?.length" class="extra-grid">
-            <div v-for="h in data.extracurricular.highlights" :key="h" class="extra-card">
+          <p class="extra-summary">{{ ai.extracurricular.summary }}</p>
+          <div v-if="ai.extracurricular.highlights?.length" class="extra-grid">
+            <div v-for="h in ai.extracurricular.highlights" :key="h" class="extra-card">
               {{ h }}
             </div>
           </div>
@@ -229,7 +250,7 @@
                 <span class="rec-col-icon">🎓</span>
                 <span class="rec-col-title">{{ t('reports.forTeachers') }}</span>
               </div>
-              <div v-for="r in data.recommendations.for_teachers" :key="r" class="rec-item">
+              <div v-for="r in ai.recommendations.for_teachers" :key="r" class="rec-item">
                 <span class="rec-bullet rec-bullet-teacher">▪</span> {{ r }}
               </div>
             </div>
@@ -238,7 +259,7 @@
                 <span class="rec-col-icon">👨‍👩‍👦</span>
                 <span class="rec-col-title">{{ t('reports.forParents') }}</span>
               </div>
-              <div v-for="r in data.recommendations.for_parents" :key="r" class="rec-item">
+              <div v-for="r in ai.recommendations.for_parents" :key="r" class="rec-item">
                 <span class="rec-bullet rec-bullet-parent">▪</span> {{ r }}
               </div>
             </div>
@@ -247,7 +268,7 @@
                 <span class="rec-col-icon">📝</span>
                 <span class="rec-col-title">{{ t('reports.forStudent') }}</span>
               </div>
-              <div v-for="r in data.recommendations.for_student" :key="r" class="rec-item">
+              <div v-for="r in ai.recommendations.for_student" :key="r" class="rec-item">
                 <span class="rec-bullet rec-bullet-student">▪</span> {{ r }}
               </div>
             </div>
@@ -257,7 +278,7 @@
         <!-- Conclusion -->
         <div class="conclusion-card">
           <div class="conclusion-label">{{ t('reports.conclusion') }}</div>
-          <p class="conclusion-text">{{ data.conclusion }}</p>
+          <p class="conclusion-text">{{ ai.conclusion }}</p>
         </div>
 
         <!-- Footer -->
@@ -281,7 +302,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { getReportApi, downloadReportPdfApi } from '@/api/reports'
-import type { StudentReport } from '@/types/report'
+import type { StudentReport, SubjectRow, TrendDirection } from '@/types/report'
 
 const route = useRoute()
 const router = useRouter()
@@ -291,16 +312,45 @@ const report = ref<StudentReport | null>(null)
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const downloadingPdf = ref(false)
+const theme = ref(document.documentElement.classList.contains('dark') ? 'dark' : 'light')
 
 const reportId = computed(() => Number(route.params.id))
-const data = computed(() => report.value?.report_data)
-const theme = ref(document.documentElement.classList.contains('dark') ? 'dark' : 'light')
+const ai = computed(() => report.value?.report_data)
+const snapshot = computed(() => report.value?.input_snapshot)
+
+const totalGrade = computed(() => snapshot.value?.grades?.student_total_grade ?? null)
+const quarterGrades = computed(() => snapshot.value?.grades?.total_quarter_grades ?? null)
+
+const subjectRows = computed<SubjectRow[]>(() => {
+  const snap = snapshot.value
+  const aiData = ai.value
+  if (!snap?.grades?.subjects) return []
+
+  const subjects = snap.grades.subjects
+  const trends = snap.trends || {}
+  const classContext = snap.class_context || {}
+  const aiSubjects = aiData?.subject_analyses || {}
+
+  return Object.entries(subjects).map(([name, quarters]) => ({
+    name,
+    q1: quarters.q1,
+    q2: quarters.q2,
+    q3: quarters.q3,
+    q4: quarters.q4,
+    cumulative: quarters.cumulative,
+    classAvg: classContext[name] ?? null,
+    trend: (trends[name]?.direction ?? 'insufficient_data') as TrendDirection,
+    trendChange: trends[name]?.change ?? 0,
+    analysis: aiSubjects[name]?.analysis ?? '',
+    recommendation: aiSubjects[name]?.recommendation ?? '',
+  }))
+})
+
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
 }
-
-let pollTimer: ReturnType<typeof setInterval> | null = null
 
 function gradeColor(pct: number): string {
   if (pct >= 80) return 'high'
@@ -533,7 +583,7 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
   margin: 0 0 20px; letter-spacing: -0.3px;
 }
 .header-meta {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px; background: rgba(255,255,255,0.08); border-radius: var(--radius-sm);
   padding: 16px 20px;
 }
@@ -564,15 +614,22 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 }
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
-/* ─── Badges ─────────────────────────────────────────────────────────────── */
+/* ─── Badges & Assessment ────────────────────────────────────────────────── */
+.assessment-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
 .badge {
   display: inline-block; padding: 6px 16px; border-radius: 20px;
-  font-family: var(--font-display); font-weight: 600; font-size: 14px; margin-bottom: 12px;
+  font-family: var(--font-display); font-weight: 600; font-size: 14px;
 }
 .badge-excellent { background: #dcfce7; color: #166534; }
 .badge-good { background: #dbeafe; color: #1e40af; }
 .badge-average { background: #fef3c7; color: #92400e; }
 .badge-low { background: #fee2e2; color: #991b1b; }
+
+.quarter-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.quarter-badge {
+  padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;
+  background: var(--bg-card-alt); border: 1px solid var(--border); color: var(--text-secondary);
+}
 
 .assessment-text { font-size: 14px; line-height: 1.7; color: var(--text-secondary); }
 
@@ -585,10 +642,17 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 .subject-card:hover { box-shadow: var(--shadow-md); }
 .subject-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
 .subject-name { font-family: var(--font-display); font-weight: 600; font-size: 16px; }
-.subject-trend { font-size: 13px; font-weight: 500; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
+.subject-trend { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
 .trend-up { background: #dcfce7; color: #166534; }
 .trend-down { background: #fee2e2; color: #991b1b; }
 .trend-stable { background: #f1f5f9; color: #475569; }
+
+.quarter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.q-chip {
+  padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 500;
+  background: var(--border-light); color: var(--text-secondary); border: 1px solid var(--border);
+  font-family: var(--font-display);
+}
 
 .subject-scores { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 .score-main { font-family: var(--font-display); font-weight: 700; font-size: 28px; }
