@@ -22,7 +22,7 @@ export interface RegisterUserRequest {
   date_of_birth?: string
   address?: string
   avatar?: File
-  gender?: 'M' | 'F'
+  gender?: 'male' | 'female'
   academic_degree?: string
   employment_type?: string
   occupation?: string

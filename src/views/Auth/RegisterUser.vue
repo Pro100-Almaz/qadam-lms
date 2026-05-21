@@ -593,7 +593,7 @@ const initialForm = () => ({
   phone_number: '',
   date_of_birth: '',
   address: '',
-  gender: '' as 'M' | 'F' | '',
+  gender: '' as 'male' | 'female' | '',
   academic_degree: '',
   employment_type: '',
   occupation: '',
@@ -615,8 +615,8 @@ const roles = computed(() => [
 ])
 
 const genderOptions = computed(() => [
-  { value: 'M' as const, label: t('auth.male'), icon: User },
-  { value: 'F' as const, label: t('auth.female'), icon: UserCircle },
+  { value: 'male' as const, label: t('auth.male'), icon: User },
+  { value: 'female' as const, label: t('auth.female'), icon: UserCircle },
 ])
 
 // ── Computed visibility ───────────────────────────────────────────────────────
@@ -737,7 +737,7 @@ async function handleSubmit() {
       ...(form.value.date_of_birth && { date_of_birth: form.value.date_of_birth }),
       ...(form.value.address && { address: form.value.address }),
       ...(avatarFile.value && { avatar: avatarFile.value }),
-      ...(showTeacherFields.value && form.value.gender && { gender: form.value.gender as 'M' | 'F' }),
+      ...(showTeacherFields.value && form.value.gender && { gender: form.value.gender as 'male' | 'female' }),
       ...(showTeacherFields.value && form.value.academic_degree && { academic_degree: form.value.academic_degree }),
       ...(showTeacherFields.value && form.value.employment_type && { employment_type: form.value.employment_type }),
       ...(showTeacherFields.value && form.value.occupation && { occupation: form.value.occupation }),
