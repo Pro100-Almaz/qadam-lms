@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
 import type { UserRole } from '@/types/auth'
+import { useAuthStore } from '@/stores/auth'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -254,20 +254,26 @@ function getDefaultRoute(role?: UserRole): string {
   return '/subjects/active'
 }
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   document.title = `${to.meta.title ?? 'Qadam'} | Qadam LMS`
 
-  const { isAuthenticated, user } = useAuth()
-  const role = user.value?.role
+  const authStore = useAuthStore()
+
+  if (authStore.isSessionLoading){
+    await authStore.initSession()
+  }
+
+  const isAuthenticated = authStore.isAuthenticated
+  const role = authStore.user?.role
 
   if (to.meta.guest) {
-    if (isAuthenticated.value && (to.name === 'Signin' || to.name === 'Signup')) {
+    if (isAuthenticated && (to.name === 'Signin' || to.name === 'Signup')) {
       return next(getDefaultRoute(role))
     }
     return next()
   }
 
-  if (!isAuthenticated.value) {
+  if (!isAuthenticated) {
     return next('/signin')
   }
 

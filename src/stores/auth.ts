@@ -45,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
     isSessionLoading.value = true
     try {
       const { data } = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/token/refresh/`,
+        `${import.meta.env.VITE_API_BASE_URL || '/api/v1/'}auth/token/refresh/`,
         { refresh: refreshToken },
       )
       setAccessToken(data.access)
