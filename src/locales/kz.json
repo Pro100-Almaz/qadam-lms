@@ -190,6 +190,7 @@
         "createTitle": "Жаңа пән",
         "language": "Тілі",
         "classes": "Сыныптар",
+        "classGroup": "Сынып тобы",
         "studentsCount": "Оқушылар",
         "status": "Күйі",
         "active": "Белсенді пәндер",

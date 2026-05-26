@@ -190,6 +190,7 @@
         "createTitle": "Новый предмет",
         "language": "Язык",
         "classes": "Классы",
+        "classGroup": "Группы классов",
         "studentsCount": "Учеников",
         "status": "Статус",
         "active": "Активные предметы",

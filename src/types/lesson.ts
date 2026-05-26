@@ -15,6 +15,7 @@ export interface CalendarLesson {
 
 export interface LessonOffering {
   id: number
+  subject_id?: number
   subject_name: string
   class_group_name: string
   academic_year_label: string

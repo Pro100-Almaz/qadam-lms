@@ -13,13 +13,19 @@
       >
         <AlertTriangle class="h-12 w-12 text-red-400" />
         <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ error }}</p>
-        <Breadcrumb backTo="/lessons" :crumbs="[{ label: t('lessons.title'), to: '/lessons' }]" />
+        <Breadcrumb :backTo="backTo" :crumbs="[{ label: t('lessons.title'), to: '/lessons' }]" />
       </div>
 
       <!-- Content -->
       <template v-else-if="lesson">
         <!-- Back button -->
-        <Breadcrumb backTo="/lessons" :crumbs="[{ label: t('lessons.title'), to: '/lessons' }, { label: lesson.offering.subject_name || t('lessons.lessonDetail') }]" />
+        <Breadcrumb
+          :backTo="backTo"
+          :crumbs="[
+            { label: t('lessons.title'), to: '/lessons' },
+            { label: lesson.offering.subject_name || t('lessons.lessonDetail') },
+          ]"
+        />
 
         <!-- Header -->
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -714,6 +720,7 @@ import {
   distributeSubtopicWeightsApi,
   deleteLessonApi,
 } from '@/api/lessons'
+import { getSubjectsApi } from '@/api/subjects'
 import type { LessonDetail, Topic, Subtopic, LessonStudent, TopicGrade } from '@/types/lesson'
 
 const route = useRoute()
@@ -754,6 +761,7 @@ const confirmMessage = ref('')
 const confirmAction = ref<(() => Promise<void>) | null>(null)
 
 const lessonId = computed(() => Number(route.params.id))
+const backTo = ref('/subjects/active')
 
 // Computed
 const filteredSubtopics = computed(() => {
@@ -820,6 +828,28 @@ function statusBadgeClass(status: string): string {
   return 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400'
 }
 
+function normalizeSubjectName(name: string): string {
+  return name.trim().toLowerCase()
+}
+
+async function resolveBackToSubject(currentLesson: LessonDetail) {
+  if (currentLesson.offering.subject_id) {
+    backTo.value = `/subjects/${currentLesson.offering.subject_id}`
+    return
+  }
+
+  try {
+    const { data: subjects } = await getSubjectsApi()
+    const subject = subjects.find(
+      (s) => normalizeSubjectName(s.name) === normalizeSubjectName(currentLesson.offering.subject_name),
+    )
+    backTo.value = subject ? `/subjects/${subject.id}` : '/subjects/active'
+  } catch (e) {
+    backTo.value = '/subjects/active'
+    console.error('Failed to resolve lesson subject:', e)
+  }
+}
+
 // Data fetching
 async function fetchLesson() {
   loading.value = true
@@ -827,6 +857,7 @@ async function fetchLesson() {
   try {
     const { data } = await getLessonDetailApi(lessonId.value)
     lesson.value = data
+    await resolveBackToSubject(data)
   } catch (e) {
     error.value = 'Failed to load lesson details.'
     console.error(e)
@@ -839,6 +870,7 @@ async function refreshLesson() {
   try {
     const { data } = await getLessonDetailApi(lessonId.value)
     lesson.value = data
+    await resolveBackToSubject(data)
   } catch (e) {
     console.error('Failed to refresh lesson:', e)
   }
@@ -1007,4 +1039,5 @@ async function executeConfirmAction() {
 onMounted(() => {
   fetchLesson()
 })
+
 </script>
