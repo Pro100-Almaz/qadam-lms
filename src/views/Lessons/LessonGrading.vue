@@ -251,6 +251,7 @@
                         </td>
                         <td class="px-3 py-2.5">
                           <textarea
+                            v-if="!topic.subtopics.length"
                             v-model="topicStates[topic.id].comment"
                             rows="1"
                             class="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-700 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 resize-none"
