@@ -181,6 +181,12 @@ const router = createRouter({
       meta: { title: 'Child Detail', roles: ['parent'] },
     },
     {
+      path: '/my-children/:childId/subjects/:subjectId',
+      name: 'MyChildSubjectDetail',
+      component: () => import('../views/Personal/MyChildSubjectDetail.vue'),
+      meta: { title: 'Child Subject Detail', roles: ['parent'] },
+    },
+    {
       path: '/parent-teachers',
       name: 'ParentTeachers',
       component: () => import('../views/Personal/ParentTeachers.vue'),

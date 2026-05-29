@@ -176,7 +176,14 @@
                   class="border-b border-gray-100 last:border-0 dark:border-gray-800"
                 >
                   <td class="px-5 py-3.5">
-                    <span class="text-sm font-medium text-gray-800 dark:text-white/90">{{ subject }}</span>
+                    <router-link
+                      v-if="subjectIdByName[String(subject)]"
+                      :to="`/my-children/${studentPk}/subjects/${subjectIdByName[String(subject)]}`"
+                      class="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                    >
+                      {{ subject }}
+                    </router-link>
+                    <span v-else class="text-sm font-medium text-gray-800 dark:text-white/90">{{ subject }}</span>
                   </td>
                   <td class="px-5 py-3.5">
                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ score.toFixed(1) }}%</span>
@@ -778,6 +785,17 @@ const initials = computed(() => {
 })
 
 const studentPk = computed(() => student.value?.id ?? 0)
+
+const subjectIdByName = computed<Record<string, number>>(() => {
+  if (!student.value) return {}
+  const map: Record<string, number> = {}
+  for (const o of student.value.offerings) {
+    if (o.subject?.name && o.subject?.id) {
+      map[o.subject.name] = o.subject.id
+    }
+  }
+  return map
+})
 
 // Grade helpers
 function scoreToGrade(score: number): number {

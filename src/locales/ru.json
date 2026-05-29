@@ -556,5 +556,23 @@
         "finalizingReport": "Завершение отчёта...",
         "pdfFailed": "Не удалось скачать PDF",
         "aiReports": "ИИ Отчёты"
+    },
+    "parentChildSubject": {
+        "cumulative": "Итоговая",
+        "scorePercent": "Балл",
+        "graded": "Оценено",
+        "lessonList": "Уроки",
+        "teacher": "Учитель",
+        "noLessonsThisQuarter": "В этой четверти уроков ещё нет.",
+        "lessonDetails": "Урок",
+        "teacherComment": "Комментарий учителя",
+        "noComment": "Учитель не оставил комментарий к этому уроку.",
+        "notGradedYet": "Урок ещё не оценён.",
+        "hasComment": "Есть комментарий учителя",
+        "viewLesson": "Открыть урок",
+        "invalidParams": "Неверный идентификатор предмета или ребёнка.",
+        "notLinked": "Этот ребёнок не связан с вашим аккаунтом.",
+        "notEnrolled": "Этот ребёнок не изучает этот предмет.",
+        "loadFailed": "Не удалось загрузить данные предмета."
     }
 }

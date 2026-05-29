@@ -556,5 +556,23 @@
         "finalizingReport": "Finalizing report...",
         "pdfFailed": "Failed to download PDF",
         "aiReports": "AI Reports"
+    },
+    "parentChildSubject": {
+        "cumulative": "Cumulative",
+        "scorePercent": "Score",
+        "graded": "Graded",
+        "lessonList": "Lessons",
+        "teacher": "Teacher",
+        "noLessonsThisQuarter": "No lessons recorded for this quarter.",
+        "lessonDetails": "Lesson",
+        "teacherComment": "Teacher's comment",
+        "noComment": "No comment from the teacher for this lesson.",
+        "notGradedYet": "Not graded yet.",
+        "hasComment": "Teacher comment available",
+        "viewLesson": "View lesson",
+        "invalidParams": "Invalid subject or child ID.",
+        "notLinked": "This child is not linked to your account.",
+        "notEnrolled": "This child is not enrolled in this subject.",
+        "loadFailed": "Failed to load subject details."
     }
 }

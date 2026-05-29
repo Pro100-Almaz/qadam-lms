@@ -556,5 +556,23 @@
         "finalizingReport": "Есепті аяқтау...",
         "pdfFailed": "PDF жүктеу мүмкін болмады",
         "aiReports": "AI Есептер"
+    },
+    "parentChildSubject": {
+        "cumulative": "Жиынтық",
+        "scorePercent": "Балл",
+        "graded": "Бағаланды",
+        "lessonList": "Сабақтар",
+        "teacher": "Мұғалім",
+        "noLessonsThisQuarter": "Бұл тоқсанда сабақ әлі жоқ.",
+        "lessonDetails": "Сабақ",
+        "teacherComment": "Мұғалімнің пікірі",
+        "noComment": "Мұғалім бұл сабаққа пікір қалдырмаған.",
+        "notGradedYet": "Сабақ әлі бағаланбаған.",
+        "hasComment": "Мұғалім пікірі бар",
+        "viewLesson": "Сабақты ашу",
+        "invalidParams": "Пән немесе бала идентификаторы жарамсыз.",
+        "notLinked": "Бұл бала сіздің аккаунтыңызбен байланыспаған.",
+        "notEnrolled": "Бұл бала бұл пәнді оқымайды.",
+        "loadFailed": "Пән мәліметтерін жүктеу мүмкін болмады."
     }
 }
