@@ -503,11 +503,6 @@ async function fetchGrading() {
     grading.value = data
     const {data: lessonData} = await getLessonDetailApi(lessonId.value)
     lesson.value = lessonData
-    console.log('lessonData', lessonData)
-    console.log('offering', lessonData.offering)
-    console.log('subject_id', lessonData.offering?.subject_id)
-    // const {data: subjectData} = await getSubjectDetailApi(lessonData.offering.subject_id)
-    // subject.value = subjectData
   } catch {
     error.value = t('common.noData')
   } finally {
