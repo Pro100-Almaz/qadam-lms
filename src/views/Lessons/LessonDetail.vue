@@ -23,7 +23,8 @@
           :backTo="backTo"
           :crumbs="[
             { label: t('lessons.title'), to: '/lessons' },
-            { label: lesson.offering.subject_name || t('lessons.lessonDetail') },
+            { label: lesson.offering.subject_name, to: `${backTo}` },
+            { label: lesson.title }
           ]"
         />
 

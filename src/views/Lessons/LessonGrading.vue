@@ -2,7 +2,13 @@
   <AdminLayout>
     <div class="space-y-6">
 
-      <Breadcrumb backTo="/lessons" :crumbs="[{ label: t('lessons.title'), to: '/lessons' }, { label: t('grading.title') }]" />
+      <Breadcrumb :backTo='backTo'
+      :crumbs="[
+        {label: t('lessons.title'), to: '/lessons' },
+        {label: lesson?.offering.subject_name || t('subjects.title'), to: lesson?.offering.subject_id ? `/subjects/${lesson.offering.subject_id}` : undefined},
+        {label: lesson?.title || t('lessonDetail.title')},
+        { label: t('grading.title') }]"
+        />
 
       <!-- Loading -->
       <div v-if="loading" class="flex items-center justify-center py-20">
@@ -443,9 +449,14 @@ import {
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
+
 import { getGradingApi, submitGradingApi, updateGradingApi, deleteStudentGradingApi } from '@/api/grading'
+import {getLessonDetailApi} from '@/api/lessons'
+import {getSubjectDetailApi} from '@/api/subjects'
+
 import type { GradingData } from '@/types/grading'
-import type { LessonStudent, Topic, Subtopic } from '@/types/lesson'
+import type { SubjectDetail} from '@/types/subject'
+import type { LessonStudent, Topic, Subtopic, LessonDetail } from '@/types/lesson'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -476,7 +487,13 @@ const commentModalText = ref('')
 const showDeleteConfirm = ref(false)
 const deleteStudentRef = ref<LessonStudent | null>(null)
 
+
+const backTo = computed(() => `/lessons/${lessonId.value}`)
+const lesson = ref<LessonDetail | null>(null)
+// const subject = ref<SubjectDetail | null>(null)
 // ─── Fetch ──────────────────────────────────────────────────────────────────────
+
+
 
 async function fetchGrading() {
   loading.value = true
@@ -484,6 +501,13 @@ async function fetchGrading() {
   try {
     const { data } = await getGradingApi(lessonId.value)
     grading.value = data
+    const {data: lessonData} = await getLessonDetailApi(lessonId.value)
+    lesson.value = lessonData
+    console.log('lessonData', lessonData)
+    console.log('offering', lessonData.offering)
+    console.log('subject_id', lessonData.offering?.subject_id)
+    // const {data: subjectData} = await getSubjectDetailApi(lessonData.offering.subject_id)
+    // subject.value = subjectData
   } catch {
     error.value = t('common.noData')
   } finally {
