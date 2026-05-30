@@ -106,7 +106,7 @@
                 </td>
                 <td class="px-5 py-4">
                   <span class="text-sm text-gray-700 dark:text-gray-300">
-                    {{ $t('subjects.languages.' + subject.language_group) }}
+                    {{ $t('subjects.languages.' + subject.language_group.toLowerCase()) }}
                   </span>
                 </td>
                 <td class="px-5 py-4">
@@ -118,7 +118,12 @@
                 </td>
                 <td class="px-5 py-4">
                   <span class="text-sm text-gray-700 dark:text-gray-300">
-                    {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
+                    <div v-if="subject.added_by.first_name && subject.added_by.last_name" class="flex items-center gap-2">
+                      {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
+                    </div>
+                    <div v-else class="flex items-center gap-2">
+                      {{ subject.added_by.username }}
+                    </div>
                   </span>
                 </td>
                 <td class="px-5 py-4 text-right">
@@ -407,6 +412,7 @@ function editSubject(subject: Subject) {
   openActionId.value = null
 }
 
+
 async function archiveSubject(subject: Subject) {
   openActionId.value = null
   if (confirm(t('subjects.confirmArchive'))) {
@@ -476,6 +482,8 @@ async function handleCreateSubject() {
     savingSubject.value = false
   }
 }
+
+
 
 watch(showAddModal, (val) => {
   if (val && !academicYears.value.length) fetchFormData()
