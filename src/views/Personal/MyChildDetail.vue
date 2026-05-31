@@ -68,20 +68,13 @@
                     <BookOpen class="h-3 w-3" />
                     {{ student.user.role_display }}
                   </span>
-                  <span
-                    v-if="schoolGroup"
-                    class="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-0.5 text-xs font-medium text-white"
-                  >
-                    <img v-if="schoolGroup.avatar" :src="schoolGroup.avatar" :alt="schoolGroup.name" class="h-4 w-4 rounded-sm object-cover" />
-                    {{ schoolGroup.name }}
-                  </span>
                 </div>
               </div>
             </div>
 
-            <div class="flex shrink-0 flex-col items-center justify-center rounded-2xl bg-white/15 px-8 py-5 backdrop-blur-sm">
-              <span class="text-4xl font-extrabold text-white">{{ student.student_total_grade }}</span>
-              <span class="mt-1 text-xs font-medium uppercase tracking-widest text-white/70">{{ t('students.grades') }}</span>
+            <div v-if="schoolGroup" class="flex shrink-0 flex-col items-center justify-center rounded-2xl bg-white/15 px-5 pt-3 pb-3 backdrop-blur-sm">
+              <img v-if="schoolGroup.avatar" :src="schoolGroup.avatar" :alt="schoolGroup.name" class="h-16 w-16 rounded-xl object-cover mb-1" />
+              <span class="font-extrabold uppercase tracking-widest text-white">{{ schoolGroup.name }}</span>
             </div>
           </div>
 
