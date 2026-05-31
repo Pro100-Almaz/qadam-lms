@@ -32,21 +32,13 @@
 
         <div class="max-h-[70vh] overflow-y-auto px-6 py-5">
           <!-- Grade summary -->
-          <div v-if="lesson.earned_points !== null" class="grid grid-cols-3 gap-3">
+          <div v-if="lesson.earned_points !== null" class="grid grid-cols-2 gap-3">
             <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-800/40">
               <p class="text-[10px] font-medium uppercase tracking-widest text-gray-500 dark:text-gray-400">
                 {{ t('lessons.points') }}
               </p>
               <p class="mt-1 text-lg font-semibold text-gray-800 dark:text-white/90">
-                {{ lesson.earned_points }}<span class="text-sm text-gray-400 dark:text-gray-500">/{{ lesson.max_points }}</span>
-              </p>
-            </div>
-            <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-800/40">
-              <p class="text-[10px] font-medium uppercase tracking-widest text-gray-500 dark:text-gray-400">
-                {{ t('parentChildSubject.scorePercent') }}
-              </p>
-              <p class="mt-1 text-lg font-semibold" :class="percentColor(percent)">
-                {{ Math.round(percent) }}%
+                {{ lesson.earned_points }}<span class="text-sm text-gray-400 dark:text-gray-500">%</span>
               </p>
             </div>
             <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-800 dark:bg-gray-800/40">
@@ -82,10 +74,13 @@
               {{ t('parentChildSubject.teacherComment') }}
             </h4>
             <blockquote
-              v-if="lesson.comment"
-              class="rounded-lg border-l-4 border-brand-400 bg-brand-50 px-4 py-3 dark:border-brand-500 dark:bg-brand-500/10"
+              v-if="lesson.comments"
+              class="rounded-lg border-l-4 border-brand-400 bg-brand-50 px-4 py-3 dark:border-brand-500 dark:bg-brand-500/10 whitespace-pre-line overflow-y-scroll"
             >
-              <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-200">"{{ lesson.comment }}"</p>
+              <p v-for="(item, index) in lesson.comments" :key="index"
+                class="text-sm leading-relaxed text-gray-700 dark:text-gray-200">
+                <strong>{{ item.topic_title }}:</strong> {{ item.comment }}
+              </p>
             </blockquote>
             <p v-else class="text-sm italic text-gray-400 dark:text-gray-500">
               {{ t('parentChildSubject.noComment') }}
@@ -117,8 +112,8 @@ const { t } = useI18n()
 const { gradeCircleClass, scoreToGrade, percentColor } = useGradeHelpers()
 
 const percent = computed(() => {
-  if (props.lesson.earned_points === null || props.lesson.max_points === 0) return 0
-  return (props.lesson.earned_points / props.lesson.max_points) * 100
+  if (props.lesson.earned_points === null) return 0
+  return props.lesson.earned_points
 })
 
 function formatDate(dateStr: string): string {

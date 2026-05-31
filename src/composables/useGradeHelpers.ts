@@ -3,7 +3,8 @@ import { useI18n } from 'vue-i18n'
 export function useGradeHelpers() {
   const { t } = useI18n()
 
-  function scoreToGrade(score: number): number {
+  function scoreToGrade(score: number | null): number {
+    if (score === null) return 0
     if (score > 80) return 5
     if (score > 60) return 4
     if (score > 40) return 3
