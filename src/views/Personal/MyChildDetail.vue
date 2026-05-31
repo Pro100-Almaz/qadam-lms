@@ -955,7 +955,6 @@ async function fetchChild() {
   try {
     const { data } = await getMyChildDetailApi(pk)
     student.value = data
-
     // Fetch tab data and school group in parallel
     const fetches: Promise<unknown>[] = [fetchAchievements(), fetchClubEntries(), fetchReadingEntries()]
     if (student.value.school_group != null) {
