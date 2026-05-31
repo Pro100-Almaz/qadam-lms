@@ -424,27 +424,16 @@
               <div class="flex flex-wrap gap-2">
                 <template v-for="att in club.attachments" :key="att.id">
                   <div v-if="isImageFile(att)" class="group/att relative">
-                    <img
-                      :src="att.file"
-                      :alt="att.original_name"
-                      class="h-16 w-16 cursor-pointer rounded-lg border border-gray-200 object-cover hover:opacity-80 dark:border-gray-700 transition-opacity"
-                      @click="openLightbox(att.file, att.original_name)"
-                    />
-                    <div class="absolute -right-1 -top-1 flex gap-0.5 opacity-0 group-hover/att:opacity-100 transition-opacity">
-                      <button @click="downloadAttachment(att)" class="rounded-full bg-white p-0.5 shadow-sm hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700">
-                        <Download class="h-3 w-3 text-gray-500" />
-                      </button>
-                      <button v-if="isAdmin" @click="removeAttachment(att.id, 'clubentry')" class="rounded-full bg-white p-0.5 shadow-sm hover:bg-red-50 dark:bg-gray-800 dark:hover:bg-red-500/10">
-                        <Trash2 class="h-3 w-3 text-red-500" />
-                      </button>
-                    </div>
+                    <button type="button" @click="previewAttachment = att" class="block h-16 w-16 overflow-hidden rounded-lg border border-gray-200 hover:opacity-80 dark:border-gray-700 transition-opacity">
+                      <img :src="att.file" :alt="att.original_name" class="h-full w-full object-cover" />
+                    </button>
+                    <button v-if="isAdmin" @click="removeAttachment(att.id, 'clubentry')" class="absolute -right-1 -top-1 rounded-full bg-white p-0.5 shadow-sm opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:bg-gray-800 dark:hover:bg-red-500/10 transition-opacity">
+                      <Trash2 class="h-3 w-3 text-red-500" />
+                    </button>
                   </div>
                   <div v-else class="group/att flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 dark:border-gray-700 dark:bg-gray-800/50">
                     <FileText class="h-3.5 w-3.5 text-gray-400" />
-                    <span class="max-w-[100px] truncate text-xs text-gray-600 dark:text-gray-400">{{ att.original_name }}</span>
-                    <button @click="downloadAttachment(att)" class="rounded p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700">
-                      <Download class="h-3 w-3 text-gray-500" />
-                    </button>
+                    <button @click="previewAttachment = att" class="max-w-[100px] truncate text-xs text-brand-500 hover:underline">{{ att.original_name }}</button>
                     <button v-if="isAdmin" @click="removeAttachment(att.id, 'clubentry')" class="rounded p-0.5 hover:bg-red-50 dark:hover:bg-red-500/10">
                       <Trash2 class="h-3 w-3 text-red-500" />
                     </button>
@@ -527,19 +516,16 @@
                     <div v-if="ach.attachments?.length" class="flex flex-wrap gap-1.5">
                       <template v-for="att in ach.attachments" :key="att.id">
                         <div v-if="isImageFile(att)" class="group/att relative">
-                          <img
-                            :src="att.file"
-                            :alt="att.original_name"
-                            class="h-10 w-10 cursor-pointer rounded border border-gray-200 object-cover hover:opacity-80 dark:border-gray-700 transition-opacity"
-                            @click="openLightbox(att.file, att.original_name)"
-                          />
-                          <button v-if="isAdmin" @click="removeAttachment(att.id, 'achievement')" class="absolute -right-1 -top-1 rounded-full bg-white p-0.5 shadow-sm opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:bg-gray-800 transition-opacity">
+                          <button type="button" @click="previewAttachment = att" class="block h-10 w-10 overflow-hidden rounded border border-gray-200 hover:opacity-80 dark:border-gray-700 transition-opacity">
+                            <img :src="att.file" :alt="att.original_name" class="h-full w-full object-cover" />
+                          </button>
+                          <button v-if="isAdmin" @click="removeAttachment(att.id, 'achievement')" class="absolute -right-1 -top-1 rounded-full bg-white p-0.5 shadow-sm opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:bg-gray-800 dark:hover:bg-red-500/10 transition-opacity">
                             <Trash2 class="h-2.5 w-2.5 text-red-500" />
                           </button>
                         </div>
                         <div v-else class="group/att flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 dark:border-gray-700 dark:bg-gray-800/50">
                           <FileText class="h-3 w-3 text-gray-400" />
-                          <button @click="downloadAttachment(att)" class="max-w-[60px] truncate text-xs text-brand-500 hover:underline">{{ att.original_name }}</button>
+                          <button @click="previewAttachment = att" class="max-w-[60px] truncate text-xs text-brand-500 hover:underline">{{ att.original_name }}</button>
                           <button v-if="isAdmin" @click="removeAttachment(att.id, 'achievement')" class="rounded p-0.5 opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:hover:bg-red-500/10 transition-opacity">
                             <Trash2 class="h-2.5 w-2.5 text-red-500" />
                           </button>
@@ -1080,35 +1066,7 @@
       @generated="onReportGenerated"
     />
 
-    <!-- Image Lightbox -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div
-          v-if="showLightbox"
-          class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4"
-          @click.self="showLightbox = false"
-        >
-          <div class="relative max-h-[90vh] max-w-[90vw]">
-            <img :src="lightboxUrl" :alt="lightboxName" class="max-h-[85vh] max-w-full rounded-lg object-contain" />
-            <div class="absolute -top-3 right-0 flex gap-2">
-              <button
-                @click="downloadAttachment({ file: lightboxUrl, original_name: lightboxName } as any)"
-                class="rounded-full bg-white p-2 shadow-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Download class="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button>
-              <button
-                @click="showLightbox = false"
-                class="rounded-full bg-white p-2 shadow-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
-              >
-                <X class="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button>
-            </div>
-            <p class="mt-2 text-center text-sm text-white/70">{{ lightboxName }}</p>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <DocumentPreviewModal :attachment="previewAttachment" @close="previewAttachment = null" />
   </AdminLayout>
 </template>
 
@@ -1155,6 +1113,7 @@ import {
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
+import DocumentPreviewModal from '@/components/ui/DocumentPreviewModal.vue'
 import {
   getStudentDetailApi,
   createPsychologicalStateApi,
@@ -1286,15 +1245,7 @@ const clubFiles = ref<File[]>([])
 const achievementFileInput = ref<HTMLInputElement | null>(null)
 const clubFileInput = ref<HTMLInputElement | null>(null)
 
-const lightboxUrl = ref('')
-const lightboxName = ref('')
-const showLightbox = ref(false)
-
-function openLightbox(url: string, name: string) {
-  lightboxUrl.value = url
-  lightboxName.value = name
-  showLightbox.value = true
-}
+const previewAttachment = ref<Attachment | null>(null)
 
 function isImageFile(attachment: Attachment): boolean {
   return attachment.file_type.startsWith('image/')

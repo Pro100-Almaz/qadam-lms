@@ -557,6 +557,16 @@
         "pdfFailed": "Failed to download PDF",
         "aiReports": "AI Reports"
     },
+    "documentPreview": {
+        "loading": "Loading preview…",
+        "errorTitle": "Failed to load preview.",
+        "errorBody": "The file may be unavailable or blocked by your browser.",
+        "unsupportedTitle": "Preview not available for this file type.",
+        "download": "Download",
+        "openInNewTab": "Open in new tab",
+        "close": "Close preview",
+        "ariaDialog": "File preview"
+    },
     "parentChildSubject": {
         "cumulative": "Cumulative",
         "scorePercent": "Score",

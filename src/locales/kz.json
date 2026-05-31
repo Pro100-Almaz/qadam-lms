@@ -557,6 +557,16 @@
         "pdfFailed": "PDF жүктеу мүмкін болмады",
         "aiReports": "AI Есептер"
     },
+    "documentPreview": {
+        "loading": "Алдын ала қарау жүктелуде…",
+        "errorTitle": "Алдын ала қарауды жүктеу мүмкін болмады.",
+        "errorBody": "Файл қолжетімсіз немесе браузер бөгеп тұр.",
+        "unsupportedTitle": "Бұл файл түрі үшін алдын ала қарау қолжетімсіз.",
+        "download": "Жүктеп алу",
+        "openInNewTab": "Жаңа қойындыда ашу",
+        "close": "Алдын ала қарауды жабу",
+        "ariaDialog": "Файлды қарау"
+    },
     "parentChildSubject": {
         "cumulative": "Жиынтық",
         "scorePercent": "Балл",

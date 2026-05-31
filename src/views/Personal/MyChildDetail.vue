@@ -280,21 +280,23 @@
               <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('students.attachments') }}</p>
               <div class="flex flex-wrap gap-2">
                 <template v-for="att in club.attachments" :key="att.id">
-                  <div v-if="isImageFile(att)" class="group/att relative">
-                    <img
-                      :src="att.file"
-                      :alt="att.original_name"
-                      class="h-16 w-16 cursor-pointer rounded-lg border border-gray-200 object-cover hover:opacity-80 dark:border-gray-700 transition-opacity"
-                      @click="openLightbox(att.file, att.original_name)"
-                    />
-                    <button @click="downloadFile(att.file, att.original_name)" class="absolute -right-1 -top-1 rounded-full bg-white p-0.5 shadow-sm opacity-0 group-hover/att:opacity-100 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-opacity">
-                      <Download class="h-3 w-3 text-gray-500" />
-                    </button>
-                  </div>
-                  <div v-else class="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 dark:border-gray-700 dark:bg-gray-800/50">
+                  <button
+                    v-if="isImageFile(att)"
+                    type="button"
+                    @click="previewAttachment = att"
+                    class="block h-16 w-16 overflow-hidden rounded-lg border border-gray-200 hover:opacity-80 dark:border-gray-700 transition-opacity"
+                  >
+                    <img :src="att.file" :alt="att.original_name" class="h-full w-full object-cover" />
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    @click="previewAttachment = att"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs text-brand-500 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:bg-gray-800 transition-colors"
+                  >
                     <FileText class="h-3.5 w-3.5 text-gray-400" />
-                    <button @click="downloadFile(att.file, att.original_name)" class="max-w-[100px] truncate text-xs text-brand-500 hover:underline">{{ att.original_name }}</button>
-                  </div>
+                    <span class="max-w-[100px] truncate">{{ att.original_name }}</span>
+                  </button>
                 </template>
               </div>
             </div>
@@ -418,16 +420,22 @@
                   <td class="px-5 py-3">
                     <div v-if="ach.attachments?.length" class="flex flex-wrap gap-1.5">
                       <template v-for="att in ach.attachments" :key="att.id">
-                        <img
+                        <button
                           v-if="isImageFile(att)"
-                          :src="att.file"
-                          :alt="att.original_name"
-                          class="h-10 w-10 cursor-pointer rounded border border-gray-200 object-cover hover:opacity-80 dark:border-gray-700 transition-opacity"
-                          @click="openLightbox(att.file, att.original_name)"
-                        />
-                        <button v-else @click="downloadFile(att.file, att.original_name)" class="flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 dark:border-gray-700 dark:bg-gray-800/50">
+                          type="button"
+                          @click="previewAttachment = att"
+                          class="block h-10 w-10 overflow-hidden rounded border border-gray-200 hover:opacity-80 dark:border-gray-700 transition-opacity"
+                        >
+                          <img :src="att.file" :alt="att.original_name" class="h-full w-full object-cover" />
+                        </button>
+                        <button
+                          v-else
+                          type="button"
+                          @click="previewAttachment = att"
+                          class="flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 dark:border-gray-700 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        >
                           <FileText class="h-3 w-3 text-gray-400" />
-                          <span class="max-w-[60px] truncate text-xs text-brand-500 hover:underline">{{ att.original_name }}</span>
+                          <span class="max-w-[60px] truncate text-xs text-brand-500">{{ att.original_name }}</span>
                         </button>
                       </template>
                     </div>
@@ -614,35 +622,7 @@
       </template>
     </Modal>
 
-    <!-- Image Lightbox -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div
-          v-if="showLightbox"
-          class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4"
-          @click.self="showLightbox = false"
-        >
-          <div class="relative max-h-[90vh] max-w-[90vw]">
-            <img :src="lightboxUrl" :alt="lightboxName" class="max-h-[85vh] max-w-full rounded-lg object-contain" />
-            <div class="absolute -top-3 right-0 flex gap-2">
-              <button
-                @click="downloadFile(lightboxUrl, lightboxName)"
-                class="rounded-full bg-white p-2 shadow-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Download class="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button>
-              <button
-                @click="showLightbox = false"
-                class="rounded-full bg-white p-2 shadow-lg hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
-              >
-                <X class="h-4 w-4 text-gray-700 dark:text-gray-300" />
-              </button>
-            </div>
-            <p class="mt-2 text-center text-sm text-white/70">{{ lightboxName }}</p>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <DocumentPreviewModal :attachment="previewAttachment" @close="previewAttachment = null" />
   </AdminLayout>
 </template>
 
@@ -683,6 +663,7 @@ import {
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
+import DocumentPreviewModal from '@/components/ui/DocumentPreviewModal.vue'
 import { getMyChildDetailApi } from '@/api/parentSelf'
 import { getSchoolGroupApi, type SchoolGroup } from '@/api/auth'
 import {
@@ -744,26 +725,10 @@ const categoryLabels: Record<AchievementCategory, string> = {
   project: 'students.project',
 }
 
-const lightboxUrl = ref('')
-const lightboxName = ref('')
-const showLightbox = ref(false)
-
-function openLightbox(url: string, name: string) {
-  lightboxUrl.value = url
-  lightboxName.value = name
-  showLightbox.value = true
-}
+const previewAttachment = ref<Attachment | null>(null)
 
 function isImageFile(attachment: Attachment): boolean {
   return attachment.file_type.startsWith('image/')
-}
-
-function downloadFile(url: string, name: string) {
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  a.target = '_blank'
-  a.click()
 }
 
 

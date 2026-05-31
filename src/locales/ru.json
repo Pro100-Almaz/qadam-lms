@@ -557,6 +557,16 @@
         "pdfFailed": "Не удалось скачать PDF",
         "aiReports": "ИИ Отчёты"
     },
+    "documentPreview": {
+        "loading": "Загрузка предпросмотра…",
+        "errorTitle": "Не удалось загрузить предпросмотр.",
+        "errorBody": "Файл может быть недоступен или заблокирован браузером.",
+        "unsupportedTitle": "Предпросмотр для этого типа файла недоступен.",
+        "download": "Скачать",
+        "openInNewTab": "Открыть в новой вкладке",
+        "close": "Закрыть предпросмотр",
+        "ariaDialog": "Просмотр файла"
+    },
     "parentChildSubject": {
         "cumulative": "Итоговая",
         "scorePercent": "Балл",
