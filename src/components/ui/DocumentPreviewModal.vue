@@ -289,14 +289,16 @@ watch(
     error.value = false
     textContent.value = ''
     textTruncated.value = false
-    loading.value = kind !== 'unsupported'
+    // Images render natively and progressively — no overlay needed. The browser
+    // serves cached images synchronously which can fire `load` before Vue attaches
+    // the listener, leaving `loading` stuck on true. Skip the loading state for
+    // images entirely; `@error` still flips to the error state if the URL fails.
+    loading.value = kind !== 'unsupported' && kind !== 'image'
 
     if (kind === 'text') {
       fetchText(att.file)
     } else if (kind === 'pdf') {
       startPdfTimeout()
-    } else if (kind === 'unsupported') {
-      loading.value = false
     }
 
     nextTick(() => closeBtnRef.value?.focus())
