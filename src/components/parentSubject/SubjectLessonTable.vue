@@ -44,7 +44,7 @@
               <div class="flex items-center gap-2">
                 <span>{{ lesson.lesson_title }}</span>
                 <MessageSquare
-                  v-if="lesson.comment"
+                  v-if="lesson.comments"
                   class="h-3.5 w-3.5 shrink-0 text-brand-500 dark:text-brand-400"
                   :aria-label="t('parentChildSubject.hasComment')"
                 />
@@ -54,7 +54,7 @@
             <td class="px-5 py-3 text-sm">
               <template v-if="lesson.earned_points !== null">
                 <span class="font-semibold text-gray-800 dark:text-white/90">{{ lesson.earned_points }}</span>
-                <span class="text-gray-400 dark:text-gray-500">/{{ lesson.max_points }}</span>
+                <span class="text-gray-400 dark:text-gray-500">%</span>
               </template>
               <span v-else class="text-xs text-gray-400 dark:text-gray-500">—</span>
             </td>
@@ -99,7 +99,7 @@ const { gradeCircleClass, scoreToGrade } = useGradeHelpers()
 
 function percentOf(lesson: ParentChildLessonGrade): number {
   if (lesson.earned_points === null || lesson.max_points === 0) return 0
-  return (lesson.earned_points / lesson.max_points) * 100
+  return (lesson.earned_points / (lesson.max_points ?? 100)) * 100
 }
 
 function formatDate(dateStr: string): string {

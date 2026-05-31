@@ -52,7 +52,7 @@
       <!-- Stat cards -->
       <SubjectStatCards
         :score-percent="detail.cumulative_grade"
-        :grade="detail.quarter_grades[String(activeQuarter) as '1' | '2' | '3' | '4']"
+        :grade="scoreToGrade(detail.quarter_grades[String(activeQuarter) as '1' | '2' | '3' | '4'])"
         :graded-count="gradedCount"
         :total-lessons="lessonsForQuarter.length"
         :avg-points="avgPoints"
@@ -93,6 +93,7 @@ import SubjectTeacherCard from '@/components/parentSubject/SubjectTeacherCard.vu
 import SubjectLessonModal from '@/components/parentSubject/SubjectLessonModal.vue'
 import { getMyChildSubjectDetailApi } from '@/api/parentSelf'
 import type { ParentChildSubjectDetail, ParentChildLessonGrade } from '@/types/parentSelf'
+import { useGradeHelpers } from '@/composables/useGradeHelpers'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -114,6 +115,8 @@ const lessonsForQuarter = computed(() => {
 const gradedCount = computed(() =>
   lessonsForQuarter.value.filter((l) => l.earned_points !== null).length,
 )
+
+const { scoreToGrade } = useGradeHelpers()
 
 const avgPoints = computed(() => {
   const graded = lessonsForQuarter.value.filter((l) => l.earned_points !== null)
