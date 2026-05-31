@@ -113,7 +113,7 @@
 
       <!-- Tab Navigation -->
       <div class="border-b border-gray-200 dark:border-gray-800">
-        <nav class="-mb-px flex gap-1">
+        <nav class="-mb-px flex gap-1 overflow-scroll no-scrollbar">
           <button
             v-for="tab in tabs"
             :key="tab.key"
