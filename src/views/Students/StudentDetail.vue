@@ -714,7 +714,7 @@
 
           <div class="space-y-4">
             <!-- Template selector -->
-            <div v-if="templates.length > 0">
+            <div v-if="templates?.length > 0">
               <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">
                 {{ t('students.useTemplate') }}
               </label>
