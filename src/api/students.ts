@@ -1,4 +1,4 @@
-import api from './client'
+import api, { unwrapList, type ListResponse } from './client'
 import { type PaginatedResponse } from './client'
 import type { Student, StudentDetail, UpdateStudentRequest, CreatePsychologicalStateRequest, PsychologicalState, PsychologicalStateTemplate } from '@/types/student'
 
@@ -24,6 +24,6 @@ export function deletePsychologicalStateApi(stateId: number) {
 }
 
 export async function getPsychologicalStateTemplatesApi() {
-  const { data } = await api.get<PaginatedResponse<PsychologicalStateTemplate>>('/psychological-state-templates/')
-  return { data: data.results }
+  const { data } = await api.get<ListResponse<PsychologicalStateTemplate>>('/psychological-state-templates/')
+  return { data: unwrapList(data) }
 }
