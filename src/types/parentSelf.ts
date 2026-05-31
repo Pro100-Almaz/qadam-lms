@@ -33,6 +33,11 @@ export interface ParentChildSubjectTeacher {
 
 export type LessonStatus = 'completed' | 'pending' | 'delayed' | 'on_schedule'
 
+export interface CommentDetails {
+  topic_title: string | null
+  comment: string | null
+}
+
 export interface ParentChildLessonGrade {
   lesson_id: number
   lesson_title: string
@@ -41,8 +46,8 @@ export interface ParentChildLessonGrade {
   quarter: 1 | 2 | 3 | 4
   status: LessonStatus
   earned_points: number | null
-  max_points: number
-  comment: string | null
+  max_points: number | null
+  comments: CommentDetails[]
 }
 
 export interface ParentChildSubjectDetail {
