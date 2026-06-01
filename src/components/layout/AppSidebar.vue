@@ -94,6 +94,7 @@
                 </button>
                 <router-link
                   v-else-if="item.path"
+                  @click="toggleSubmenu()"
                   :to="item.path"
                   :class="[
                     'menu-item group',
