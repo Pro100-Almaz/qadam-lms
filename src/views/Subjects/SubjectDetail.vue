@@ -353,7 +353,8 @@
         <div
           v-if="showAddLessonModal"
           class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
-          @click.self="showAddLessonModal = false"
+          @mousedown="addLessonBackdrop.onMouseDown"
+          @mouseup="addLessonBackdrop.onMouseUp"
         >
           <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
             <div class="flex items-center justify-between">
@@ -507,6 +508,7 @@ import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import { getSubjectDetailApi, getSubjectGradesApi } from '@/api/subjects'
 import { createLessonApi } from '@/api/lessons'
 import { useAuth } from '@/composables/useAuth'
+import { useBackdropClose } from '@/composables/useBackdropClose'
 import type { SubjectDetail, SubjectGrades } from '@/types/subject'
 
 const { t } = useI18n()
@@ -527,6 +529,7 @@ const canAddLesson = computed(() =>
   ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'].includes(authUser.value?.role ?? '')
 )
 const showAddLessonModal = ref(false)
+const addLessonBackdrop = useBackdropClose(() => { showAddLessonModal.value = false })
 const savingLesson = ref(false)
 const lessonForm = ref({
   offering: null as number | null,
