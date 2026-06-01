@@ -48,6 +48,11 @@ export function distributeTopicWeightsApi(lessonId: number) {
   return api.post<Topic[]>(`/lessons/${lessonId}/topics/distribute-weights/`)
 }
 
+export async function getTopicTotalWeightApi(topicId: number){
+  const response = await api.get<{ total_weight: number}>(`/topics/${topicId}/total-weight/`)
+  return response.data.total_weight
+}
+
 // Subtopics
 export function createSubtopicApi(lessonId: number, data: CreateSubtopicRequest) {
   return api.post<Subtopic>(`/lessons/${lessonId}/subtopics/`, data)

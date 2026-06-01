@@ -1,6 +1,9 @@
 <template>
   <Teleport to="body">
-    <div class="fixed top-4 right-4 z-[100] flex flex-col gap-3 w-80">
+    <div
+    class="fixed bottom-4 right-4 flex flex-col gap-3 w-80"
+    style="z-index: 9999999 !important;"
+    >
       <TransitionGroup name="toast">
         <div
           v-for="toast in toasts"
