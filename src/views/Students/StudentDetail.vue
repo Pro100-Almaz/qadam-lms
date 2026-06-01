@@ -1174,14 +1174,14 @@ const templates = ref<PsychologicalStateTemplate[]>([])
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
 const activeTab = ref<'subjects' | 'clubs' | 'psych' | 'rating' | 'reports' | 'info'>('subjects')
-const tabs = [
+const tabs = computed(() => [
   { key: 'subjects' as const, label: t('subjects.title'), icon: BookMarked, disabled: false },
   { key: 'clubs' as const, label: t('students.clubs'), icon: Puzzle, disabled: false },
   { key: 'psych' as const, label: t('students.psychologicalStates'), icon: Brain, disabled: false },
   { key: 'rating' as const, label: t('students.rating'), icon: Trophy, disabled: false },
   { key: 'reports' as const, label: t('reports.aiReports'), icon: Sparkles, disabled: false },
   { key: 'info' as const, label: t('profile.personalInfo'), icon: User, disabled: false },
-]
+])
 
 // ─── Achievements / Clubs / Reading ─────────────────────────────────────────
 const achievements = ref<Achievement[]>([])

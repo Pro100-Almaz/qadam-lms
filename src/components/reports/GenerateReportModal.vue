@@ -130,11 +130,11 @@ const MAX_POLL_ATTEMPTS = 40
 
 const languages = [
   { value: 'ru' as ReportLanguage, label: 'Русский' },
-  { value: 'kk' as ReportLanguage, label: 'Қазақша' },
+  { value: 'kz' as ReportLanguage, label: 'Қазақша' },
   { value: 'en' as ReportLanguage, label: 'English' },
 ]
 
-const localeToLang: Record<string, ReportLanguage> = { ru: 'ru', kz: 'kk', en: 'en' }
+const localeToLang: Record<string, ReportLanguage> = { ru: 'ru', kz: 'kz', en: 'en' }
 const selectedLanguage = ref<ReportLanguage>(localeToLang[locale.value] ?? 'ru')
 const selectedQuarter = ref(props.currentQuarter || 1)
 const isGenerating = ref(false)

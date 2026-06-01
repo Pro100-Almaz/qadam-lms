@@ -1,4 +1,4 @@
-export type ReportLanguage = 'ru' | 'kk' | 'en'
+export type ReportLanguage = 'ru' | 'kz' | 'en'
 export type ReportStatus = 'pending' | 'generating' | 'completed' | 'failed'
 export type TrendDirection = 'improving' | 'declining' | 'stable' | 'insufficient_data'
 
