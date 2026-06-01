@@ -49,6 +49,41 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// ─── Refresh-in-flight dedupe ─────────────────────────────────────────────────
+// Simple JWT rotates the refresh token on every successful /auth/token/refresh/
+// call and blacklists the previous one. If multiple callers race (App init,
+// router guard, 401 interceptor) they all send the same refresh and all but the
+// first get a 401 because the token was just blacklisted. The failing branches
+// then wipe the *rotated* token from localStorage, logging the user out.
+// Funnel every refresh through a single in-flight promise so concurrent callers
+// await the same network call.
+
+let refreshInFlight: Promise<string> | null = null
+
+export function refreshAccessToken(): Promise<string> {
+  if (refreshInFlight) return refreshInFlight
+
+  const refresh = localStorage.getItem('refresh_token')
+  if (!refresh) {
+    return Promise.reject(new Error('No refresh token'))
+  }
+
+  refreshInFlight = axios
+    .post<AuthTokens>(`${api.defaults.baseURL}/auth/token/refresh/`, { refresh })
+    .then(({ data }) => {
+      setAccessToken(data.access)
+      if (data.refresh) {
+        localStorage.setItem('refresh_token', data.refresh)
+      }
+      return data.access
+    })
+    .finally(() => {
+      refreshInFlight = null
+    })
+
+  return refreshInFlight
+}
+
 // ─── Response interceptor (401 refresh) ───────────────────────────────────────
 
 api.interceptors.response.use(
@@ -57,25 +92,13 @@ api.interceptors.response.use(
     const original = error.config
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true
-      const refresh = localStorage.getItem('refresh_token')
-      if (refresh) {
-        try {
-          const { data } = await axios.post<AuthTokens>(
-            `${api.defaults.baseURL}/auth/token/refresh/`,
-            { refresh },
-          )
-          setAccessToken(data.access)
-          if (data.refresh) {
-            localStorage.setItem('refresh_token', data.refresh)
-          }
-          original.headers.Authorization = `Bearer ${data.access}`
-          return api(original)
-        } catch {
-          setAccessToken(null)
-          localStorage.removeItem('refresh_token')
-          window.dispatchEvent(new Event('auth:logout'))
-        }
-      } else {
+      try {
+        const access = await refreshAccessToken()
+        original.headers.Authorization = `Bearer ${access}`
+        return api(original)
+      } catch {
+        setAccessToken(null)
+        localStorage.removeItem('refresh_token')
         window.dispatchEvent(new Event('auth:logout'))
       }
     }

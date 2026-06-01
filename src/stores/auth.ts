@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { loginApi, logoutApi, getMeApi, updateProfileApi, uploadAvatarApi } from '@/api/auth'
-import { setAccessToken } from '@/api/client'
+import { setAccessToken, refreshAccessToken } from '@/api/client'
 import type { User, UserRole } from '@/types/auth'
 import axios from 'axios'
 
@@ -44,14 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     isSessionLoading.value = true
     try {
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || '/api/v1/'}auth/token/refresh/`,
-        { refresh: refreshToken },
-      )
-      setAccessToken(data.access)
-      if (data.refresh) {
-        localStorage.setItem('refresh_token', data.refresh)
-      }
+      await refreshAccessToken()
       await fetchCurrentUser()
     } catch {
       logout()
