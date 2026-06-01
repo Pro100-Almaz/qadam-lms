@@ -695,14 +695,14 @@ function adjustColor(hex: string, amount: number): string {
 }
 
 const activeTab = ref<'subjects' | 'clubs' | 'psych' | 'rating' | 'reports' | 'info'>('subjects')
-const tabs = [
+const tabs = computed(() => [
   { key: 'subjects' as const, label: t('subjects.title'), icon: BookMarked },
   { key: 'clubs' as const, label: t('students.clubs'), icon: Puzzle },
   { key: 'psych' as const, label: t('students.psychologicalStates'), icon: Brain },
   { key: 'rating' as const, label: t('students.rating'), icon: Trophy },
   { key: 'reports' as const, label: t('reports.aiReports'), icon: Sparkles },
   { key: 'info' as const, label: t('profile.personalInfo'), icon: User },
-]
+])
 
 const achievements = ref<Achievement[]>([])
 const readingEntries = ref<ReadingEntry[]>([])
