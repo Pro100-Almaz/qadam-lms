@@ -11,7 +11,7 @@ export function getSubjectDetailApi(id: number) {
   return api.get<SubjectDetail>(`/subjects/${id}/`)
 }
 
-export function getSubjectGradesApi(id: number, params?: { quarter?: number }) {
+export function getSubjectGradesApi(id: number, params?: { quarter?: number, class_group_id?: number }) {
   return api.get<SubjectGrades>(`/subjects/${id}/grades/`, { params })
 }
 

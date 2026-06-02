@@ -71,13 +71,18 @@
 
             <!-- Classes offered -->
             <div v-if="subject.offerings.length" class="flex flex-wrap gap-1.5 pt-0.5">
-              <span
+              <button
                 v-for="o in subject.offerings"
                 :key="o.id"
-                class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-white/70"
+                @click="selectClassGroup(o.class_group.id)"
+                :class="[
+                'transition inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-white/70',
+                activeClassGroup === o.class_group.id
+                ? 'bg-brand-500 text-white shadow-sm'
+                : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5',]"
               >
                 {{ o.class_group.display_name }}
-              </span>
+            </button>
             </div>
           </div>
 
@@ -180,6 +185,7 @@
                       <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 w-10">#</th>
                       <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('common.name') }}</th>
                       <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('lessons.dayOfWeek') }}</th>
+                      <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('subjects.classes') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -198,6 +204,7 @@
                         </router-link>
                       </td>
                       <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ formatDate(lesson.date) }}</td>
+                      <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ lesson.class_group_name }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -522,6 +529,7 @@ const loadingDetail = ref(false)
 const loadingGrades = ref(false)
 const detailError = ref<string | null>(null)
 const activeQuarter = ref(1)
+const activeClassGroup = ref(0)
 
 const canAddLesson = computed(() =>
   ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'].includes(authUser.value?.role ?? '')
@@ -591,10 +599,10 @@ async function fetchDetail() {
   }
 }
 
-async function fetchGrades(quarter: number) {
+async function fetchGrades(classGroupId: number, quarter: number) {
   loadingGrades.value = true
   try {
-    const { data } = await getSubjectGradesApi(subjectId.value, { quarter })
+    const { data } = await getSubjectGradesApi(subjectId.value, { quarter, class_group_id: classGroupId })
     grades.value = data
   } catch {
     grades.value = null
@@ -603,9 +611,14 @@ async function fetchGrades(quarter: number) {
   }
 }
 
+function selectClassGroup(g: number) {
+  activeClassGroup.value = activeClassGroup.value === g ? 0 : g
+  fetchGrades(activeClassGroup.value, activeQuarter.value)
+}
+
 function selectQuarter(q: number) {
   activeQuarter.value = q
-  fetchGrades(q)
+  fetchGrades(activeClassGroup.value, activeQuarter.value)
 }
 
 // ── Computed helpers ───────────────────────────────────────────────────────────
@@ -724,6 +737,6 @@ function formatDate(dateStr: string): string {
 
 onMounted(async () => {
   await fetchDetail()
-  await fetchGrades(activeQuarter.value)
+  await fetchGrades(activeClassGroup.value, activeQuarter.value)
 })
 </script>

@@ -56,6 +56,7 @@ export interface SubjectGrades {
     title: string
     date: string
     order: number
+    class_group_name: string
   }[]
   lesson_avgs: Record<string, Record<string, number>>
 }
