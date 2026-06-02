@@ -715,6 +715,7 @@ import {
   updateTopicApi,
   deleteTopicApi,
   distributeTopicWeightsApi,
+  getTopicTotalWeightApi,
   createSubtopicApi,
   updateSubtopicApi,
   deleteSubtopicApi,
@@ -723,10 +724,12 @@ import {
 } from '@/api/lessons'
 import { getSubjectsApi } from '@/api/subjects'
 import type { LessonDetail, Topic, Subtopic, LessonStudent, TopicGrade } from '@/types/lesson'
+import {useToast} from "@/composables/useToast";
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const { success, warning, info } = useToast()
 
 // State
 const lesson = ref<LessonDetail | null>(null)
@@ -763,6 +766,8 @@ const confirmAction = ref<(() => Promise<void>) | null>(null)
 
 const lessonId = computed(() => Number(route.params.id))
 const backTo = ref('/subjects/active')
+
+const topicTotalWeight = ref(0)
 
 // Computed
 const filteredSubtopics = computed(() => {
@@ -932,6 +937,14 @@ async function handleDistributeTopicWeights() {
   try {
     await distributeTopicWeightsApi(lessonId.value)
     await refreshLesson()
+    const topicId = lesson.value?.topics.find(
+      (t) => t.id === subtopicForm.value.parent
+    )?.id
+    if(topicId){
+      topicTotalWeight.value = await getTopicTotalWeightApi(topicId)
+    }else{
+      topicTotalWeight.value = 0
+    }
   } catch (e) {
     console.error('Failed to distribute topic weights:', e)
   } finally {
@@ -979,6 +992,25 @@ async function handleSaveSubtopic() {
     }
     showSubtopicModal.value = false
     await refreshLesson()
+    topicTotalWeight.value = (await getTopicTotalWeightApi(lesson.value?.topics.find((t) => t.id === subtopicForm.value.parent)?.id ?? 0)) || 0
+    if (topicTotalWeight.value == 100) {
+      success(
+        'Общий вес текущей темы',
+        'Общий вес темы составляет 100%.'
+      )
+    } else if (topicTotalWeight.value > 100) {
+      warning(
+        'Общий вес текущей темы()',
+        `Общий вес темы составляет ${topicTotalWeight.value}%. Рекомендуется скорректировать веса подтем.`
+      )
+    } else {
+      info(
+        'Общий вес текущей темы',
+        `Общий вес темы составляет ${topicTotalWeight.value}%. Распределите оставшийся вес между подтемами.`
+      )
+    }
+
+
   } catch (e) {
     console.error('Failed to save subtopic:', e)
   } finally {
