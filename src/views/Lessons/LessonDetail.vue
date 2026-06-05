@@ -432,7 +432,8 @@
           <div
             v-if="showSubtopicModal"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-            @click.self="showSubtopicModal = false"
+            @mousedown="addSubtopicBackdrop.onMouseDown"
+            @mouseup="addSubtopicBackdrop.onMouseUp"
           >
             <Transition
               enter-active-class="transition duration-200 ease-out"
@@ -753,6 +754,7 @@ const topicForm = ref({ title: '', weight: '', comment_template: '' })
 
 // Subtopic modal
 const showSubtopicModal = ref(false)
+const addSubtopicBackdrop = useBackdropClose(() => { showSubtopicModal.value = false })
 const editingSubtopicId = ref<number | null>(null)
 const subtopicForm = ref({ parent: 0, title: '', weight: '', comment_template: '' })
 const subtopicFilterTopicId = ref<number | null>(null)
