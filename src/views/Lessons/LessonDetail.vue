@@ -346,7 +346,8 @@
           <div
             v-if="showTopicModal"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-            @click.self="showTopicModal = false"
+            @mousedown="addTopicBackdrop.onMouseDown"
+            @mouseup="addTopicBackdrop.onMouseUp"
           >
             <Transition
               enter-active-class="transition duration-200 ease-out"
@@ -724,6 +725,7 @@ import {
 } from '@/api/lessons'
 import { getSubjectsApi } from '@/api/subjects'
 import type { LessonDetail, Topic, Subtopic, LessonStudent, TopicGrade } from '@/types/lesson'
+import { useBackdropClose } from '@/composables/useBackdropClose'
 import {useToast} from "@/composables/useToast";
 
 const route = useRoute()
@@ -745,6 +747,7 @@ const tabs = computed(() => [
 
 // Topic modal
 const showTopicModal = ref(false)
+const addTopicBackdrop = useBackdropClose(() => { showTopicModal.value = false })
 const editingTopicId = ref<number | null>(null)
 const topicForm = ref({ title: '', weight: '', comment_template: '' })
 
