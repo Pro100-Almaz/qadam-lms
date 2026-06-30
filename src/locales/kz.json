@@ -374,6 +374,8 @@
         "download": "Жүктеу",
         "attachments": "Тіркемелер",
         "attachFiles": "Файлдарды тіркеу",
+        "cover": "Мұқаба",
+        "attachCover": "Мұқаба суретін тіркеу",
         "uploadingFiles": "Файлдар жүктелуде...",
         "deleteAttachment": "Тіркемені жою",
         "confirmDeleteAttachment": "Бұл тіркемені жойғыңыз келе ме?",
