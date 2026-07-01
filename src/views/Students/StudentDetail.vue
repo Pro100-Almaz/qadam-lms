@@ -1632,8 +1632,6 @@ async function submitAchievement() {
     if (achievementFiles.value.length > 0) {
       try {
         await uploadAttachmentsApi('achievement', created.id, achievementFiles.value)
-        // Re-fetch from the DB so attachment shape (esp. `file` URLs) matches
-        // the list endpoint — the upload response's URLs differ and break preview.
         await fetchAchievements()
       } catch { /* silent */ }
     } else {

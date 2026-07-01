@@ -183,9 +183,6 @@ const { t } = useI18n()
 const loading = ref(false)
 const error = ref(false)
 const textContent = ref('')
-// The backend serves /media behind authentication. A raw <img>/<iframe>/<a> request
-// can't attach the in-memory JWT, so it gets redirected to the backend sign-in page.
-// We fetch the file through the authenticated axios client and preview the blob URL.
 const blobUrl = ref('')
 const textTruncated = ref(false)
 const iframeRef = ref<HTMLIFrameElement | null>(null)
@@ -213,8 +210,6 @@ const previewKind = computed<PreviewKind>(() => {
   return EXT_MAP[ext] ?? 'unsupported'
 })
 
-// URL fed to <img>/<iframe>/<video>/<audio>. Empty until the authenticated blob
-// fetch resolves, so the media element never requests the protected URL directly.
 const srcUrl = computed(() => blobUrl.value)
 
 const fileExt = computed(() => {
@@ -259,9 +254,6 @@ function revokeBlobUrl() {
   }
 }
 
-// Fetch the protected media file through the authenticated axios client and
-// expose it as an object URL. Returns the URL, or null on failure. The result
-// is cached in blobUrl so download/open-in-new-tab reuse the same fetch.
 async function ensureBlobUrl(): Promise<string | null> {
   if (blobUrl.value) return blobUrl.value
   if (!props.attachment) return null
@@ -312,7 +304,6 @@ async function openInNewTab() {
 watch(
   () => props.attachment,
   async (att) => {
-    // Clear any pending PDF timeout and release the previous file's blob URL.
     if (pdfTimeout) { clearTimeout(pdfTimeout); pdfTimeout = null }
     revokeBlobUrl()
 
@@ -333,9 +324,7 @@ watch(
       return
     }
 
-    // Authenticated fetch of the media file → object URL for the preview element.
     const url = await ensureBlobUrl()
-    // Bail if the attachment changed while the request was in flight.
     if (props.attachment !== att) return
     if (!url) {
       error.value = true
@@ -344,12 +333,10 @@ watch(
     }
 
     if (kind === 'image') {
-      // The img @load handler clears loading once the blob renders.
       loading.value = true
     } else if (kind === 'pdf') {
       startPdfTimeout()
     }
-    // video/audio clear loading via their @loadeddata handlers.
   },
 )
 
