@@ -1631,11 +1631,14 @@ async function submitAchievement() {
     let created = { ...res.data, attachments: res.data.attachments || [] }
     if (achievementFiles.value.length > 0) {
       try {
-        const attRes = await uploadAttachmentsApi('achievement', created.id, achievementFiles.value)
-        created.attachments = attRes.data
+        await uploadAttachmentsApi('achievement', created.id, achievementFiles.value)
+        // Re-fetch from the DB so attachment shape (esp. `file` URLs) matches
+        // the list endpoint — the upload response's URLs differ and break preview.
+        await fetchAchievements()
       } catch { /* silent */ }
+    } else {
+      achievements.value.unshift(created)
     }
-    achievements.value.unshift(created)
     achievementFiles.value = []
     showAddAchievementModal.value = false
   } catch (e) { console.error('Failed to create achievement:', e) }

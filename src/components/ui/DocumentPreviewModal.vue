@@ -86,8 +86,8 @@
 
           <!-- Image -->
           <img
-            v-else-if="previewKind === 'image'"
-            :src="attachment.file"
+            v-else-if="previewKind === 'image' && srcUrl"
+            :src="srcUrl"
             :alt="attachment.original_name"
             class="max-h-[80vh] max-w-full object-contain rounded"
             @load="loading = false"
@@ -96,9 +96,9 @@
 
           <!-- PDF -->
           <iframe
-            v-else-if="previewKind === 'pdf'"
+            v-else-if="previewKind === 'pdf' && srcUrl"
             ref="iframeRef"
-            :src="`${attachment.file}#toolbar=0&navpanes=0`"
+            :src="`${srcUrl}#toolbar=0&navpanes=0`"
             class="block w-full h-full border-0 min-h-[60vh]"
             tabindex="0"
             @load="onIframeLoad"
@@ -106,8 +106,8 @@
 
           <!-- Video -->
           <video
-            v-else-if="previewKind === 'video'"
-            :src="attachment.file"
+            v-else-if="previewKind === 'video' && srcUrl"
+            :src="srcUrl"
             controls
             class="max-h-[70vh] w-full rounded"
             @loadeddata="loading = false"
@@ -115,10 +115,10 @@
           />
 
           <!-- Audio -->
-          <div v-else-if="previewKind === 'audio'" class="w-full px-8 py-12 flex flex-col items-center gap-4">
+          <div v-else-if="previewKind === 'audio' && srcUrl" class="w-full px-8 py-12 flex flex-col items-center gap-4">
             <FileAudio class="h-16 w-16 text-gray-300 dark:text-gray-700" />
             <audio
-              :src="attachment.file"
+              :src="srcUrl"
               controls
               class="w-full"
               @loadeddata="loading = false"
@@ -152,8 +152,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
+import api from '@/api/client'
 import {
   File,
   FileImage,
@@ -182,6 +183,10 @@ const { t } = useI18n()
 const loading = ref(false)
 const error = ref(false)
 const textContent = ref('')
+// The backend serves /media behind authentication. A raw <img>/<iframe>/<a> request
+// can't attach the in-memory JWT, so it gets redirected to the backend sign-in page.
+// We fetch the file through the authenticated axios client and preview the blob URL.
+const blobUrl = ref('')
 const textTruncated = ref(false)
 const iframeRef = ref<HTMLIFrameElement | null>(null)
 const closeBtnRef = ref<HTMLButtonElement | null>(null)
@@ -207,6 +212,10 @@ const previewKind = computed<PreviewKind>(() => {
   const ext = props.attachment?.original_name.split('.').slice(-1)[0]?.toLowerCase() ?? ''
   return EXT_MAP[ext] ?? 'unsupported'
 })
+
+// URL fed to <img>/<iframe>/<video>/<audio>. Empty until the authenticated blob
+// fetch resolves, so the media element never requests the protected URL directly.
+const srcUrl = computed(() => blobUrl.value)
 
 const fileExt = computed(() => {
   const ext = props.attachment?.original_name.split('.').slice(-1)[0]?.toUpperCase() ?? ''
@@ -243,10 +252,32 @@ function onError() {
   error.value = true
 }
 
+function revokeBlobUrl() {
+  if (blobUrl.value) {
+    URL.revokeObjectURL(blobUrl.value)
+    blobUrl.value = ''
+  }
+}
+
+// Fetch the protected media file through the authenticated axios client and
+// expose it as an object URL. Returns the URL, or null on failure. The result
+// is cached in blobUrl so download/open-in-new-tab reuse the same fetch.
+async function ensureBlobUrl(): Promise<string | null> {
+  if (blobUrl.value) return blobUrl.value
+  if (!props.attachment) return null
+  try {
+    const { data } = await api.get<Blob>(props.attachment.file, { responseType: 'blob' })
+    blobUrl.value = URL.createObjectURL(data)
+    return blobUrl.value
+  } catch {
+    return null
+  }
+}
+
 async function fetchText(url: string) {
   try {
-    const res = await fetch(url)
-    const raw = await res.text()
+    const { data } = await api.get(url, { responseType: 'text', transformResponse: [(d) => d] })
+    const raw = String(data)
     const lines = raw.split('\n')
     if (lines.length > 500) {
       textContent.value = lines.slice(0, 500).join('\n')
@@ -262,26 +293,28 @@ async function fetchText(url: string) {
   }
 }
 
-function downloadAttachment() {
+async function downloadAttachment() {
   if (!props.attachment) return
+  const href = await ensureBlobUrl()
+  if (!href) { error.value = true; return }
   const a = document.createElement('a')
-  a.href = props.attachment.file
+  a.href = href
   a.download = props.attachment.original_name
-  a.target = '_blank'
-  a.rel = 'noopener'
   a.click()
 }
 
-function openInNewTab() {
-  if (!props.attachment) return
-  window.open(props.attachment.file, '_blank', 'noopener')
+async function openInNewTab() {
+  const href = await ensureBlobUrl()
+  if (!href) { error.value = true; return }
+  window.open(href, '_blank', 'noopener')
 }
 
 watch(
   () => props.attachment,
-  (att) => {
-    // Clear any pending PDF timeout
+  async (att) => {
+    // Clear any pending PDF timeout and release the previous file's blob URL.
     if (pdfTimeout) { clearTimeout(pdfTimeout); pdfTimeout = null }
+    revokeBlobUrl()
 
     if (!att) return
 
@@ -289,19 +322,39 @@ watch(
     error.value = false
     textContent.value = ''
     textTruncated.value = false
-    // Images render natively and progressively — no overlay needed. The browser
-    // serves cached images synchronously which can fire `load` before Vue attaches
-    // the listener, leaving `loading` stuck on true. Skip the loading state for
-    // images entirely; `@error` still flips to the error state if the URL fails.
-    loading.value = kind !== 'unsupported' && kind !== 'image'
+    loading.value = kind !== 'unsupported'
+
+    nextTick(() => closeBtnRef.value?.focus())
+
+    if (kind === 'unsupported') return
 
     if (kind === 'text') {
       fetchText(att.file)
+      return
+    }
+
+    // Authenticated fetch of the media file → object URL for the preview element.
+    const url = await ensureBlobUrl()
+    // Bail if the attachment changed while the request was in flight.
+    if (props.attachment !== att) return
+    if (!url) {
+      error.value = true
+      loading.value = false
+      return
+    }
+
+    if (kind === 'image') {
+      // The img @load handler clears loading once the blob renders.
+      loading.value = true
     } else if (kind === 'pdf') {
       startPdfTimeout()
     }
-
-    nextTick(() => closeBtnRef.value?.focus())
+    // video/audio clear loading via their @loadeddata handlers.
   },
 )
+
+onBeforeUnmount(() => {
+  if (pdfTimeout) { clearTimeout(pdfTimeout); pdfTimeout = null }
+  revokeBlobUrl()
+})
 </script>
