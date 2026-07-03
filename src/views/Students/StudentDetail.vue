@@ -374,13 +374,20 @@
                   {{ monthNames[club.month - 1] }} · {{ club.academic_year }}
                 </p>
               </div>
-              <button
-                v-if="isAdmin"
-                @click="removeClubEntry(club.id)"
-                class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 transition-colors"
-              >
-                <Trash2 class="h-3.5 w-3.5" />
-              </button>
+              <div v-if="isAdmin" class="flex shrink-0 items-center gap-1">
+                <button
+                  @click="openEditClubModal(club)"
+                  class="rounded-lg p-1.5 text-gray-400 hover:bg-brand-50 hover:text-brand-500 dark:hover:bg-brand-500/10 transition-colors"
+                >
+                  <Pencil class="h-3.5 w-3.5" />
+                </button>
+                <button
+                  @click="removeClubEntry(club.id)"
+                  class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 transition-colors"
+                >
+                  <Trash2 class="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
 
             <!-- Attendance bar -->
@@ -861,13 +868,13 @@
       </template>
     </Modal>
 
-    <!-- Add Club Entry Modal -->
-    <Modal v-if="showAddClubModal" :fullScreenBackdrop="true" @close="showAddClubModal = false">
+    <!-- Add / Edit Club Entry Modal -->
+    <Modal v-if="showAddClubModal" :fullScreenBackdrop="true" @close="closeClubModal">
       <template #body>
         <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-md dark:border-gray-800 dark:bg-gray-900">
           <div class="mb-5 flex items-center justify-between">
-            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('students.addClubEntry') }}</h3>
-            <button @click="showAddClubModal = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"><X class="h-5 w-5" /></button>
+            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ editingClubId ? t('students.editClubEntry') : t('students.addClubEntry') }}</h3>
+            <button @click="closeClubModal" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"><X class="h-5 w-5" /></button>
           </div>
           <div class="space-y-4">
             <div>
@@ -928,7 +935,7 @@
             </div>
           </div>
           <div class="mt-6 flex gap-3">
-            <button @click="showAddClubModal = false; clubFiles = []" class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5">{{ t('common.cancel') }}</button>
+            <button @click="closeClubModal" class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5">{{ t('common.cancel') }}</button>
             <button @click="submitClubEntry" :disabled="!newClub.club_name || !newClub.academic_year || savingClub" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors">
               <Loader2 v-if="savingClub" class="h-4 w-4 animate-spin" />
               {{ t('common.save') }}
@@ -1080,6 +1087,7 @@ import {
   Star,
   Plus,
   Trash2,
+  Pencil,
   History,
   X,
   Loader2,
@@ -1124,6 +1132,7 @@ import {
   deleteReadingEntryApi,
   getClubEntriesApi,
   createClubEntryApi,
+  updateClubEntryApi,
   deleteClubEntryApi,
   uploadAttachmentsApi,
   deleteAttachmentApi,
@@ -1187,6 +1196,7 @@ const loadingReading = ref(false)
 
 const showAddAchievementModal = ref(false)
 const showAddClubModal = ref(false)
+const editingClubId = ref<number | null>(null)
 const showAddReadingModal = ref(false)
 const savingAchievement = ref(false)
 const savingClub = ref(false)
@@ -1680,15 +1690,41 @@ async function fetchClubEntries() {
 async function openAddClubModal() {
   await fetchAcademicYears()
   const activeYear = (academicYears.value || []).find(y => y.is_active)
+  editingClubId.value = null
+  clubFiles.value = []
   newClub.value = { academic_year: activeYear?.id ?? null, month: new Date().getMonth() + 1, club_name: '', plan: '', criteria: '', total_sessions: 0, attended_sessions: 0, comments: '' }
   showAddClubModal.value = true
+}
+
+async function openEditClubModal(club: ClubEntry) {
+  await fetchAcademicYears()
+  editingClubId.value = club.id
+  clubFiles.value = []
+  const matchedYear = (academicYears.value || []).find(y => y.year === club.academic_year)
+  newClub.value = {
+    academic_year: matchedYear?.id ?? null,
+    month: club.month,
+    club_name: club.club_name,
+    plan: club.plan || '',
+    criteria: club.criteria || '',
+    total_sessions: club.total_sessions,
+    attended_sessions: club.attended_sessions,
+    comments: club.comments || '',
+  }
+  showAddClubModal.value = true
+}
+
+function closeClubModal() {
+  showAddClubModal.value = false
+  editingClubId.value = null
+  clubFiles.value = []
 }
 
 async function submitClubEntry() {
   if (!studentPk.value || !newClub.value.academic_year || !newClub.value.club_name) return
   savingClub.value = true
   try {
-    const res = await createClubEntryApi(studentPk.value, {
+    const payload = {
       academic_year: newClub.value.academic_year,
       month: newClub.value.month,
       club_name: newClub.value.club_name,
@@ -1697,18 +1733,30 @@ async function submitClubEntry() {
       total_sessions: newClub.value.total_sessions,
       attended_sessions: newClub.value.attended_sessions,
       comments: newClub.value.comments || undefined,
-    })
-    let created = { ...res.data, attachments: res.data.attachments || [] }
-    if (clubFiles.value.length > 0) {
-      try {
-        const attRes = await uploadAttachmentsApi('clubentry', created.id, clubFiles.value)
-        created.attachments = attRes.data
-      } catch { /* silent */ }
     }
-    clubEntries.value.unshift(created)
-    clubFiles.value = []
-    showAddClubModal.value = false
-  } catch (e) { console.error('Failed to create club entry:', e) }
+    if (editingClubId.value) {
+      const res = await updateClubEntryApi(editingClubId.value, payload)
+      const updated = { ...res.data, attachments: res.data.attachments || [] }
+      if (clubFiles.value.length > 0) {
+        try {
+          const attRes = await uploadAttachmentsApi('clubentry', updated.id, clubFiles.value)
+          updated.attachments = attRes.data
+        } catch { /* silent */ }
+      }
+      clubEntries.value = clubEntries.value.map(c => (c.id === updated.id ? updated : c))
+    } else {
+      const res = await createClubEntryApi(studentPk.value, payload)
+      const created = { ...res.data, attachments: res.data.attachments || [] }
+      if (clubFiles.value.length > 0) {
+        try {
+          const attRes = await uploadAttachmentsApi('clubentry', created.id, clubFiles.value)
+          created.attachments = attRes.data
+        } catch { /* silent */ }
+      }
+      clubEntries.value.unshift(created)
+    }
+    closeClubModal()
+  } catch (e) { console.error('Failed to save club entry:', e) }
   finally { savingClub.value = false }
 }
 
