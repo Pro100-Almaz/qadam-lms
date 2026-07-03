@@ -982,6 +982,20 @@
                 <input v-model.number="newReading.test_score" type="number" min="0" max="100" placeholder="0-100" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
               </div>
             </div>
+            <div>
+              <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.cover') }}</label>
+              <div v-if="readingCoverPreview" class="relative inline-block">
+                <img :src="readingCoverPreview" alt="cover" class="h-28 w-20 rounded-lg border border-gray-200 object-cover dark:border-gray-700" />
+                <button type="button" @click="clearReadingCover" class="absolute -right-2 -top-2 rounded-full bg-gray-800 p-1 text-white hover:bg-gray-700">
+                  <X class="h-3 w-3" />
+                </button>
+              </div>
+              <div v-else @click="readingCoverInput?.click()" class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-3 text-sm text-gray-500 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+                <ImagePlus class="h-4 w-4" />
+                <span>{{ t('students.attachCover') }}</span>
+              </div>
+              <input ref="readingCoverInput" type="file" accept="image/*" class="hidden" @change="onReadingCoverChange" />
+            </div>
           </div>
           <div class="mt-6 flex gap-3">
             <button @click="showAddReadingModal = false" class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5">{{ t('common.cancel') }}</button>
@@ -1071,12 +1085,12 @@
 </template>
 
 <script setup lang="ts">
+import axios from 'axios'
 import { ref, computed, onMounted, defineComponent, h } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import VueApexCharts from 'vue3-apexcharts'
 import {
-  ArrowLeft,
   AlertCircle,
   GraduationCap,
   BookOpen,
@@ -1104,11 +1118,8 @@ import {
   Award,
   BookText,
   Download,
-  Calendar,
   FileText,
   Paperclip,
-  Eye,
-  Image as ImageIcon,
   Sparkles,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -1138,18 +1149,16 @@ import {
   deleteAttachmentApi,
 } from '@/api/achievements'
 import { getAcademicYearsApi } from '@/api/academic'
-import type { Achievement, ReadingEntry, ClubEntry, AchievementCategory, Attachment } from '@/types/achievement'
+import type { Achievement, ReadingEntry, ClubEntry, AchievementCategory, Attachment, CreateReadingEntryRequest } from '@/types/achievement'
 import type { AcademicYear } from '@/types/academic'
 import { getSchoolGroupApi, type SchoolGroup } from '@/api/auth'
 import { useAuth } from '@/composables/useAuth'
 import GenerateReportModal from '@/components/reports/GenerateReportModal.vue'
 import ReportHistoryList from '@/components/reports/ReportHistoryList.vue'
-import type { StudentReport } from '@/types/report'
 
 // ─── i18n / route ────────────────────────────────────────────────────────────
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
 const { user: authUser } = useAuth()
 const isAdmin = computed(() =>
   ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(authUser.value?.role || ''),
@@ -1163,7 +1172,7 @@ const showReportModal = ref(false)
 const reportHistoryRef = ref<InstanceType<typeof ReportHistoryList> | null>(null)
 const currentQuarter = ref(1)
 
-function onReportGenerated(_report: StudentReport) {
+function onReportGenerated() {
   showReportModal.value = false
   reportHistoryRef.value?.refresh()
 }
@@ -1248,6 +1257,10 @@ const clubFiles = ref<File[]>([])
 const achievementFileInput = ref<HTMLInputElement | null>(null)
 const clubFileInput = ref<HTMLInputElement | null>(null)
 
+const readingCover = ref<File | null>(null)
+const readingCoverPreview = ref<string | null>(null)
+const readingCoverInput = ref<HTMLInputElement | null>(null)
+
 const previewAttachment = ref<Attachment | null>(null)
 
 function isImageFile(attachment: Attachment): boolean {
@@ -1264,12 +1277,19 @@ function onClubFileChange(e: Event) {
   if (input.files) clubFiles.value = Array.from(input.files)
 }
 
-function downloadAttachment(attachment: Attachment) {
-  const a = document.createElement('a')
-  a.href = attachment.file
-  a.download = attachment.original_name
-  a.target = '_blank'
-  a.click()
+function onReadingCoverChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  if (readingCoverPreview.value) URL.revokeObjectURL(readingCoverPreview.value)
+  readingCover.value = file
+  readingCoverPreview.value = file ? URL.createObjectURL(file) : null
+}
+
+function clearReadingCover() {
+  if (readingCoverPreview.value) URL.revokeObjectURL(readingCoverPreview.value)
+  readingCover.value = null
+  readingCoverPreview.value = null
+  if (readingCoverInput.value) readingCoverInput.value.value = ''
 }
 
 async function removeAttachment(attachmentId: number, entryType: 'achievement' | 'clubentry') {
@@ -1638,7 +1658,7 @@ async function submitAchievement() {
       duration: newAchievement.value.duration || undefined,
       description: newAchievement.value.description || undefined,
     })
-    let created = { ...res.data, attachments: res.data.attachments || [] }
+    const created = { ...res.data, attachments: res.data.attachments || [] }
     if (achievementFiles.value.length > 0) {
       try {
         await uploadAttachmentsApi('achievement', created.id, achievementFiles.value)
@@ -1783,6 +1803,7 @@ async function openAddReadingModal() {
   await fetchAcademicYears()
   const activeYear = (academicYears.value || []).find(y => y.is_active)
   newReading.value = { academic_year: activeYear?.id ?? null, title: '', month: new Date().getMonth() + 1, pages_read: 0, test_score: null }
+  clearReadingCover()
   showAddReadingModal.value = true
 }
 
@@ -1790,14 +1811,26 @@ async function submitReadingEntry() {
   if (!studentPk.value || !newReading.value.academic_year || !newReading.value.title) return
   savingReading.value = true
   try {
-    const res = await createReadingEntryApi(studentPk.value, {
+    let payload: CreateReadingEntryRequest | FormData = {
       academic_year: newReading.value.academic_year,
       title: newReading.value.title,
       month: newReading.value.month,
       pages_read: newReading.value.pages_read,
       test_score: newReading.value.test_score,
-    })
+    }
+    if (readingCover.value) {
+      const fd = new FormData()
+      fd.append('academic_year', String(newReading.value.academic_year))
+      fd.append('title', newReading.value.title)
+      fd.append('month', String(newReading.value.month))
+      fd.append('pages_read', String(newReading.value.pages_read ?? 0))
+      if (newReading.value.test_score != null) fd.append('test_score', String(newReading.value.test_score))
+      fd.append('cover', readingCover.value)
+      payload = fd
+    }
+    const res = await createReadingEntryApi(studentPk.value, payload)
     readingEntries.value.unshift(res.data)
+    clearReadingCover()
     showAddReadingModal.value = false
   } catch (e) { console.error('Failed to create reading entry:', e) }
   finally { savingReading.value = false }
@@ -1831,7 +1864,7 @@ async function fetchStudent() {
     templates.value = templatesRes.data
     academicYears.value = yearsRes.data
     // Fetch school group and tab data in parallel
-    const fetches: Promise<any>[] = [fetchAchievements(), fetchClubEntries(), fetchReadingEntries()]
+    const fetches: Promise<void>[] = [fetchAchievements(), fetchClubEntries(), fetchReadingEntries()]
     if (student.value.school_group != null) {
       fetches.push(
         getSchoolGroupApi(student.value.school_group)
@@ -1840,11 +1873,13 @@ async function fetchStudent() {
       )
     }
     await Promise.all(fetches)
-  } catch (err: any) {
-    if (err?.response?.status === 404) {
-      error.value = 'Student not found.'
-    } else {
-      error.value = 'Failed to load student data.'
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err)) {
+      if (err.response?.status === 404) {
+        error.value = 'Student not found.'
+      } else {
+        error.value = 'Failed to load student data.'
+      }
     }
   } finally {
     loading.value = false

@@ -375,6 +375,8 @@
         "download": "Скачать",
         "attachments": "Вложения",
         "attachFiles": "Прикрепить файлы",
+        "cover": "Обложка",
+        "attachCover": "Прикрепить обложку",
         "uploadingFiles": "Загрузка файлов...",
         "deleteAttachment": "Удалить вложение",
         "confirmDeleteAttachment": "Вы уверены, что хотите удалить это вложение?",
