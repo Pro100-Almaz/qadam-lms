@@ -186,6 +186,7 @@
                       <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('common.name') }}</th>
                       <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('lessons.dayOfWeek') }}</th>
                       <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ $t('subjects.classes') }}</th>
+                      <th v-if="canAddLesson" class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 w-16"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -205,6 +206,19 @@
                       </td>
                       <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ formatDate(lesson.date) }}</td>
                       <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ lesson.class_group_name }}</td>
+                      <td v-if="canAddLesson" class="px-5 py-3 text-right">
+                        <button
+                          type="button"
+                          @click="openCopyLessonModal(lesson.id)"
+                          :disabled="loadingCopySource === lesson.id"
+                          :title="$t('lessons.copyLesson')"
+                          :aria-label="$t('lessons.copyLesson')"
+                          class="inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-brand-600 disabled:opacity-50 dark:hover:bg-white/5 dark:hover:text-brand-400 transition"
+                        >
+                          <Loader2 v-if="loadingCopySource === lesson.id" class="h-4 w-4 animate-spin" />
+                          <Copy v-else class="h-4 w-4" />
+                        </button>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -365,12 +379,12 @@
         >
           <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $t('lessons.createTitle') }}</h3>
+              <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ copyingFromLessonId ? $t('lessons.copyTitle') : $t('lessons.createTitle') }}</h3>
               <button @click="showAddLessonModal = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5">
                 <X class="h-4 w-4" />
               </button>
             </div>
-            <form @submit.prevent="handleCreateLesson" class="mt-4 space-y-4">
+            <form @submit.prevent="handleSubmitLesson" class="mt-4 space-y-4">
               <!-- Offering (class group) -->
               <div>
                 <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('subjects.classGroup') }}</label>
@@ -508,12 +522,13 @@ import {
   User as UserIcon,
   Trophy,
   Plus,
+  Copy,
   X,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import { getSubjectDetailApi, getSubjectGradesApi } from '@/api/subjects'
-import { createLessonApi } from '@/api/lessons'
+import { createLessonApi, copyLessonApi, getLessonDetailApi } from '@/api/lessons'
 import { useAuth } from '@/composables/useAuth'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import type { SubjectDetail, SubjectGrades } from '@/types/subject'
@@ -539,6 +554,8 @@ const canAddLesson = computed(() =>
 const showAddLessonModal = ref(false)
 const addLessonBackdrop = useBackdropClose(() => { showAddLessonModal.value = false })
 const savingLesson = ref(false)
+const copyingFromLessonId = ref<number | null>(null)
+const loadingCopySource = ref<number | null>(null)
 const lessonForm = ref({
   offering: null as number | null,
   title: '',
@@ -551,6 +568,7 @@ const lessonForm = ref({
 })
 
 function openAddLessonModal() {
+  copyingFromLessonId.value = null
   lessonForm.value = {
     offering: subject.value?.offerings[0]?.id ?? null,
     title: '',
@@ -562,6 +580,33 @@ function openAddLessonModal() {
     description: '',
   }
   showAddLessonModal.value = true
+}
+
+async function openCopyLessonModal(lessonId: number) {
+  loadingCopySource.value = lessonId
+  try {
+    const { data } = await getLessonDetailApi(lessonId)
+    copyingFromLessonId.value = lessonId
+    lessonForm.value = {
+      offering: null,
+      title: data.title,
+      date: new Date().toISOString().split('T')[0],
+      quarter: data.quarter,
+      unit: data.unit,
+      order: data.order,
+      status: data.status,
+      description: data.description ?? '',
+    }
+    showAddLessonModal.value = true
+  } catch {
+    // handled by global interceptor
+  } finally {
+    loadingCopySource.value = null
+  }
+}
+
+function handleSubmitLesson() {
+  return copyingFromLessonId.value ? handleCopyLesson() : handleCreateLesson()
 }
 
 async function handleCreateLesson() {
@@ -579,6 +624,30 @@ async function handleCreateLesson() {
       description: lessonForm.value.description || undefined,
     })
     showAddLessonModal.value = false
+    router.push(`/lessons/${data.id}`)
+  } catch {
+    // handled by global interceptor
+  } finally {
+    savingLesson.value = false
+  }
+}
+
+async function handleCopyLesson() {
+  if (!copyingFromLessonId.value || !lessonForm.value.offering || !lessonForm.value.title) return
+  savingLesson.value = true
+  try {
+    const { data } = await copyLessonApi(copyingFromLessonId.value, {
+      offering: lessonForm.value.offering,
+      title: lessonForm.value.title,
+      date: lessonForm.value.date || undefined,
+      quarter: lessonForm.value.quarter,
+      unit: lessonForm.value.unit,
+      order: lessonForm.value.order || undefined,
+      status: lessonForm.value.status,
+      description: lessonForm.value.description || undefined,
+    })
+    showAddLessonModal.value = false
+    copyingFromLessonId.value = null
     router.push(`/lessons/${data.id}`)
   } catch {
     // handled by global interceptor
