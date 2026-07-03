@@ -564,10 +564,9 @@ function openGradingModal(student: LessonStudent) {
   const g = grading.value!
 
   // Determine comment mode from existing data
+  commentMode.value = 'selected'
   if (g.merged_comment_map[userId]) {
     commentMode.value = 'merged'
-  } else {
-    commentMode.value = 'selected'
   }
 
   // Determine comment mode from server data
