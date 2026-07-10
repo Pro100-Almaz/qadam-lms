@@ -251,6 +251,8 @@
         "room": "Кабинет",
         "editTitle": "Сабақты өңдеу",
         "createTitle": "Жаңа сабақ",
+        "copyTitle": "Сабақты көшіру",
+        "copyLesson": "Сабақты басқа сыныпқа көшіру",
         "today": "Бүгін",
         "viewMonth": "Ай",
         "viewWeek": "Апта",

@@ -453,10 +453,8 @@ import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 
 import { getGradingApi, submitGradingApi, updateGradingApi, deleteStudentGradingApi } from '@/api/grading'
 import {getLessonDetailApi} from '@/api/lessons'
-import {getSubjectDetailApi} from '@/api/subjects'
 
 import type { GradingData } from '@/types/grading'
-import type { SubjectDetail} from '@/types/subject'
 import type { LessonStudent, Topic, Subtopic, LessonDetail } from '@/types/lesson'
 
 const route = useRoute()

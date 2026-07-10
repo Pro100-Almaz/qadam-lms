@@ -27,6 +27,10 @@ export function createLessonApi(data: CreateLessonRequest) {
   return api.post<LessonDetail>('/lessons/', data)
 }
 
+export function copyLessonApi(lessonId: number, data: CreateLessonRequest) {
+  return api.post<LessonDetail>(`/lessons/${lessonId}/copy/`, data)
+}
+
 export function deleteLessonApi(id: number) {
   return api.delete(`/lessons/${id}/`)
 }

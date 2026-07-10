@@ -251,6 +251,8 @@
         "room": "Room",
         "editTitle": "Edit Lesson",
         "createTitle": "New Lesson",
+        "copyTitle": "Copy Lesson",
+        "copyLesson": "Copy lesson to another class",
         "today": "Today",
         "viewMonth": "Month",
         "viewWeek": "Week",
