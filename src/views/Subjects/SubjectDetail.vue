@@ -178,8 +178,8 @@
                   {{ $t('lessons.title') }} — Q{{ activeQuarter }}
                 </h2>
               </div>
-              <div class="overflow-x-auto">
-                <table class="w-full">
+              <div class="max-w-full overflow-x-auto custom-scrollbar">
+                <table class="w-full min-w-[640px]">
                   <thead>
                     <tr class="border-b border-gray-100 dark:border-gray-800">
                       <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 w-10">#</th>
@@ -235,8 +235,8 @@
                   {{ $t('subjects.gradebook') }} — Q{{ activeQuarter }}
                 </h2>
               </div>
-              <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+              <div class="max-w-full overflow-x-auto custom-scrollbar">
+                <table class="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr class="border-b border-gray-100 dark:border-gray-800">
                       <th class="sticky left-0 z-10 bg-white px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:bg-gray-900 dark:text-gray-400 min-w-[160px]">
@@ -373,7 +373,7 @@
       <Transition name="fade">
         <div
           v-if="showAddLessonModal"
-          class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+          class="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-4 sm:items-center"
           @mousedown="addLessonBackdrop.onMouseDown"
           @mouseup="addLessonBackdrop.onMouseUp"
         >

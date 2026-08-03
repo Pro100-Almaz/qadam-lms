@@ -59,7 +59,7 @@
     </div>
 
     <div class="max-w-full overflow-x-auto custom-scrollbar">
-      <table class="min-w-full">
+      <table class="w-full min-w-[640px]">
         <thead>
           <tr class="border-t border-gray-100 dark:border-gray-800">
             <th class="py-3 text-left">

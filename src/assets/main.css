@@ -531,6 +531,58 @@ span.flatpickr-weekday,
 .flatpickr-calendar.hasTime .flatpickr-time {
   border: transparent !important;
 }
+.flatpickr-monthSelect-month {
+  border-radius: 0.5rem !important;
+  color: var(--color-gray-800) !important;
+  font-size: var(--text-sm) !important;
+  font-weight: 500 !important;
+}
+.dark .flatpickr-monthSelect-month {
+  color: rgb(255 255 255 / 0.9) !important;
+}
+.flatpickr-monthSelect-month:hover,
+.flatpickr-monthSelect-month:focus {
+  border-color: var(--color-gray-100) !important;
+  background: var(--color-gray-50) !important;
+}
+.dark .flatpickr-monthSelect-month:hover,
+.dark .flatpickr-monthSelect-month:focus {
+  border-color: rgb(255 255 255 / 0.05) !important;
+  background: rgb(255 255 255 / 0.05) !important;
+}
+.flatpickr-monthSelect-month.selected {
+  border-color: var(--color-brand-500) !important;
+  background: var(--color-brand-500) !important;
+  color: white !important;
+}
+.flatpickr-monthSelect-month.flatpickr-disabled {
+  color: var(--color-gray-300) !important;
+  opacity: 0.6;
+}
+.dark .flatpickr-monthSelect-month.flatpickr-disabled {
+  color: var(--color-gray-600) !important;
+}
+.club-history-month-picker .flatpickr-innerContainer,
+.club-history-month-picker .flatpickr-rContainer,
+.club-history-month-picker .flatpickr-monthSelect-months {
+  width: 100% !important;
+}
+.club-history-month-picker .flatpickr-monthSelect-months {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.125rem;
+}
+.club-history-month-picker .flatpickr-monthSelect-month {
+  width: auto !important;
+  min-width: 0;
+  margin: 0 !important;
+}
+@media (min-width: 1024px) {
+  .club-history-month-picker.flatpickr-calendar {
+    width: 22rem !important;
+    min-width: 22rem !important;
+  }
+}
 .fc .fc-view-harness {
   @apply max-w-full overflow-x-auto custom-scrollbar;
 }

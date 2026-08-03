@@ -45,7 +45,7 @@
           </button>
           <div
             v-show="langDropdownOpen"
-            class="absolute left-0 z-50 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+            class="absolute left-0 top-full z-50 mt-1 w-44 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
           >
             <button
               @click="selectedLanguage = ''; langDropdownOpen = false"
@@ -72,113 +72,229 @@
         {{ $t('common.loading') }}
       </div>
 
-      <!-- Table -->
-      <div v-else class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-        <div class="overflow-x-visible">
-          <table class="w-full">
-            <thead>
-              <tr class="border-b border-gray-200 dark:border-gray-800">
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {{ $t('subjects.name') }}
-                </th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {{ $t('subjects.language') }}
-                </th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {{ $t('subjects.status') }}
-                </th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {{ $t('subjects.addedBy') }}
-                </th>
-                <th class="px-5 py-3.5 text-right text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {{ $t('common.actions') }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="subject in paginatedSubjects"
-                :key="subject.id"
-                class="border-b border-gray-100 last:border-0 dark:border-gray-800"
+      <!-- Subjects list -->
+      <div v-else>
+        <!-- Mobile cards -->
+        <div
+          class="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white xl:hidden dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900"
+        >
+          <article v-for="subject in paginatedSubjects" :key="subject.id" class="p-4">
+            <div class="flex items-start justify-between gap-3">
+              <button
+                type="button"
+                class="min-w-0 text-left text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                @click="viewSubject(subject)"
               >
-                <td class="px-5 py-4">
-                  <p class="cursor-pointer text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300" @click="viewSubject(subject)">{{ subject.name }}</p>
-                </td>
-                <td class="px-5 py-4">
-                  <span class="text-sm text-gray-700 dark:text-gray-300">
-                    {{ $t('subjects.languages.' + subject.language_group.toLowerCase()) }}
-                  </span>
-                </td>
-                <td class="px-5 py-4">
-                  <span
-                    class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
+                {{ subject.name }}
+              </button>
+              <span
+                class="shrink-0 rounded-full bg-success-50 px-2.5 py-0.5 text-xs font-medium text-success-700 dark:bg-success-500/10 dark:text-success-400"
+              >
+                {{ $t('subjects.statusActive') }}
+              </span>
+            </div>
+
+            <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+              <div>
+                <dt class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ $t('subjects.language') }}
+                </dt>
+                <dd class="mt-1 text-sm text-gray-700 dark:text-gray-300">
+                  {{ $t('subjects.languages.' + subject.language_group.toLowerCase()) }}
+                </dd>
+              </div>
+              <div class="min-w-0">
+                <dt class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ $t('subjects.addedBy') }}
+                </dt>
+                <dd class="mt-1 truncate text-sm text-gray-700 dark:text-gray-300">
+                  <template v-if="subject.added_by.first_name && subject.added_by.last_name">
+                    {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
+                  </template>
+                  <template v-else>{{ subject.added_by.username }}</template>
+                </dd>
+              </div>
+            </dl>
+
+            <div
+              class="mt-4 flex items-center justify-end gap-1 border-t border-gray-100 pt-3 dark:border-gray-800"
+            >
+              <button
+                type="button"
+                class="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
+                @click="viewSubject(subject)"
+              >
+                <Eye class="h-4 w-4" />
+                {{ $t('common.view') }}
+              </button>
+              <template v-if="isAdmin">
+                <button
+                  type="button"
+                  :aria-label="$t('common.edit')"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
+                  @click="editSubject(subject)"
+                >
+                  <Pencil class="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  :aria-label="$t('subjects.archive')"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-warning-600 hover:bg-warning-50 dark:text-warning-400 dark:hover:bg-warning-500/10"
+                  @click="archiveSubject(subject)"
+                >
+                  <Archive class="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  :aria-label="$t('common.delete')"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-error-600 hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-500/10"
+                  @click="deleteSubject(subject)"
+                >
+                  <Trash2 class="h-4 w-4" />
+                </button>
+              </template>
+            </div>
+          </article>
+
+          <div
+            v-if="filteredSubjects.length === 0"
+            class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+          >
+            {{ $t('common.noData') }}
+          </div>
+        </div>
+
+        <!-- Desktop table -->
+        <div
+          class="hidden rounded-xl border border-gray-200 bg-white xl:block dark:border-gray-800 dark:bg-gray-900"
+        >
+          <div class="max-w-full overflow-x-auto custom-scrollbar">
+            <table class="w-full min-w-[640px]">
+              <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-800">
+                  <th
+                    class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400"
                   >
-                    {{ $t('subjects.statusActive') }}
-                  </span>
-                </td>
-                <td class="px-5 py-4">
-                  <span class="text-sm text-gray-700 dark:text-gray-300">
-                    <div v-if="subject.added_by.first_name && subject.added_by.last_name" class="flex items-center gap-2">
-                      {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
-                    </div>
-                    <div v-else class="flex items-center gap-2">
-                      {{ subject.added_by.username }}
-                    </div>
-                  </span>
-                </td>
-                <td class="px-5 py-4 text-right">
-                  <div class="relative inline-block" :ref="el => setActionRef(el, subject.id)">
-                    <button
-                      @click="isAdmin ? toggleActions(subject.id) : viewSubject(subject)"
-                      class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
+                    {{ $t('subjects.name') }}
+                  </th>
+                  <th
+                    class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400"
+                  >
+                    {{ $t('subjects.language') }}
+                  </th>
+                  <th
+                    class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400"
+                  >
+                    {{ $t('subjects.status') }}
+                  </th>
+                  <th
+                    class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400"
+                  >
+                    {{ $t('subjects.addedBy') }}
+                  </th>
+                  <th
+                    class="px-5 py-3.5 text-right text-sm font-medium text-gray-500 dark:text-gray-400"
+                  >
+                    {{ $t('common.actions') }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="subject in paginatedSubjects"
+                  :key="subject.id"
+                  class="border-b border-gray-100 last:border-0 dark:border-gray-800"
+                >
+                  <td class="px-5 py-4">
+                    <p
+                      class="cursor-pointer text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                      @click="viewSubject(subject)"
                     >
-                      <Eye v-if="!isAdmin" class="h-4 w-4" />
-                      <MoreVertical v-else class="h-4 w-4" />
-                    </button>
-                    <div
-                      v-if="isAdmin"
-                      v-show="openActionId === subject.id"
-                      class="absolute right-0 z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+                      {{ subject.name }}
+                    </p>
+                  </td>
+                  <td class="px-5 py-4">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">
+                      {{ $t('subjects.languages.' + subject.language_group.toLowerCase()) }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-4">
+                    <span
+                      class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400"
                     >
-                      <button
-                        @click="viewSubject(subject)"
-                        class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                      {{ $t('subjects.statusActive') }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-4">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">
+                      <div
+                        v-if="subject.added_by.first_name && subject.added_by.last_name"
+                        class="flex items-center gap-2"
                       >
-                        <Eye class="h-3.5 w-3.5" />
-                        {{ $t('common.view') }}
-                      </button>
+                        {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
+                      </div>
+                      <div v-else class="flex items-center gap-2">
+                        {{ subject.added_by.username }}
+                      </div>
+                    </span>
+                  </td>
+                  <td class="px-5 py-4 text-right">
+                    <div class="relative inline-block" :ref="(el) => setActionRef(el, subject.id)">
                       <button
-                        @click="editSubject(subject)"
-                        class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                        @click="isAdmin ? toggleActions(subject.id) : viewSubject(subject)"
+                        class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
                       >
-                        <Pencil class="h-3.5 w-3.5" />
-                        {{ $t('common.edit') }}
+                        <Eye v-if="!isAdmin" class="h-4 w-4" />
+                        <MoreVertical v-else class="h-4 w-4" />
                       </button>
-                      <button
-                        @click="archiveSubject(subject)"
-                        class="flex w-full items-center gap-2 px-4 py-2 text-sm text-warning-600 hover:bg-gray-50 dark:text-warning-400 dark:hover:bg-white/5"
+                      <div
+                        v-if="isAdmin"
+                        v-show="openActionId === subject.id"
+                        class="absolute right-0 top-full z-50 mt-1 w-40 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
                       >
-                        <Archive class="h-3.5 w-3.5" />
-                        {{ $t('subjects.archive') }}
-                      </button>
-                      <button
-                        @click="deleteSubject(subject)"
-                        class="flex w-full items-center gap-2 px-4 py-2 text-sm text-error-600 hover:bg-gray-50 dark:text-error-400 dark:hover:bg-white/5"
-                      >
-                        <Trash2 class="h-3.5 w-3.5" />
-                        {{ $t('common.delete') }}
-                      </button>
+                        <button
+                          @click="viewSubject(subject)"
+                          class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                        >
+                          <Eye class="h-3.5 w-3.5" />
+                          {{ $t('common.view') }}
+                        </button>
+                        <button
+                          @click="editSubject(subject)"
+                          class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                        >
+                          <Pencil class="h-3.5 w-3.5" />
+                          {{ $t('common.edit') }}
+                        </button>
+                        <button
+                          @click="archiveSubject(subject)"
+                          class="flex w-full items-center gap-2 px-4 py-2 text-sm text-warning-600 hover:bg-gray-50 dark:text-warning-400 dark:hover:bg-white/5"
+                        >
+                          <Archive class="h-3.5 w-3.5" />
+                          {{ $t('subjects.archive') }}
+                        </button>
+                        <button
+                          @click="deleteSubject(subject)"
+                          class="flex w-full items-center gap-2 px-4 py-2 text-sm text-error-600 hover:bg-gray-50 dark:text-error-400 dark:hover:bg-white/5"
+                        >
+                          <Trash2 class="h-3.5 w-3.5" />
+                          {{ $t('common.delete') }}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="filteredSubjects.length === 0">
-                <td colspan="5" class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                  {{ $t('common.noData') }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  </td>
+                </tr>
+                <tr v-if="filteredSubjects.length === 0">
+                  <td
+                    colspan="5"
+                    class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+                  >
+                    {{ $t('common.noData') }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -202,7 +318,7 @@
         >
           <div
             v-if="showAddModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @click.self="showAddModal = false"
           >
             <div class="mx-4 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
@@ -412,7 +528,6 @@ function editSubject(subject: Subject) {
   openActionId.value = null
 }
 
-
 async function archiveSubject(subject: Subject) {
   openActionId.value = null
   if (confirm(t('subjects.confirmArchive'))) {
@@ -482,8 +597,6 @@ async function handleCreateSubject() {
     savingSubject.value = false
   }
 }
-
-
 
 watch(showAddModal, (val) => {
   if (val && !academicYears.value.length) fetchFormData()

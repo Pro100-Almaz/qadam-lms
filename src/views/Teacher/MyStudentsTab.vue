@@ -103,8 +103,8 @@
 
       <!-- Students table -->
       <div v-else-if="studentsData" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
-        <div class="overflow-x-auto">
-          <table class="w-full">
+        <div class="max-w-full overflow-x-auto custom-scrollbar">
+          <table class="w-full min-w-[640px]">
             <thead>
               <tr class="border-b border-gray-200 dark:border-gray-800">
                 <th

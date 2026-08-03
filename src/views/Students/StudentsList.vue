@@ -35,7 +35,7 @@
           </button>
           <div
             v-show="yearDropdownOpen"
-            class="absolute left-0 z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+            class="absolute left-0 top-full z-50 mt-1 w-48 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
           >
             <button
               @click="selectedYearId = null; yearDropdownOpen = false"
@@ -68,7 +68,7 @@
           </button>
           <div
             v-show="classDropdownOpen"
-            class="absolute left-0 z-50 mt-1 max-h-60 w-44 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+            class="absolute left-0 top-full z-50 mt-1 max-h-60 w-44 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
           >
             <button
               @click="selectedClassGroupId = null; classDropdownOpen = false"
@@ -97,8 +97,8 @@
 
       <!-- Table -->
       <div v-else class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-        <div class="overflow-x-visible">
-          <table class="w-full">
+        <div class="max-w-full overflow-x-auto custom-scrollbar">
+          <table class="w-full min-w-[640px]">
             <thead>
               <tr class="border-b border-gray-200 dark:border-gray-800">
                 <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -166,7 +166,7 @@
                     </button>
                     <div
                       v-show="openActionId === student.id"
-                      class="absolute right-0 z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+                      class="absolute right-0 top-full z-50 mt-1 w-40 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
                     >
                       <button
                         @click="viewStudent(student)"

@@ -32,7 +32,7 @@
     <!-- Dropdown Start -->
     <div
       v-if="dropdownOpen"
-      class="absolute -right-[240px] mt-[17px] flex h-[480px] w-[350px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark sm:w-[361px] lg:right-0"
+      class="fixed left-4 top-[8.25rem] z-50 flex h-[min(480px,calc(100dvh-9.25rem))] w-[350px] max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark lg:absolute lg:left-auto lg:right-0 lg:top-full lg:mt-2 lg:h-[480px] lg:w-[361px]"
     >
       <div
         class="flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-800"

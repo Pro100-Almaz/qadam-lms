@@ -190,14 +190,14 @@
                 </span>
               </div>
 
-              <div class="overflow-x-auto">
+              <div class="max-w-full overflow-x-auto custom-scrollbar">
                 <div
                   v-if="teacher.assignments.length === 0"
                   class="px-6 py-6 text-center text-sm text-gray-400 dark:text-gray-500"
                 >
                   {{ t('common.noData') }}
                 </div>
-                <table v-else class="w-full">
+                <table v-else class="w-full min-w-[640px]">
                   <thead>
                     <tr class="border-b border-gray-100 dark:border-gray-800">
                       <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
