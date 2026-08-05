@@ -12,6 +12,7 @@ declare module 'vue-router' {
 
 const staffRoles: UserRole[] = ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal']
 const adminRoles: UserRole[] = ['admin', 'supervisor', 'principal']
+const clubRoles: UserRole[] = ['club_manager', ...adminRoles]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -130,6 +131,12 @@ const router = createRouter({
       component: () => import('../views/Students/StudentDetail.vue'),
       meta: { title: 'Student Detail', roles: staffRoles },
     },
+    {
+      path: '/students/:studentId/clubs/:clubId',
+      name: 'StudentClubDetail',
+      component: () => import('../views/Students/StudentClubDetail.vue'),
+      meta: { title: 'Student Club Detail', roles: [...staffRoles, 'student', 'parent'] },
+    },
 
     // Register (admin only)
     {
@@ -137,6 +144,38 @@ const router = createRouter({
       name: 'RegisterUser',
       component: () => import('../views/Auth/RegisterUser.vue'),
       meta: { title: 'Register User', roles: adminRoles },
+    },
+
+    // Club management
+    {
+      path: '/clubs',
+      name: 'Clubs',
+      component: () => import('../views/Clubs/ClubsList.vue'),
+      meta: { title: 'Clubs', roles: clubRoles },
+    },
+    {
+      path: '/clubs/create',
+      name: 'CreateClub',
+      component: () => import('../views/Clubs/CreateClub.vue'),
+      meta: { title: 'Create Club', roles: clubRoles },
+    },
+    {
+      path: '/clubs/:id/edit',
+      name: 'EditClub',
+      component: () => import('../views/Clubs/CreateClub.vue'),
+      meta: { title: 'Edit Club', roles: clubRoles },
+    },
+    {
+      path: '/clubs/:id/attendance',
+      name: 'ClubAttendance',
+      component: () => import('../views/Clubs/ClubAttendance.vue'),
+      meta: { title: 'Club Attendance', roles: clubRoles },
+    },
+    {
+      path: '/clubs/:id',
+      name: 'ClubDetail',
+      component: () => import('../views/Clubs/ClubDetail.vue'),
+      meta: { title: 'Club Detail', roles: clubRoles },
     },
 
     // Profile (all authenticated users)
@@ -257,6 +296,7 @@ const router = createRouter({
 function getDefaultRoute(role?: UserRole): string {
   if (role === 'student') return '/my-subjects'
   if (role === 'parent') return '/my-children'
+  if (role === 'club_manager') return '/clubs'
   return '/subjects/active'
 }
 

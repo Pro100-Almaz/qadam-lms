@@ -158,8 +158,8 @@
               {{ t('subjects.title') }}
             </h2>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full">
+          <div class="max-w-full overflow-x-auto custom-scrollbar">
+            <table class="w-full min-w-[640px]">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                   <th class="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -346,117 +346,7 @@
       </div>
 
       <!-- TAB: Clubs -->
-      <div v-show="activeTab === 'clubs'" class="space-y-5">
-        <div class="flex items-center justify-between">
-          <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('students.clubs') }}</h2>
-          <button
-            v-if="isAdmin"
-            @click="openAddClubModal"
-            class="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
-          >
-            <Plus class="h-4 w-4" />
-            {{ t('students.addClubEntry') }}
-          </button>
-        </div>
-
-        <div v-if="loadingClubs" class="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{{ t('common.loading') }}</div>
-
-        <div v-else-if="clubEntries.length > 0" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <div
-            v-for="club in clubEntries"
-            :key="club.id"
-            class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs"
-          >
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <h3 class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ club.club_name }}</h3>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                  {{ monthNames[club.month - 1] }} · {{ club.academic_year }}
-                </p>
-              </div>
-              <div v-if="isAdmin" class="flex shrink-0 items-center gap-1">
-                <button
-                  @click="openEditClubModal(club)"
-                  class="rounded-lg p-1.5 text-gray-400 hover:bg-brand-50 hover:text-brand-500 dark:hover:bg-brand-500/10 transition-colors"
-                >
-                  <Pencil class="h-3.5 w-3.5" />
-                </button>
-                <button
-                  @click="removeClubEntry(club.id)"
-                  class="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 transition-colors"
-                >
-                  <Trash2 class="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-
-            <!-- Attendance bar -->
-            <div class="mt-3">
-              <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span>{{ t('students.attendance') }}</span>
-                <span class="font-medium">{{ club.attended_sessions }}/{{ club.total_sessions }}</span>
-              </div>
-              <div class="mt-1 h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
-                <div
-                  class="h-full rounded-full bg-brand-500 transition-all"
-                  :style="{ width: club.total_sessions ? (club.attended_sessions / club.total_sessions * 100) + '%' : '0%' }"
-                ></div>
-              </div>
-            </div>
-
-            <div v-if="club.plan" class="mt-3">
-              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('students.plan') }}</p>
-              <p class="mt-0.5 text-xs text-gray-700 dark:text-gray-300">{{ club.plan }}</p>
-            </div>
-
-            <div v-if="club.criteria" class="mt-2">
-              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('students.criteria') }}</p>
-              <p class="mt-0.5 text-xs text-gray-700 dark:text-gray-300">{{ club.criteria }}</p>
-            </div>
-
-            <div v-if="club.comments" class="mt-2 rounded-lg bg-gray-50 p-2.5 dark:bg-gray-800/60">
-              <p class="text-xs italic text-gray-600 dark:text-gray-400">"{{ club.comments }}"</p>
-            </div>
-
-            <!-- Attachments -->
-            <div v-if="club.attachments?.length" class="mt-3 border-t border-gray-100 pt-3 dark:border-gray-800">
-              <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('students.attachments') }}</p>
-              <div class="flex flex-wrap gap-2">
-                <template v-for="att in club.attachments" :key="att.id">
-                  <div v-if="isImageFile(att)" class="group/att relative">
-                    <button type="button" @click="previewAttachment = att" class="block h-16 w-16 overflow-hidden rounded-lg border border-gray-200 hover:opacity-80 dark:border-gray-700 transition-opacity">
-                      <img :src="att.file" :alt="att.original_name" class="h-full w-full object-cover" />
-                    </button>
-                    <button v-if="isAdmin" @click="removeAttachment(att.id, 'clubentry')" class="absolute -right-1 -top-1 rounded-full bg-white p-0.5 shadow-sm opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:bg-gray-800 dark:hover:bg-red-500/10 transition-opacity">
-                      <Trash2 class="h-3 w-3 text-red-500" />
-                    </button>
-                  </div>
-                  <div v-else class="group/att flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 dark:border-gray-700 dark:bg-gray-800/50">
-                    <FileText class="h-3.5 w-3.5 text-gray-400" />
-                    <button @click="previewAttachment = att" class="max-w-[100px] truncate text-xs text-brand-500 hover:underline">{{ att.original_name }}</button>
-                    <button v-if="isAdmin" @click="removeAttachment(att.id, 'clubentry')" class="rounded p-0.5 hover:bg-red-50 dark:hover:bg-red-500/10">
-                      <Trash2 class="h-3 w-3 text-red-500" />
-                    </button>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-16 dark:border-gray-800">
-          <Puzzle class="mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
-          <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('students.noClubEntries') }}</p>
-          <button
-            v-if="isAdmin"
-            @click="openAddClubModal"
-            class="mt-4 flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
-          >
-            <Plus class="h-4 w-4" />
-            {{ t('students.addClubEntry') }}
-          </button>
-        </div>
-      </div>
+      <StudentClubsSection v-show="activeTab === 'clubs'" :student-id="studentPk" />
 
       <!-- TAB: Rating / Achievements -->
       <div v-show="activeTab === 'rating'" class="space-y-8">
@@ -476,8 +366,8 @@
 
           <div v-if="loadingAchievements" class="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{{ t('common.loading') }}</div>
 
-          <div v-else-if="achievements.length > 0" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs overflow-hidden">
-            <table class="w-full">
+          <div v-else-if="achievements.length > 0" class="max-w-full overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-theme-xs custom-scrollbar dark:border-gray-800 dark:bg-gray-900">
+            <table class="w-full min-w-[640px]">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                   <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('students.category') }}</th>
@@ -519,14 +409,14 @@
                           <button type="button" @click="previewAttachment = att" class="block h-10 w-10 overflow-hidden rounded border border-gray-200 hover:opacity-80 dark:border-gray-700 transition-opacity">
                             <img :src="att.file" :alt="att.original_name" class="h-full w-full object-cover" />
                           </button>
-                          <button v-if="isAdmin" @click="removeAttachment(att.id, 'achievement')" class="absolute -right-1 -top-1 rounded-full bg-white p-0.5 shadow-sm opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:bg-gray-800 dark:hover:bg-red-500/10 transition-opacity">
+                          <button v-if="isAdmin" @click="removeAttachment(att.id)" class="absolute -right-1 -top-1 rounded-full bg-white p-0.5 shadow-sm opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:bg-gray-800 dark:hover:bg-red-500/10 transition-opacity">
                             <Trash2 class="h-2.5 w-2.5 text-red-500" />
                           </button>
                         </div>
                         <div v-else class="group/att flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 dark:border-gray-700 dark:bg-gray-800/50">
                           <FileText class="h-3 w-3 text-gray-400" />
                           <button @click="previewAttachment = att" class="max-w-[60px] truncate text-xs text-brand-500 hover:underline">{{ att.original_name }}</button>
-                          <button v-if="isAdmin" @click="removeAttachment(att.id, 'achievement')" class="rounded p-0.5 opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:hover:bg-red-500/10 transition-opacity">
+                          <button v-if="isAdmin" @click="removeAttachment(att.id)" class="rounded p-0.5 opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:hover:bg-red-500/10 transition-opacity">
                             <Trash2 class="h-2.5 w-2.5 text-red-500" />
                           </button>
                         </div>
@@ -868,83 +758,6 @@
       </template>
     </Modal>
 
-    <!-- Add / Edit Club Entry Modal -->
-    <Modal v-if="showAddClubModal" :fullScreenBackdrop="true" @close="closeClubModal">
-      <template #body>
-        <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-md dark:border-gray-800 dark:bg-gray-900">
-          <div class="mb-5 flex items-center justify-between">
-            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ editingClubId ? t('students.editClubEntry') : t('students.addClubEntry') }}</h3>
-            <button @click="closeClubModal" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"><X class="h-5 w-5" /></button>
-          </div>
-          <div class="space-y-4">
-            <div>
-              <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.clubName') }} <span class="text-red-500">*</span></label>
-              <input v-model="newClub.club_name" type="text" placeholder="e.g. Chess Club" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('academicYears.title') }} <span class="text-red-500">*</span></label>
-                <select v-model="newClub.academic_year" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                  <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.year }}</option>
-                </select>
-              </div>
-              <div>
-                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.month') }} <span class="text-red-500">*</span></label>
-                <select v-model="newClub.month" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                  <option v-for="(name, idx) in monthNames" :key="idx" :value="idx + 1">{{ name }}</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.plan') }}</label>
-              <textarea v-model="newClub.plan" rows="2" class="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"></textarea>
-            </div>
-            <div>
-              <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.criteria') }}</label>
-              <input v-model="newClub.criteria" type="text" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.totalSessions') }}</label>
-                <input v-model.number="newClub.total_sessions" type="number" min="0" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
-              </div>
-              <div>
-                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.attendedSessions') }}</label>
-                <input v-model.number="newClub.attended_sessions" type="number" min="0" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
-              </div>
-            </div>
-            <div>
-              <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.comments') }}</label>
-              <textarea v-model="newClub.comments" rows="2" class="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"></textarea>
-            </div>
-            <div>
-              <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.attachments') }}</label>
-              <div
-                @click="clubFileInput?.click()"
-                class="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-sm text-gray-500 hover:border-brand-400 hover:bg-brand-50/50 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-400 dark:hover:border-brand-500/50 dark:hover:bg-brand-500/5 transition-colors"
-              >
-                <Paperclip class="h-4 w-4" />
-                <span>{{ clubFiles.length > 0 ? `${clubFiles.length} file(s) selected` : t('students.attachFiles') }}</span>
-              </div>
-              <input ref="clubFileInput" type="file" multiple accept="image/*,.pdf,.doc,.docx" class="hidden" @change="onClubFileChange" />
-              <div v-if="clubFiles.length > 0" class="mt-2 flex flex-wrap gap-1.5">
-                <span v-for="(f, idx) in clubFiles" :key="idx" class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
-                  {{ f.name }}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div class="mt-6 flex gap-3">
-            <button @click="closeClubModal" class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5">{{ t('common.cancel') }}</button>
-            <button @click="submitClubEntry" :disabled="!newClub.club_name || !newClub.academic_year || savingClub" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors">
-              <Loader2 v-if="savingClub" class="h-4 w-4 animate-spin" />
-              {{ t('common.save') }}
-            </button>
-          </div>
-        </div>
-      </template>
-    </Modal>
-
     <!-- Add Reading Entry Modal -->
     <Modal v-if="showAddReadingModal" :fullScreenBackdrop="true" @close="showAddReadingModal = false">
       <template #body>
@@ -1101,7 +914,6 @@ import {
   Star,
   Plus,
   Trash2,
-  Pencil,
   History,
   X,
   Loader2,
@@ -1126,6 +938,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
 import DocumentPreviewModal from '@/components/ui/DocumentPreviewModal.vue'
+import StudentClubsSection from '@/components/students/StudentClubsSection.vue'
 import {
   getStudentDetailApi,
   createPsychologicalStateApi,
@@ -1141,15 +954,11 @@ import {
   getReadingEntriesApi,
   createReadingEntryApi,
   deleteReadingEntryApi,
-  getClubEntriesApi,
-  createClubEntryApi,
-  updateClubEntryApi,
-  deleteClubEntryApi,
   uploadAttachmentsApi,
   deleteAttachmentApi,
 } from '@/api/achievements'
 import { getAcademicYearsApi } from '@/api/academic'
-import type { Achievement, ReadingEntry, ClubEntry, AchievementCategory, Attachment, CreateReadingEntryRequest } from '@/types/achievement'
+import type { Achievement, ReadingEntry, AchievementCategory, Attachment, CreateReadingEntryRequest } from '@/types/achievement'
 import type { AcademicYear } from '@/types/academic'
 import { getSchoolGroupApi, type SchoolGroup } from '@/api/auth'
 import { useAuth } from '@/composables/useAuth'
@@ -1197,18 +1006,13 @@ const tabs = computed(() => [
 // ─── Achievements / Clubs / Reading ─────────────────────────────────────────
 const achievements = ref<Achievement[]>([])
 const readingEntries = ref<ReadingEntry[]>([])
-const clubEntries = ref<ClubEntry[]>([])
 const academicYears = ref<AcademicYear[]>([])
 const loadingAchievements = ref(false)
-const loadingClubs = ref(false)
 const loadingReading = ref(false)
 
 const showAddAchievementModal = ref(false)
-const showAddClubModal = ref(false)
-const editingClubId = ref<number | null>(null)
 const showAddReadingModal = ref(false)
 const savingAchievement = ref(false)
-const savingClub = ref(false)
 const savingReading = ref(false)
 
 const categoryLabels: Record<AchievementCategory, string> = {
@@ -1233,17 +1037,6 @@ const newAchievement = ref({
   description: '',
 })
 
-const newClub = ref({
-  academic_year: null as number | null,
-  month: new Date().getMonth() + 1,
-  club_name: '',
-  plan: '',
-  criteria: '',
-  total_sessions: 0,
-  attended_sessions: 0,
-  comments: '',
-})
-
 const newReading = ref({
   academic_year: null as number | null,
   title: '',
@@ -1253,9 +1046,7 @@ const newReading = ref({
 })
 
 const achievementFiles = ref<File[]>([])
-const clubFiles = ref<File[]>([])
 const achievementFileInput = ref<HTMLInputElement | null>(null)
-const clubFileInput = ref<HTMLInputElement | null>(null)
 
 const readingCover = ref<File | null>(null)
 const readingCoverPreview = ref<string | null>(null)
@@ -1270,11 +1061,6 @@ function isImageFile(attachment: Attachment): boolean {
 function onAchievementFileChange(e: Event) {
   const input = e.target as HTMLInputElement
   if (input.files) achievementFiles.value = Array.from(input.files)
-}
-
-function onClubFileChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  if (input.files) clubFiles.value = Array.from(input.files)
 }
 
 function onReadingCoverChange(e: Event) {
@@ -1292,21 +1078,14 @@ function clearReadingCover() {
   if (readingCoverInput.value) readingCoverInput.value.value = ''
 }
 
-async function removeAttachment(attachmentId: number, entryType: 'achievement' | 'clubentry') {
+async function removeAttachment(attachmentId: number) {
   if (!confirm(t('students.confirmDeleteAttachment'))) return
   try {
     await deleteAttachmentApi(attachmentId)
-    if (entryType === 'achievement') {
-      achievements.value = achievements.value.map(a => ({
-        ...a,
-        attachments: (a.attachments || []).filter(att => att.id !== attachmentId),
-      }))
-    } else {
-      clubEntries.value = clubEntries.value.map(c => ({
-        ...c,
-        attachments: (c.attachments || []).filter(att => att.id !== attachmentId),
-      }))
-    }
+    achievements.value = achievements.value.map(a => ({
+      ...a,
+      attachments: (a.attachments || []).filter(att => att.id !== attachmentId),
+    }))
   } catch { /* silent */ }
 }
 
@@ -1631,7 +1410,6 @@ async function fetchAcademicYears() {
     const active = academicYears.value.find(y => y.is_active)
     if (active) {
       newAchievement.value.academic_year = active.id
-      newClub.value.academic_year = active.id
       newReading.value.academic_year = active.id
       if (active.current_quarter) currentQuarter.value = active.current_quarter
     }
@@ -1693,98 +1471,6 @@ async function downloadCertificate(id: number) {
     a.download = filename
     a.click()
     URL.revokeObjectURL(url)
-  } catch { /* silent */ }
-}
-
-// ─── Club Entries CRUD ──────────────────────────────────────────────────────
-async function fetchClubEntries() {
-  if (!studentPk.value) return
-  loadingClubs.value = true
-  try {
-    const { data } = await getClubEntriesApi(studentPk.value)
-    clubEntries.value = data
-  } catch { clubEntries.value = [] }
-  finally { loadingClubs.value = false }
-}
-
-async function openAddClubModal() {
-  await fetchAcademicYears()
-  const activeYear = (academicYears.value || []).find(y => y.is_active)
-  editingClubId.value = null
-  clubFiles.value = []
-  newClub.value = { academic_year: activeYear?.id ?? null, month: new Date().getMonth() + 1, club_name: '', plan: '', criteria: '', total_sessions: 0, attended_sessions: 0, comments: '' }
-  showAddClubModal.value = true
-}
-
-async function openEditClubModal(club: ClubEntry) {
-  await fetchAcademicYears()
-  editingClubId.value = club.id
-  clubFiles.value = []
-  const matchedYear = (academicYears.value || []).find(y => y.year === club.academic_year)
-  newClub.value = {
-    academic_year: matchedYear?.id ?? null,
-    month: club.month,
-    club_name: club.club_name,
-    plan: club.plan || '',
-    criteria: club.criteria || '',
-    total_sessions: club.total_sessions,
-    attended_sessions: club.attended_sessions,
-    comments: club.comments || '',
-  }
-  showAddClubModal.value = true
-}
-
-function closeClubModal() {
-  showAddClubModal.value = false
-  editingClubId.value = null
-  clubFiles.value = []
-}
-
-async function submitClubEntry() {
-  if (!studentPk.value || !newClub.value.academic_year || !newClub.value.club_name) return
-  savingClub.value = true
-  try {
-    const payload = {
-      academic_year: newClub.value.academic_year,
-      month: newClub.value.month,
-      club_name: newClub.value.club_name,
-      plan: newClub.value.plan || undefined,
-      criteria: newClub.value.criteria || undefined,
-      total_sessions: newClub.value.total_sessions,
-      attended_sessions: newClub.value.attended_sessions,
-      comments: newClub.value.comments || undefined,
-    }
-    if (editingClubId.value) {
-      const res = await updateClubEntryApi(editingClubId.value, payload)
-      const updated = { ...res.data, attachments: res.data.attachments || [] }
-      if (clubFiles.value.length > 0) {
-        try {
-          const attRes = await uploadAttachmentsApi('clubentry', updated.id, clubFiles.value)
-          updated.attachments = attRes.data
-        } catch { /* silent */ }
-      }
-      clubEntries.value = clubEntries.value.map(c => (c.id === updated.id ? updated : c))
-    } else {
-      const res = await createClubEntryApi(studentPk.value, payload)
-      const created = { ...res.data, attachments: res.data.attachments || [] }
-      if (clubFiles.value.length > 0) {
-        try {
-          const attRes = await uploadAttachmentsApi('clubentry', created.id, clubFiles.value)
-          created.attachments = attRes.data
-        } catch { /* silent */ }
-      }
-      clubEntries.value.unshift(created)
-    }
-    closeClubModal()
-  } catch (e) { console.error('Failed to save club entry:', e) }
-  finally { savingClub.value = false }
-}
-
-async function removeClubEntry(id: number) {
-  if (!confirm(t('students.confirmDeleteClubEntry'))) return
-  try {
-    await deleteClubEntryApi(id)
-    clubEntries.value = clubEntries.value.filter(c => c.id !== id)
   } catch { /* silent */ }
 }
 
@@ -1864,7 +1550,7 @@ async function fetchStudent() {
     templates.value = templatesRes.data
     academicYears.value = yearsRes.data
     // Fetch school group and tab data in parallel
-    const fetches: Promise<void>[] = [fetchAchievements(), fetchClubEntries(), fetchReadingEntries()]
+    const fetches: Promise<void>[] = [fetchAchievements(), fetchReadingEntries()]
     if (student.value.school_group != null) {
       fetches.push(
         getSchoolGroupApi(student.value.school_group)

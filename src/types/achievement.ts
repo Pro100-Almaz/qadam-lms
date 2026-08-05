@@ -55,29 +55,3 @@ export interface CreateReadingEntryRequest {
   pages_read?: number
   test_score?: number | null
 }
-
-export interface ClubEntry {
-  id: number
-  student: { id: number; full_name: string }
-  academic_year: string
-  month: number
-  club_name: string
-  plan: string
-  criteria: string
-  total_sessions: number
-  attended_sessions: number
-  comments: string
-  attachments: Attachment[]
-  created_at: string
-}
-
-export interface CreateClubEntryRequest {
-  academic_year: number
-  month: number
-  club_name: string
-  plan?: string
-  criteria?: string
-  total_sessions?: number
-  attended_sessions?: number
-  comments?: string
-}

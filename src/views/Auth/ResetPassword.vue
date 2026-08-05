@@ -1,7 +1,7 @@
 <template>
   <FullScreenLayout>
     <div class="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
-      <div class="flex flex-col justify-center w-full h-screen dark:bg-gray-900">
+      <div class="flex min-h-screen min-h-dvh w-full flex-col justify-center dark:bg-gray-900">
         <div class="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
           <div>
             <div class="mb-5 sm:mb-8">

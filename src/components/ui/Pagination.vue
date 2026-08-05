@@ -3,13 +3,41 @@
     <!-- Page size selector -->
     <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
       <span>{{ $t('pagination.show') }}</span>
-      <select
-        :value="pageSize"
-        @change="$emit('update:pageSize', Number(($event.target as HTMLSelectElement).value))"
-        class="h-9 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-      >
-        <option v-for="size in pageSizes" :key="size" :value="size">{{ size }}</option>
-      </select>
+      <div ref="pageSizeDropdownRef" class="relative">
+        <button
+          type="button"
+          class="flex h-9 min-w-16 items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-2 text-sm text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+          aria-haspopup="listbox"
+          :aria-expanded="pageSizeDropdownOpen"
+          @click="pageSizeDropdownOpen = !pageSizeDropdownOpen"
+          @keydown.esc="pageSizeDropdownOpen = false"
+        >
+          <span>{{ pageSize }}</span>
+          <ChevronDown
+            class="h-4 w-4 text-gray-400 transition-transform"
+            :class="{ 'rotate-180': pageSizeDropdownOpen }"
+          />
+        </button>
+
+        <div
+          v-if="pageSizeDropdownOpen"
+          class="absolute bottom-full left-0 z-50 mb-1 min-w-full overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+          role="listbox"
+        >
+          <button
+            v-for="size in pageSizes"
+            :key="size"
+            type="button"
+            role="option"
+            :aria-selected="size === pageSize"
+            class="flex min-h-10 w-full items-center px-3 text-left text-sm text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-hidden dark:text-gray-300 dark:hover:bg-white/5 dark:focus:bg-white/5"
+            :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': size === pageSize }"
+            @click="selectPageSize(size)"
+          >
+            {{ size }}
+          </button>
+        </div>
+      </div>
       <span>{{ $t('pagination.of') }} {{ total }} {{ $t('pagination.entries') }}</span>
     </div>
 
@@ -54,8 +82,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const props = withDefaults(
   defineProps<{
@@ -69,10 +97,27 @@ const props = withDefaults(
   }
 )
 
-defineEmits<{
+const emit = defineEmits<{
   'update:currentPage': [page: number]
   'update:pageSize': [size: number]
 }>()
+
+const pageSizeDropdownOpen = ref(false)
+const pageSizeDropdownRef = ref<HTMLElement | null>(null)
+
+function selectPageSize(size: number) {
+  emit('update:pageSize', size)
+  pageSizeDropdownOpen.value = false
+}
+
+function closePageSizeDropdown(event: MouseEvent) {
+  if (!pageSizeDropdownRef.value?.contains(event.target as Node)) {
+    pageSizeDropdownOpen.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', closePageSizeDropdown))
+onBeforeUnmount(() => document.removeEventListener('click', closePageSizeDropdown))
 
 const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
 

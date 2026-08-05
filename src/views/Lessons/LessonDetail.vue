@@ -138,8 +138,8 @@
               </button>
             </div>
           </div>
-          <div class="overflow-x-auto">
-            <table v-if="lesson.topics.length" class="w-full text-sm">
+          <div class="max-w-full overflow-x-auto custom-scrollbar">
+            <table v-if="lesson.topics.length" class="w-full min-w-[640px] text-sm">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                   <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">#</th>
@@ -217,8 +217,8 @@
               </button>
             </div>
           </div>
-          <div class="overflow-x-auto">
-            <table v-if="filteredSubtopics.length" class="w-full text-sm">
+          <div class="max-w-full overflow-x-auto custom-scrollbar">
+            <table v-if="filteredSubtopics.length" class="w-full min-w-[640px] text-sm">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                   <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">#</th>
@@ -274,8 +274,8 @@
           <div class="border-b border-gray-200 p-4 dark:border-gray-800">
             <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ t('lessons.studentGrades') }}</h2>
           </div>
-          <div class="overflow-x-auto">
-            <table v-if="lesson.students.length" class="w-full text-sm">
+          <div class="max-w-full overflow-x-auto custom-scrollbar">
+            <table v-if="lesson.students.length" class="w-full min-w-[640px] text-sm">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                   <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">#</th>
@@ -345,7 +345,7 @@
         >
           <div
             v-if="showTopicModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @mousedown="addTopicBackdrop.onMouseDown"
             @mouseup="addTopicBackdrop.onMouseUp"
           >
@@ -431,7 +431,7 @@
         >
           <div
             v-if="showSubtopicModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @mousedown="addSubtopicBackdrop.onMouseDown"
             @mouseup="addSubtopicBackdrop.onMouseUp"
           >
@@ -529,7 +529,7 @@
         >
           <div
             v-if="showGradeModal && selectedStudent"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @click.self="showGradeModal = false"
           >
             <Transition
@@ -644,7 +644,7 @@
         >
           <div
             v-if="showConfirmModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @click.self="showConfirmModal = false"
           >
             <Transition

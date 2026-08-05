@@ -152,8 +152,8 @@
           <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
             <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('subjects.title') }}</h2>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full">
+          <div class="max-w-full overflow-x-auto custom-scrollbar">
+            <table class="w-full min-w-[640px]">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                   <th class="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ t('common.name') }}</th>
@@ -225,82 +225,7 @@
       </div>
 
       <!-- TAB: Clubs (read-only) -->
-      <div v-show="activeTab === 'clubs'" class="space-y-5">
-        <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('students.clubs') }}</h2>
-
-        <div v-if="loadingClubs" class="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{{ t('common.loading') }}</div>
-
-        <div v-else-if="clubEntries.length > 0" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <div
-            v-for="club in clubEntries"
-            :key="club.id"
-            class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs"
-          >
-            <div>
-              <h3 class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ club.club_name }}</h3>
-              <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                {{ monthNames[club.month - 1] }} · {{ club.academic_year }}
-              </p>
-            </div>
-
-            <div class="mt-3">
-              <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span>{{ t('students.attendance') }}</span>
-                <span class="font-medium">{{ club.attended_sessions }}/{{ club.total_sessions }}</span>
-              </div>
-              <div class="mt-1 h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800">
-                <div
-                  class="h-full rounded-full bg-brand-500 transition-all"
-                  :style="{ width: club.total_sessions ? (club.attended_sessions / club.total_sessions * 100) + '%' : '0%' }"
-                ></div>
-              </div>
-            </div>
-
-            <div v-if="club.plan" class="mt-3">
-              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('students.plan') }}</p>
-              <p class="mt-0.5 text-xs text-gray-700 dark:text-gray-300">{{ club.plan }}</p>
-            </div>
-            <div v-if="club.criteria" class="mt-2">
-              <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('students.criteria') }}</p>
-              <p class="mt-0.5 text-xs text-gray-700 dark:text-gray-300">{{ club.criteria }}</p>
-            </div>
-            <div v-if="club.comments" class="mt-2 rounded-lg bg-gray-50 p-2.5 dark:bg-gray-800/60">
-              <p class="text-xs italic text-gray-600 dark:text-gray-400">"{{ club.comments }}"</p>
-            </div>
-
-            <!-- Attachments -->
-            <div v-if="club.attachments?.length" class="mt-3 border-t border-gray-100 pt-3 dark:border-gray-800">
-              <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('students.attachments') }}</p>
-              <div class="flex flex-wrap gap-2">
-                <template v-for="att in club.attachments" :key="att.id">
-                  <button
-                    v-if="isImageFile(att)"
-                    type="button"
-                    @click="previewAttachment = att"
-                    class="block h-16 w-16 overflow-hidden rounded-lg border border-gray-200 hover:opacity-80 dark:border-gray-700 transition-opacity"
-                  >
-                    <img :src="att.file" :alt="att.original_name" class="h-full w-full object-cover" />
-                  </button>
-                  <button
-                    v-else
-                    type="button"
-                    @click="previewAttachment = att"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs text-brand-500 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <FileText class="h-3.5 w-3.5 text-gray-400" />
-                    <span class="max-w-[100px] truncate">{{ att.original_name }}</span>
-                  </button>
-                </template>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-16 dark:border-gray-800">
-          <Puzzle class="mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
-          <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('students.noClubEntries') }}</p>
-        </div>
-      </div>
+      <StudentClubsSection v-show="activeTab === 'clubs'" :student-id="studentPk" />
 
       <!-- TAB: Psychological States (read-only) -->
       <div v-show="activeTab === 'psych'" class="space-y-5">
@@ -374,8 +299,8 @@
 
           <div v-if="loadingAchievements" class="py-10 text-center text-sm text-gray-500 dark:text-gray-400">{{ t('common.loading') }}</div>
 
-          <div v-else-if="achievements.length > 0" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs overflow-hidden">
-            <table class="w-full">
+          <div v-else-if="achievements.length > 0" class="max-w-full overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-theme-xs custom-scrollbar dark:border-gray-800 dark:bg-gray-900">
+            <table class="w-full min-w-[640px]">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                   <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('students.category') }}</th>
@@ -657,16 +582,16 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
 import DocumentPreviewModal from '@/components/ui/DocumentPreviewModal.vue'
+import StudentClubsSection from '@/components/students/StudentClubsSection.vue'
 import { getMyChildDetailApi } from '@/api/parentSelf'
 import { getSchoolGroupApi, type SchoolGroup } from '@/api/auth'
 import {
   getAchievementsApi,
   downloadAchievementCertificateApi,
   getReadingEntriesApi,
-  getClubEntriesApi,
 } from '@/api/achievements'
 import type { StudentDetail, PsychologicalState } from '@/types/student'
-import type { Achievement, ReadingEntry, ClubEntry, AchievementCategory, Attachment } from '@/types/achievement'
+import type { Achievement, ReadingEntry, AchievementCategory, Attachment } from '@/types/achievement'
 import ReportHistoryList from '@/components/reports/ReportHistoryList.vue'
 
 const route = useRoute()
@@ -706,9 +631,7 @@ const tabs = computed(() => [
 
 const achievements = ref<Achievement[]>([])
 const readingEntries = ref<ReadingEntry[]>([])
-const clubEntries = ref<ClubEntry[]>([])
 const loadingAchievements = ref(false)
-const loadingClubs = ref(false)
 const loadingReading = ref(false)
 
 const categoryLabels: Record<AchievementCategory, string> = {
@@ -921,7 +844,7 @@ async function fetchChild() {
     const { data } = await getMyChildDetailApi(pk)
     student.value = data
     // Fetch tab data and school group in parallel
-    const fetches: Promise<unknown>[] = [fetchAchievements(), fetchClubEntries(), fetchReadingEntries()]
+    const fetches: Promise<unknown>[] = [fetchAchievements(), fetchReadingEntries()]
     if (student.value.school_group != null) {
       fetches.push(
         getSchoolGroupApi(student.value.school_group)
@@ -949,16 +872,6 @@ async function fetchAchievements() {
     achievements.value = data
   } catch { achievements.value = [] }
   finally { loadingAchievements.value = false }
-}
-
-async function fetchClubEntries() {
-  if (!studentPk.value) return
-  loadingClubs.value = true
-  try {
-    const { data } = await getClubEntriesApi(studentPk.value)
-    clubEntries.value = data
-  } catch { clubEntries.value = [] }
-  finally { loadingClubs.value = false }
 }
 
 async function fetchReadingEntries() {

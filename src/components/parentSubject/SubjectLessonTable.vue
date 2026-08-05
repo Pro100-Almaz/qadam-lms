@@ -15,8 +15,8 @@
       </p>
     </div>
 
-    <div v-else class="overflow-x-auto">
-      <table class="w-full">
+    <div v-else class="max-w-full overflow-x-auto custom-scrollbar">
+      <table class="w-full min-w-[640px]">
         <thead>
           <tr class="border-b border-gray-100 dark:border-gray-800">
             <th class="w-10 px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400" scope="col">#</th>

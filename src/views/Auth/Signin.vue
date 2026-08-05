@@ -2,7 +2,7 @@
   <FullScreenLayout>
     <div class="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
       <div
-        class="relative flex flex-col justify-center w-full h-screen lg:flex-row dark:bg-gray-900"
+        class="relative flex min-h-screen w-full flex-col justify-center lg:flex-row dark:bg-gray-900"
       >
         <div class="flex flex-col flex-1 w-full lg:w-1/2">
           <div class="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
@@ -211,7 +211,7 @@
           </div>
         </div>
         <div
-          class="relative items-center hidden w-full h-full overflow-hidden lg:w-1/2 bg-[#2a2a2a] lg:grid"
+          class="relative hidden min-h-screen w-full overflow-hidden bg-[#2a2a2a] lg:grid lg:w-1/2 lg:place-items-center lg:self-stretch"
           @mousemove="onMouseMove"
         >
           <!-- Animated background shapes -->

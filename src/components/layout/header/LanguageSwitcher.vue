@@ -13,7 +13,7 @@
     </button>
     <div
       v-show="isOpen"
-      class="absolute right-0 mt-2 w-36 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+      class="absolute left-0 top-full z-50 mt-2 w-36 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900 lg:left-auto lg:right-0"
     >
       <button
         v-for="loc in SUPPORTED_LOCALES"

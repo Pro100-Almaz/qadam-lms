@@ -64,8 +64,8 @@
           <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
             <h2 class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ t('grading.studentGrades') }}</h2>
           </div>
-          <div class="overflow-x-auto">
-            <table v-if="grading.students.length" class="w-full text-sm">
+          <div class="max-w-full overflow-x-auto custom-scrollbar">
+            <table v-if="grading.students.length" class="w-full min-w-[640px] text-sm">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                   <th class="px-5 py-3 text-left font-medium text-gray-500 dark:text-gray-400">#</th>
@@ -158,7 +158,7 @@
         >
           <div
             v-if="showModal && modalStudent"
-            class="fixed inset-0 z-[100000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @click.self="showModal = false"
           >
             <div class="mx-4 w-full max-w-5xl rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900 max-h-[90vh] flex flex-col">
@@ -218,8 +218,8 @@
               </div>
 
               <!-- Modal Body: Topics/Subtopics -->
-              <div class="flex-1 overflow-y-auto px-6 py-4">
-                <table class="w-full text-sm">
+              <div class="max-w-full flex-1 overflow-auto px-6 py-4 custom-scrollbar">
+                <table class="w-full min-w-[640px] text-sm">
                   <thead>
                     <tr class="border-b border-gray-200 dark:border-gray-800">
                       <th class="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-400">{{ t('lessons.topics') }}</th>
@@ -374,7 +374,7 @@
         >
           <div
             v-if="showCommentModalVisible"
-            class="fixed inset-0 z-[100000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @click.self="showCommentModalVisible = false"
           >
             <div class="mx-4 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
@@ -402,7 +402,7 @@
         >
           <div
             v-if="showDeleteConfirm"
-            class="fixed inset-0 z-[100000] flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            class="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @click.self="showDeleteConfirm = false"
           >
             <div class="mx-4 w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900 text-center">

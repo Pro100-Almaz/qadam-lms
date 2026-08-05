@@ -1,7 +1,7 @@
 <template>
   <aside
     :class="[
-      'fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-99999 border-r border-gray-200',
+      'fixed left-0 top-16 flex h-[calc(100dvh-4rem)] flex-col border-r border-gray-200 bg-white px-5 text-gray-900 transition-all duration-300 ease-in-out z-99999 lg:top-0 lg:h-dvh dark:border-gray-800 dark:bg-gray-900',
       {
         'lg:w-[290px]': isExpanded || isMobileOpen || isHovered,
         'lg:w-[90px]': !isExpanded && !isHovered,
@@ -19,7 +19,7 @@
         !isExpanded && !isHovered ? 'lg:justify-center' : 'justify-start',
       ]"
     >
-      <router-link to="/" class="flex items-center">
+      <router-link to="/" class="flex items-center" @click="closeMobileSidebar">
         <span
           v-if="isExpanded || isHovered || isMobileOpen"
           class="text-xl font-bold text-gray-900 dark:text-white"
@@ -31,7 +31,7 @@
       </router-link>
     </div>
     <div
-      class="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar"
+      class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-4 duration-300 ease-linear no-scrollbar"
     >
       <nav class="mb-6">
         <div class="flex flex-col gap-4">
@@ -94,7 +94,7 @@
                 </button>
                 <router-link
                   v-else-if="item.path"
-                  @click="toggleSubmenu()"
+                  @click="closeMobileSidebar"
                   :to="item.path"
                   :class="[
                     'menu-item group',
@@ -135,6 +135,7 @@
                       <li v-for="subItem in item.subItems" :key="subItem.name">
                         <router-link
                           :to="subItem.path"
+                          @click="closeMobileSidebar"
                           :class="[
                             'menu-dropdown-item',
                             {
@@ -197,7 +198,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import {
@@ -212,6 +213,7 @@ import {
   UserPlus,
   LayoutDashboard,
   Briefcase,
+  Puzzle,
 } from "lucide-vue-next";
 
 import {
@@ -225,14 +227,30 @@ const route = useRoute();
 const { t } = useI18n();
 const { user } = useAuth();
 
-const { isExpanded, isMobileOpen, isHovered, openSubmenu } = useSidebar();
+const { isExpanded, isMobileOpen, isHovered, openSubmenu, toggleMobileSidebar } = useSidebar();
 
 const role = computed(() => user.value?.role);
 const isStudent = computed(() => role.value === 'student');
 const isParent = computed(() => role.value === 'parent');
+const isClubManager = computed(() => role.value === 'club_manager');
 const isAdmin = computed(() => ['admin', 'supervisor', 'principal'].includes(role.value ?? ''));
 
 const menuGroups = computed(() => {
+  if (isClubManager.value) {
+    return [
+      {
+        title: t("nav.management"),
+        items: [
+          {
+            icon: Puzzle,
+            name: t("nav.clubs"),
+            path: "/clubs",
+          },
+        ],
+      },
+    ];
+  }
+
   if (isStudent.value) {
     return [
       {
@@ -317,6 +335,11 @@ const menuGroups = computed(() => {
 
   if (isAdmin.value) {
     managementItems.push({
+      icon: Puzzle,
+      name: t("nav.clubs"),
+      path: "/clubs",
+    });
+    managementItems.push({
       icon: UserPlus,
       name: t("nav.register"),
       path: "/register",
@@ -361,12 +384,18 @@ const menuGroups = computed(() => {
   ];
 });
 
-const isActive = (path) => route.path === path;
+const isActive = (path) => route.path === path || (path === '/clubs' && route.path.startsWith('/clubs/'));
 
 const toggleSubmenu = (groupIndex, itemIndex) => {
   const key = `${groupIndex}-${itemIndex}`;
   openSubmenu.value = openSubmenu.value === key ? null : key;
 };
+
+const closeMobileSidebar = () => {
+  if (isMobileOpen.value) toggleMobileSidebar();
+};
+
+watch(() => route.fullPath, closeMobileSidebar);
 
 const isAnySubmenuRouteActive = computed(() => {
   return menuGroups.value.some((group) =>

@@ -271,7 +271,7 @@
       <!-- Event detail modal -->
       <div
         v-if="selectedEvent"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
         @click.self="selectedEvent = null"
       >
         <div class="mx-4 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
@@ -346,7 +346,7 @@
         <Transition name="fade">
           <div
             v-if="showAddModal"
-            class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+            class="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-4 sm:items-center"
             @click.self="showAddModal = false"
           >
             <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900 max-h-[90vh] overflow-y-auto">

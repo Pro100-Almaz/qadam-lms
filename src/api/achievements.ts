@@ -5,8 +5,6 @@ import type {
   CreateAchievementRequest,
   ReadingEntry,
   CreateReadingEntryRequest,
-  ClubEntry,
-  CreateClubEntryRequest,
   Attachment,
 } from '@/types/achievement'
 
@@ -62,25 +60,6 @@ export function updateReadingEntryApi(id: number, data: Partial<CreateReadingEnt
 
 export function deleteReadingEntryApi(id: number) {
   return api.delete(`/reading-entries/${id}/`)
-}
-
-// ─── Club Entries ──────────────────────────────────────────────────────────────
-
-export async function getClubEntriesApi(studentPk: number, params?: { year?: number; month?: number; club_name?: string }) {
-  const { data } = await api.get<ListResponse<ClubEntry>>(`/students/${studentPk}/club-entries/`, { params })
-  return { data: unwrapList(data) }
-}
-
-export function createClubEntryApi(studentPk: number, data: CreateClubEntryRequest) {
-  return api.post<ClubEntry>(`/students/${studentPk}/club-entries/`, data)
-}
-
-export function updateClubEntryApi(id: number, data: Partial<CreateClubEntryRequest>) {
-  return api.patch<ClubEntry>(`/club-entries/${id}/`, data)
-}
-
-export function deleteClubEntryApi(id: number) {
-  return api.delete(`/club-entries/${id}/`)
 }
 
 // ─── Attachments ──────────────────────────────────────────────────────────────

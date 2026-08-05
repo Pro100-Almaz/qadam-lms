@@ -64,7 +64,7 @@
     >
       <div
         v-if="isOpen"
-        class="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-sm dark:bg-gray-900"
+        class="absolute left-0 top-full z-10 mt-1 w-full max-w-[calc(100vw-2rem)] rounded-lg bg-white shadow-sm dark:bg-gray-900"
       >
         <ul
           class="overflow-y-auto divide-y divide-gray-200 custom-scrollbar max-h-60 dark:divide-gray-800"
