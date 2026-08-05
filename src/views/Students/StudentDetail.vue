@@ -348,8 +348,8 @@
       <!-- TAB: Clubs -->
       <StudentClubsSection v-show="activeTab === 'clubs'" :student-id="studentPk" />
 
-      <!-- TAB: Rating / Achievements -->
-      <div v-show="activeTab === 'rating'" class="space-y-8">
+      <!-- TAB: Achievements -->
+      <div v-show="activeTab === 'achievements'" class="space-y-8">
         <!-- Achievements -->
         <div class="space-y-4">
           <div class="flex items-center justify-between">
