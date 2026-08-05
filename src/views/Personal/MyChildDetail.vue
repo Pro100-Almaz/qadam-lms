@@ -291,8 +291,8 @@
         </div>
       </div>
 
-      <!-- TAB: Rating / Achievements + Reading (read-only) -->
-      <div v-show="activeTab === 'rating'" class="space-y-8">
+      <!-- TAB: Achievements + Reading (read-only) -->
+      <div v-show="activeTab === 'achievements'" class="space-y-8">
         <!-- Achievements -->
         <div class="space-y-4">
           <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('students.achievements') }}</h2>

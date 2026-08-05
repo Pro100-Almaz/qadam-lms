@@ -10,9 +10,9 @@ declare module 'vue-router' {
   }
 }
 
-const staffRoles: UserRole[] = ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal']
+const staffRoles: UserRole[] = ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal', 'clubmanager', 'psychologist']
 const adminRoles: UserRole[] = ['admin', 'supervisor', 'principal']
-const clubRoles: UserRole[] = ['club_manager', ...adminRoles]
+const clubRoles: UserRole[] = ['clubmanager', ...adminRoles]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -296,7 +296,7 @@ const router = createRouter({
 function getDefaultRoute(role?: UserRole): string {
   if (role === 'student') return '/my-subjects'
   if (role === 'parent') return '/my-children'
-  if (role === 'club_manager') return '/clubs'
+  if (role === 'clubmanager') return '/clubs'
   return '/subjects/active'
 }
 

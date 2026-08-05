@@ -232,7 +232,7 @@ const { isExpanded, isMobileOpen, isHovered, openSubmenu, toggleMobileSidebar } 
 const role = computed(() => user.value?.role);
 const isStudent = computed(() => role.value === 'student');
 const isParent = computed(() => role.value === 'parent');
-const isClubManager = computed(() => role.value === 'club_manager');
+const isClubManager = computed(() => role.value === 'clubmanager');
 const isAdmin = computed(() => ['admin', 'supervisor', 'principal'].includes(role.value ?? ''));
 
 const menuGroups = computed(() => {

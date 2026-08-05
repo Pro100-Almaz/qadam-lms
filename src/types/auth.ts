@@ -6,7 +6,8 @@ export type UserRole =
   | 'supervisor'
   | 'principal'
   | 'parent'
-  | 'club_manager'
+  | 'clubmanager'
+  | 'psychologist'
 
 export interface User {
   id: number
