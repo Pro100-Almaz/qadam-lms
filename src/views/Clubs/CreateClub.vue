@@ -288,12 +288,10 @@ const datePickerConfig = {
 const startDatePickerConfig = computed(() => ({
   ...datePickerConfig,
   locale: pickerLocale.value,
-  maxDate: form.value.endDate || undefined,
 }))
 const endDatePickerConfig = computed(() => ({
   ...datePickerConfig,
   locale: pickerLocale.value,
-  minDate: form.value.startDate || undefined,
 }))
 
 function selectAcademicYear(yearId: string) {
