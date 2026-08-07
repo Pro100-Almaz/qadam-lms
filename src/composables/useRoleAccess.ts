@@ -6,7 +6,7 @@ export function useRoleAccess() {
   const auth = useAuthStore()
 
   function hasRole(...roles: UserRole[]) {
-    return computed(() => !!auth.userRole && roles.includes(auth.userRole))
+    return computed(() => !!auth.userRoles && roles.some((role) => auth.userRoles?.includes(role)))
   }
 
   function canEdit(resource: string) {
@@ -20,7 +20,7 @@ export function useRoleAccess() {
     }
     return computed(() => {
       const allowed = editPermissions[resource] ?? []
-      return !!auth.userRole && allowed.includes(auth.userRole)
+      return !!auth.userRoles && allowed.some((role) => auth.userRoles?.includes(role))
     })
   }
 

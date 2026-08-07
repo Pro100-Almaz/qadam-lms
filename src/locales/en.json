@@ -64,7 +64,8 @@
         "view": "View",
         "details": "Details",
         "reset": "Reset",
-        "selectOption": "Select option"
+        "selectOption": "Select option",
+        "noComment": "No comments"
     },
     "validation": {
         "required": "This field is required",

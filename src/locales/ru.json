@@ -64,7 +64,8 @@
         "view": "Просмотр",
         "details": "Подробности",
         "reset": "Сбросить",
-        "selectOption": "Выберите вариант"
+        "selectOption": "Выберите вариант",
+        "noComment": "Нет комментариев"
     },
     "validation": {
         "required": "Это поле обязательно",

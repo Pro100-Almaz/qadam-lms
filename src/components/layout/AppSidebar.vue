@@ -206,8 +206,6 @@ import {
   GraduationCap,
   Users,
   CalendarDays,
-  UserCircle,
-  BookMarked,
   School,
   ClipboardList,
   UserPlus,
@@ -229,28 +227,17 @@ const { user } = useAuth();
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu, toggleMobileSidebar } = useSidebar();
 
-const role = computed(() => user.value?.role);
-const isStudent = computed(() => role.value === 'student');
-const isParent = computed(() => role.value === 'parent');
-const isClubManager = computed(() => role.value === 'clubmanager');
-const isAdmin = computed(() => ['admin', 'supervisor', 'principal'].includes(role.value ?? ''));
+const roles = computed(() => user.value?.roles);
+
+const isStudent = computed(() => roles.value?.includes('student'));
+const isParent = computed(() => roles.value?.includes('parent'));
+const isClubManager = computed(() => roles.value?.includes('clubmanager'));
+const isPsychologist = computed(() => roles.value?.includes('psychologist'));
+
+const isAdmin = computed(() => ['admin', 'supervisor', 'principal'].some(role => roles.value?.includes(role)));
+const isTeacher = computed(() => ['teacher', 'homeroom_teacher'].some(role => roles.value?.includes(role)));
 
 const menuGroups = computed(() => {
-  if (isClubManager.value) {
-    return [
-      {
-        title: t("nav.management"),
-        items: [
-          {
-            icon: Puzzle,
-            name: t("nav.clubs"),
-            path: "/clubs",
-          },
-        ],
-      },
-    ];
-  }
-
   if (isStudent.value) {
     return [
       {
@@ -306,8 +293,43 @@ const menuGroups = computed(() => {
     ];
   }
 
-  const managementItems = [
+  const menu = [];
+  const managementItems = [];
+  const personalItems = [];
+
+  if (isTeacher.value) {
+    personalItems.push({
+      icon: LayoutDashboard,
+      name: t("nav.teacherDashboard"),
+      path: "/teacher",
+    },
     {
+      icon: Briefcase,
+      name: t("nav.workload"),
+      path: "/teacher/workload",
+    },
+    // {
+    //   icon: UserCircle,
+    //   name: t("nav.myStudent"),
+    //   path: "/my-student",
+    // },
+    {
+      icon: ClipboardList,
+      name: t("nav.myLessons"),
+      path: "/my-lessons",
+    });
+  }
+
+  if (roles.value.includes('homeroom_teacher')) {
+    personalItems.splice(-1, 0, {
+      icon: School,
+      name: t("nav.myClass"),
+      path: "/my-class",
+    });
+  }
+
+  if (isAdmin.value || isTeacher.value) {
+    managementItems.push({
       icon: BookOpen,
       name: t("nav.subjects"),
       subItems: [
@@ -325,20 +347,31 @@ const menuGroups = computed(() => {
       icon: Users,
       name: t("nav.teachers"),
       path: "/teachers",
-    },
-    {
+    });
+  }
+
+  if (isAdmin.value || isPsychologist.value || isTeacher.value) {
+    managementItems.push({
       icon: GraduationCap,
       name: t("nav.students"),
       path: "/students",
-    },
-  ];
+    });
+  }
+
+  if (isClubManager.value) {
+    menu.push({
+      title: t("nav.management"),
+      items: [
+        {
+          icon: Puzzle,
+          name: t("nav.clubs"),
+          path: "/clubs",
+        },
+      ],
+    });
+  }
 
   if (isAdmin.value) {
-    managementItems.push({
-      icon: Puzzle,
-      name: t("nav.clubs"),
-      path: "/clubs",
-    });
     managementItems.push({
       icon: UserPlus,
       name: t("nav.register"),
@@ -346,42 +379,19 @@ const menuGroups = computed(() => {
     });
   }
 
-  return [
-    {
+  if (managementItems.length > 0) {
+    menu.push({
       title: t("nav.management"),
       items: managementItems,
-    },
-    {
+    });
+  }
+  if (personalItems.length > 0) {
+    menu.push({
       title: t("nav.personal"),
-      items: [
-        {
-          icon: LayoutDashboard,
-          name: t("nav.teacherDashboard"),
-          path: "/teacher",
-        },
-        {
-          icon: Briefcase,
-          name: t("nav.workload"),
-          path: "/teacher/workload",
-        },
-        {
-          icon: UserCircle,
-          name: t("nav.myStudent"),
-          path: "/my-student",
-        },
-        {
-          icon: School,
-          name: t("nav.myClass"),
-          path: "/my-class",
-        },
-        {
-          icon: ClipboardList,
-          name: t("nav.myLessons"),
-          path: "/my-lessons",
-        },
-      ],
-    },
-  ];
+      items: personalItems,
+    });
+  }
+  return menu;
 });
 
 const isActive = (path) => route.path === path || (path === '/clubs' && route.path.startsWith('/clubs/'));

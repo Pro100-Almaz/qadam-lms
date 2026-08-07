@@ -64,7 +64,8 @@
         "view": "Қарау",
         "details": "Толығырақ",
         "reset": "Қалпына келтіру",
-        "selectOption": "Опцияны таңдаңыз"
+        "selectOption": "Опцияны таңдаңыз",
+        "noComment": "Пікірлер жоқ"
     },
     "validation": {
         "required": "Бұл өріс міндетті",

@@ -45,6 +45,7 @@ export interface HomeroomStudent {
 export interface HomeroomTeacherDashboard {
   class_group: string
   class_group_id: number
+  academic_year: string
   student_count: number
   subject_count: number
   students: HomeroomStudent[]

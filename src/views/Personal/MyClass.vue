@@ -27,13 +27,13 @@
     <!-- Content -->
     <div v-else class="space-y-6">
       <!-- Class Header -->
-      <div v-if="classGroup" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
+      <div v-if="myClass" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
         <div class="px-6 py-5">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 class="text-xl font-bold text-gray-800 dark:text-white/90">{{ classGroup.display_name }}</h1>
+              <h1 class="text-xl font-bold text-gray-800 dark:text-white/90">{{ myClass.class_group }}</h1>
               <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {{ t('students.yearOfEducation') }}: {{ classGroup.academic_year?.year || '—' }}
+                {{ t('students.yearOfEducation') }}: {{ myClass.academic_year || '—' }}
               </p>
             </div>
             <div class="flex items-center gap-3">
@@ -141,10 +141,10 @@ import {
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { getStudentsApi } from '@/api/students'
-import { getClassGroupsApi } from '@/api/academic'
+import { getHomeroomClassApi } from '@/api/teacherDashboard'
 import { useAuth } from '@/composables/useAuth'
 import type { Student } from '@/types/student'
-import type { ClassGroup } from '@/types/academic'
+import type { HomeroomTeacherDashboard } from '@/types/teacherDashboard'
 
 const { t } = useI18n()
 const { user: authUser } = useAuth()
@@ -152,9 +152,9 @@ const { user: authUser } = useAuth()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const students = ref<Student[]>([])
-const classGroup = ref<ClassGroup | null>(null)
+const myClass = ref<HomeroomTeacherDashboard | null>(null)
 
-const isHomeroomTeacher = computed(() => authUser.value?.role === 'homeroom_teacher')
+const isHomeroomTeacher = computed(() => authUser.value?.roles.includes('homeroom_teacher'))
 
 async function fetchData() {
   if (!isHomeroomTeacher.value) {
@@ -164,16 +164,11 @@ async function fetchData() {
   loading.value = true
   error.value = null
   try {
-    const classGroupsRes = await getClassGroupsApi()
-    const groups = classGroupsRes.data
+    const { data: data } = await getHomeroomClassApi()
+    myClass.value = data
 
-    // Find the class group matching this teacher's primary_group or take the first one
-    const teacherGroup = authUser.value?.primary_group
-    const matched = groups.find((g) => g.display_name === teacherGroup) || groups[0] || null
-    classGroup.value = matched
-
-    if (matched) {
-      const studentsRes = await getStudentsApi({ class_group: matched.id })
+    if (myClass.value) {
+      const studentsRes = await getStudentsApi({ class_group: myClass.value.class_group_id })
       students.value = studentsRes.data
     }
   } catch {

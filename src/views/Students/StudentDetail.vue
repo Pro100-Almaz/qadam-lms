@@ -269,7 +269,7 @@
             :class="stateBorderClass(state.score)"
             style="border-left-width: 4px"
           >
-            <div class="p-4">
+            <div class="p-4 flex h-full flex-col">
               <!-- Name + score -->
               <div class="flex items-start justify-between gap-2">
                 <h3 class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ state.name }}</h3>
@@ -292,9 +292,11 @@
               </span>
 
               <!-- Comment -->
-              <blockquote v-if="state.comment" class="mt-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/60">
-                <p class="text-xs italic leading-relaxed text-gray-600 dark:text-gray-400">"{{ state.comment }}"</p>
+              <blockquote class="mt-3 flex-1 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/60">
+                <p v-if="state.comment" class="overflow-x-scroll no-scrollbar text-xs italic leading-relaxed text-gray-600 dark:text-gray-400">"{{ state.comment }}"</p>
+                <p v-else class="text-xs italic leading-relaxed text-gray-600 dark:text-gray-400">{{ t('common.noComment') }}</p>
               </blockquote>
+
 
               <!-- Footer -->
               <div class="mt-4 flex items-center justify-between">
@@ -970,11 +972,11 @@ const { t } = useI18n()
 const route = useRoute()
 const { user: authUser } = useAuth()
 const isAdmin = computed(() =>
-  ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(authUser.value?.role || ''),
+  authUser.value?.roles.some(role => ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal', 'psychologist'].includes(role))
 )
 
 const canGenerateReport = computed(() =>
-  ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(authUser.value?.role || ''),
+  authUser.value?.roles.some(role => ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(role))
 )
 
 const showReportModal = ref(false)
