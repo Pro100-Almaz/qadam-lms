@@ -372,6 +372,24 @@
                   </select>
                   <FieldError :errors="fieldErrors.school_group" />
                 </div>
+
+                <!-- Medical features -->
+                <div>
+                  <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                    {{ t('students.medicalFeatures') }}
+                  </label>
+                  <div class="relative">
+                    <HeartPulse class="absolute left-3.5 top-3.5 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <textarea
+                      v-model="form.medical_features"
+                      rows="3"
+                      :placeholder="t('students.medicalFeaturesPlaceholder')"
+                      :class="inputClass('medical_features')"
+                      class="w-full rounded-lg border bg-white py-2.5 pl-10 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                    />
+                  </div>
+                  <FieldError :errors="fieldErrors.medical_features" />
+                </div>
               </div>
 
               <!-- Parent fields -->
@@ -546,6 +564,7 @@ import {
   Heart,
   UserCircle,
   VenetianMask,
+  HeartPulse,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { registerUserApi, getSchoolGroupsApi } from '@/api/auth'
@@ -599,6 +618,7 @@ const initialForm = () => ({
   occupation: '',
   school_group: undefined as number | undefined,
   student_id: undefined as number | undefined,
+  medical_features: '',
 })
 
 const form = ref(initialForm())
@@ -637,6 +657,7 @@ watch(
     form.value.occupation = ''
     form.value.school_group = undefined
     form.value.student_id = undefined
+    form.value.medical_features = ''
     fieldErrors.value = {}
   },
 )
@@ -742,6 +763,7 @@ async function handleSubmit() {
       ...(showTeacherFields.value && form.value.employment_type && { employment_type: form.value.employment_type }),
       ...(showTeacherFields.value && form.value.occupation && { occupation: form.value.occupation }),
       ...(showStudentFields.value && form.value.school_group != null && { school_group: form.value.school_group }),
+      ...(showStudentFields.value && form.value.medical_features.trim() && { medical_features: form.value.medical_features.trim() }),
       ...(showParentFields.value && form.value.student_id != null && { student_id: form.value.student_id }),
     })
 

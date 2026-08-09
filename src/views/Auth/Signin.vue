@@ -333,7 +333,6 @@ const handleSubmit = async () => {
   try {
     const result = await login(username.value, password.value)
     if (result.success) {
-      console.log('Login successful, redirecting to home...', result)
       router.push('/')
     } else if (result.errors) {
       fieldErrors.value = result.errors

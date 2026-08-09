@@ -28,6 +28,7 @@ export interface RegisterUserRequest {
   occupation?: string
   school_group?: number
   student_id?: number
+  medical_features?: string
 }
 
 export interface RegisterUserResponse {
@@ -60,6 +61,7 @@ export function registerUserApi(data: RegisterUserRequest) {
   if (data.occupation) formData.append('occupation', data.occupation)
   if (data.school_group != null) formData.append('school_group', String(data.school_group))
   if (data.student_id != null) formData.append('student_id', String(data.student_id))
+  if (data.medical_features) formData.append('medical_features', data.medical_features)
   return api.post<RegisterUserResponse>('/auth/register/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
