@@ -105,6 +105,14 @@ const router = createRouter({
       meta: { title: 'Lesson Grading', roles: staffRoles },
     },
 
+    // Schedule builder (admins only)
+    {
+      path: '/schedule-builder',
+      name: 'ScheduleBuilder',
+      component: () => import('../views/Schedule/ScheduleBuilder.vue'),
+      meta: { title: 'Schedule Builder', roles: adminRoles },
+    },
+
     // Attendance (teachers & homeroom teachers)
     {
       path: '/attendance',
