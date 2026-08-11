@@ -30,7 +30,30 @@
         "myChildren": "My Children",
         "teacherDashboard": "Dashboard",
         "workload": "Workload",
-        "clubs": "Clubs"
+        "clubs": "Clubs",
+        "attendance": "Attendance"
+    },
+    "attendance": {
+        "title": "Attendance",
+        "subtitle": "Weekly class attendance sheet — tick a box for every lesson the student attended.",
+        "teachersOnly": "This page is only available for teachers and homeroom teachers.",
+        "classroom": "Classroom",
+        "month": "Month",
+        "week": "Week",
+        "previousWeek": "Previous week",
+        "nextWeek": "Next week",
+        "today": "Today",
+        "students": "Students",
+        "studentsColumn": "Students",
+        "weekRange": "Week",
+        "markedPresent": "Present marks",
+        "dayRate": "Day attendance",
+        "legend": "Checked — present, empty — absent.",
+        "markAll": "Mark all",
+        "clearAll": "Clear all",
+        "markColumn": "Mark all for",
+        "total": "Total",
+        "presentPerLesson": "Present per lesson"
     },
     "common": {
         "add": "Add",

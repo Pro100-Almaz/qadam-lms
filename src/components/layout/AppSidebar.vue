@@ -212,6 +212,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Puzzle,
+  ClipboardCheck,
 } from "lucide-vue-next";
 
 import {
@@ -343,6 +344,15 @@ const menuGroups = computed(() => {
       name: t("nav.lessons"),
       path: "/lessons",
     },
+    ...(isTeacher.value
+      ? [
+          {
+            icon: ClipboardCheck,
+            name: t("nav.attendance"),
+            path: "/attendance",
+          },
+        ]
+      : []),
     {
       icon: Users,
       name: t("nav.teachers"),
