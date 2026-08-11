@@ -104,6 +104,14 @@ const router = createRouter({
       meta: { title: 'Lesson Grading', roles: staffRoles },
     },
 
+    // Attendance (teachers & homeroom teachers)
+    {
+      path: '/attendance',
+      name: 'Attendance',
+      component: () => import('../views/Attendance/AttendanceSheet.vue'),
+      meta: { title: 'Attendance', roles: ['teacher', 'homeroom_teacher'] },
+    },
+
     // Teachers (staff only)
     {
       path: '/teachers',

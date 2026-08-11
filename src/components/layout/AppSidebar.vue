@@ -214,6 +214,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Puzzle,
+  ClipboardCheck,
 } from "lucide-vue-next";
 
 import {
@@ -234,6 +235,7 @@ const isStudent = computed(() => role.value === 'student');
 const isParent = computed(() => role.value === 'parent');
 const isClubManager = computed(() => role.value === 'clubmanager');
 const isAdmin = computed(() => ['admin', 'supervisor', 'principal'].includes(role.value ?? ''));
+const isTeacher = computed(() => ['teacher', 'homeroom_teacher'].includes(role.value ?? ''));
 
 const menuGroups = computed(() => {
   if (isClubManager.value) {
@@ -321,6 +323,15 @@ const menuGroups = computed(() => {
       name: t("nav.lessons"),
       path: "/lessons",
     },
+    ...(isTeacher.value
+      ? [
+          {
+            icon: ClipboardCheck,
+            name: t("nav.attendance"),
+            path: "/attendance",
+          },
+        ]
+      : []),
     {
       icon: Users,
       name: t("nav.teachers"),
