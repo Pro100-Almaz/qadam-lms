@@ -457,6 +457,13 @@
             <InfoRow :label="t('profile.address')" :value="student.user.address || '—'">
               <template #icon><MapPin class="h-4 w-4 text-gray-400" /></template>
             </InfoRow>
+            <div v-if="student.medical_features" class="flex items-start gap-4 px-5 py-3.5">
+              <div class="flex w-5 shrink-0 justify-center pt-0.5">
+                <HeartPulse class="h-4 w-4 text-gray-400" />
+              </div>
+              <span class="w-36 shrink-0 text-sm text-gray-500 dark:text-gray-400">{{ t('students.medicalFeatures') }}</span>
+              <span class="whitespace-pre-line text-sm font-medium text-gray-800 dark:text-white/90">{{ student.medical_features }}</span>
+            </div>
           </div>
 
           <div class="border-t border-gray-200 px-5 py-4 dark:border-gray-800">
@@ -566,6 +573,7 @@ import {
   CalendarDays,
   Phone,
   MapPin,
+  HeartPulse,
   ShieldCheck,
   Building2,
   Trophy,

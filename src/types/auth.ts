@@ -20,7 +20,7 @@ export interface User {
   address: string
   avatar: string | null
   school: string
-  role: UserRole
+  roles: UserRole[]
   role_display: string
   primary_group: string
 }

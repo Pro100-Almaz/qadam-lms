@@ -64,7 +64,8 @@
         "view": "View",
         "details": "Details",
         "reset": "Reset",
-        "selectOption": "Select option"
+        "selectOption": "Select option",
+        "noComment": "No comments"
     },
     "validation": {
         "required": "This field is required",
@@ -536,6 +537,9 @@
         "addFirstState": "Add First State",
         "history": "History",
         "schoolInformation": "School Information",
+        "parents": "Parents",
+        "medicalFeatures": "Medical Features",
+        "medicalFeaturesPlaceholder": "Allergies, chronic conditions, medication...",
         "useTemplate": "Use Template",
         "selectTemplate": "— Select template —",
         "stateName": "State Name",

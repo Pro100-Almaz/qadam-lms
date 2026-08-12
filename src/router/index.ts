@@ -10,9 +10,10 @@ declare module 'vue-router' {
   }
 }
 
-const staffRoles: UserRole[] = ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal', 'clubmanager', 'psychologist']
+const staffRoles: UserRole[] = ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal', 'psychologist']
 const adminRoles: UserRole[] = ['admin', 'supervisor', 'principal']
-const clubRoles: UserRole[] = ['clubmanager', ...adminRoles]
+const clubRoles: UserRole[] = ['clubmanager']
+const teacherRoles: UserRole[] = ['teacher', 'homeroom_teacher']
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -63,7 +64,7 @@ const router = createRouter({
       path: '/subjects/active',
       name: 'SubjectsActive',
       component: () => import('../views/Subjects/SubjectsActive.vue'),
-      meta: { title: 'Subjects — Active', roles: staffRoles },
+      meta: { title: 'Subjects — Active', roles: [...adminRoles, ...teacherRoles] },
     },
     {
       path: '/subjects/processing',
@@ -293,10 +294,12 @@ const router = createRouter({
   ],
 })
 
-function getDefaultRoute(role?: UserRole): string {
-  if (role === 'student') return '/my-subjects'
-  if (role === 'parent') return '/my-children'
-  if (role === 'clubmanager') return '/clubs'
+function getDefaultRoute(roles: UserRole[]): string {
+  if (roles.length === 0) return '/'
+  if (roles.includes('student')) return '/my-subjects'
+  if (roles.includes('parent')) return '/my-children'
+  if (roles.includes('clubmanager')) return '/clubs'
+  if (roles.includes('psychologist')) return '/students'
   return '/subjects/active'
 }
 
@@ -310,11 +313,11 @@ router.beforeEach(async (to, from, next) => {
   }
 
   const isAuthenticated = authStore.isAuthenticated
-  const role = authStore.user?.role
+  const roles = authStore.user?.roles || []
 
   if (to.meta.guest) {
     if (isAuthenticated && (to.name === 'Signin' || to.name === 'Signup')) {
-      return next(getDefaultRoute(role))
+      return next(getDefaultRoute(roles))
     }
     return next()
   }
@@ -325,12 +328,12 @@ router.beforeEach(async (to, from, next) => {
 
   // Role-based home redirect
   if (to.name === 'Home') {
-    return next(getDefaultRoute(role))
+    return next(getDefaultRoute(roles))
   }
 
   // Role-based route guard
-  if (to.meta.roles && role && !to.meta.roles.includes(role)) {
-    return next(getDefaultRoute(role))
+  if (to.meta.roles && roles && !to.meta.roles.some((role) => roles.includes(role))) {
+    return next(getDefaultRoute(roles))
   }
 
   next()

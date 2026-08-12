@@ -549,7 +549,7 @@ const activeQuarter = ref(1)
 const activeClassGroup = ref(0)
 
 const canAddLesson = computed(() =>
-  ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'].includes(authUser.value?.role ?? '')
+  authUser.value?.roles.some((role) => ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'].includes(role))
 )
 const showAddLessonModal = ref(false)
 const addLessonBackdrop = useBackdropClose(() => { showAddLessonModal.value = false })

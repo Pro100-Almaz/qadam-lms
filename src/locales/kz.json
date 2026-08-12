@@ -64,7 +64,8 @@
         "view": "Қарау",
         "details": "Толығырақ",
         "reset": "Қалпына келтіру",
-        "selectOption": "Опцияны таңдаңыз"
+        "selectOption": "Опцияны таңдаңыз",
+        "noComment": "Пікірлер жоқ"
     },
     "validation": {
         "required": "Бұл өріс міндетті",
@@ -536,6 +537,9 @@
         "addFirstState": "Бірінші жағдайды қосу",
         "history": "Тарих",
         "schoolInformation": "Мектеп туралы мәлімет",
+        "parents": "Ата-аналары",
+        "medicalFeatures": "Медициналық ерекшеліктері",
+        "medicalFeaturesPlaceholder": "Аллергия, созылмалы аурулар, дәрі-дәрмек...",
         "useTemplate": "Үлгіні қолдану",
         "selectTemplate": "— Үлгіні таңдаңыз —",
         "stateName": "Жағдай атауы",

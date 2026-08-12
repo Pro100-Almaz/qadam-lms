@@ -7,7 +7,16 @@ export interface Student {
   user: User
   school_group: number
   academic_year: number
+  medical_features: string
   current_class_group: ClassGroup | null
+}
+
+export interface StudentParent {
+  id: number
+  user_id: number
+  full_name: string
+  email: string | null
+  phone_number: string | null
 }
 
 export interface PsychologicalState {
@@ -26,6 +35,7 @@ export interface PsychologicalStateTemplate {
 }
 
 export interface StudentDetail extends Student {
+  parents: StudentParent[]
   offerings: SubjectOffering[]
   subject_quarter_grades: Record<string, Record<string, number>>
   total_quarter_grades: Record<string, number>
@@ -47,6 +57,7 @@ export interface UpdateStudentRequest {
   school_group?: number
   academic_year?: number
   class_group?: number
+  medical_features?: string
 }
 
 export interface CreatePsychologicalStateRequest {

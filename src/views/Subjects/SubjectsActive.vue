@@ -449,7 +449,7 @@ import { useAuth } from '@/composables/useAuth'
 
 const { t } = useI18n()
 const { user: authUser } = useAuth()
-const isAdmin = computed(() => ['admin', 'supervisor', 'principal'].includes(authUser.value?.role ?? ''))
+const isAdmin = computed(() => authUser.value?.roles.some(role => ['admin', 'supervisor', 'principal'].includes(role)))
 const router = useRouter()
 
 const subjects = ref<Subject[]>([])

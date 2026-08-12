@@ -64,7 +64,8 @@
         "view": "Просмотр",
         "details": "Подробности",
         "reset": "Сбросить",
-        "selectOption": "Выберите вариант"
+        "selectOption": "Выберите вариант",
+        "noComment": "Нет комментариев"
     },
     "validation": {
         "required": "Это поле обязательно",
@@ -536,6 +537,9 @@
         "addFirstState": "Добавить первое состояние",
         "history": "История",
         "schoolInformation": "Данные о школе",
+        "parents": "Родители",
+        "medicalFeatures": "Медицинские особенности",
+        "medicalFeaturesPlaceholder": "Аллергии, хронические заболевания, лекарства...",
         "useTemplate": "Использовать шаблон",
         "selectTemplate": "— Выбрать шаблон —",
         "stateName": "Название состояния",

@@ -269,7 +269,7 @@
             :class="stateBorderClass(state.score)"
             style="border-left-width: 4px"
           >
-            <div class="p-4">
+            <div class="p-4 flex h-full flex-col">
               <!-- Name + score -->
               <div class="flex items-start justify-between gap-2">
                 <h3 class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ state.name }}</h3>
@@ -292,9 +292,11 @@
               </span>
 
               <!-- Comment -->
-              <blockquote v-if="state.comment" class="mt-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/60">
-                <p class="text-xs italic leading-relaxed text-gray-600 dark:text-gray-400">"{{ state.comment }}"</p>
+              <blockquote class="mt-3 flex-1 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/60">
+                <p v-if="state.comment" class="overflow-x-scroll no-scrollbar text-xs italic leading-relaxed text-gray-600 dark:text-gray-400">"{{ state.comment }}"</p>
+                <p v-else class="text-xs italic leading-relaxed text-gray-600 dark:text-gray-400">{{ t('common.noComment') }}</p>
               </blockquote>
+
 
               <!-- Footer -->
               <div class="mt-4 flex items-center justify-between">
@@ -535,8 +537,16 @@
       <!-- TAB: Personal Info -->
       <div v-show="activeTab === 'info'">
         <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs overflow-hidden">
-          <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
+          <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800">
             <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('profile.personalInfo') }}</h2>
+            <button
+              v-if="isHomeroomTeacher"
+              @click="openEditInfoModal"
+              class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-brand-500 dark:hover:bg-white/5 transition-colors"
+              :title="t('profile.editPersonalInfo')"
+            >
+              <Pencil class="h-4 w-4" />
+            </button>
           </div>
           <div class="divide-y divide-gray-100 dark:divide-gray-800">
             <InfoRow :label="t('profile.username')" :value="student.user.username">
@@ -560,7 +570,38 @@
             <InfoRow :label="t('profile.address')" :value="student.user.address || '—'">
               <template #icon><MapPin class="h-4 w-4 text-gray-400" /></template>
             </InfoRow>
+            <div v-if="student.medical_features" class="flex items-start gap-4 px-5 py-3.5">
+              <div class="flex w-5 shrink-0 justify-center pt-0.5">
+                <HeartPulse class="h-4 w-4 text-gray-400" />
+              </div>
+              <span class="w-36 shrink-0 text-sm text-gray-500 dark:text-gray-400">{{ t('students.medicalFeatures') }}</span>
+              <span class="whitespace-pre-line text-sm font-medium text-gray-800 dark:text-white/90">{{ student.medical_features }}</span>
+            </div>
           </div>
+
+          <template v-if="student.parents?.length">
+            <div class="border-t border-gray-200 px-5 py-4 dark:border-gray-800">
+              <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ t('students.parents') }}</h3>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-800">
+              <div v-for="parent in student.parents" :key="parent.id" class="flex items-start gap-4 px-5 py-3.5">
+                <div class="flex w-5 shrink-0 justify-center pt-0.5">
+                  <Users class="h-4 w-4 text-gray-400" />
+                </div>
+                <span class="w-36 shrink-0 text-sm text-gray-500 dark:text-gray-400">{{ parent.full_name }}</span>
+                <div class="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm font-medium text-gray-800 dark:text-white/90">
+                  <span v-if="parent.email" class="flex items-center gap-1.5 break-all">
+                    <Mail class="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                    {{ parent.email }}
+                  </span>
+                  <span v-if="parent.phone_number" class="flex items-center gap-1.5">
+                    <Phone class="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                    {{ parent.phone_number }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </template>
 
           <div class="border-t border-gray-200 px-5 py-4 dark:border-gray-800">
             <h3 class="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ t('students.schoolInformation') }}</h3>
@@ -821,6 +862,130 @@
       </template>
     </Modal>
 
+    <!-- Edit Personal Info Modal -->
+    <Modal v-if="showEditInfoModal" :fullScreenBackdrop="true" @close="closeEditInfoModal">
+      <template #body>
+        <div class="relative w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-md dark:border-gray-800 dark:bg-gray-900 max-h-[85vh] overflow-y-auto custom-scrollbar">
+          <div class="mb-5 flex items-center justify-between">
+            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('profile.editPersonalInfo') }}</h3>
+            <button
+              @click="closeEditInfoModal"
+              class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
+            >
+              <X class="h-5 w-5" />
+            </button>
+          </div>
+
+          <div
+            v-if="editInfoError"
+            class="mb-4 rounded-lg border border-error-300 bg-error-50 px-4 py-3 text-sm text-error-600 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400"
+          >
+            {{ editInfoError }}
+          </div>
+
+          <form class="space-y-4" @submit.prevent="submitEditInfo">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('profile.firstName') }}</label>
+                <input
+                  v-model="editInfoForm.first_name"
+                  type="text"
+                  class="h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  :class="editInfoFieldErrors.first_name ? 'border-error-500 dark:border-error-500' : 'border-gray-300 dark:border-gray-700'"
+                />
+                <p v-if="editInfoFieldErrors.first_name" class="mt-1.5 text-xs text-error-500">{{ editInfoFieldErrors.first_name[0] }}</p>
+              </div>
+
+              <div>
+                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('profile.lastName') }}</label>
+                <input
+                  v-model="editInfoForm.last_name"
+                  type="text"
+                  class="h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  :class="editInfoFieldErrors.last_name ? 'border-error-500 dark:border-error-500' : 'border-gray-300 dark:border-gray-700'"
+                />
+                <p v-if="editInfoFieldErrors.last_name" class="mt-1.5 text-xs text-error-500">{{ editInfoFieldErrors.last_name[0] }}</p>
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('profile.email') }}</label>
+                <input
+                  v-model="editInfoForm.email"
+                  type="email"
+                  class="h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  :class="editInfoFieldErrors.email ? 'border-error-500 dark:border-error-500' : 'border-gray-300 dark:border-gray-700'"
+                />
+                <p v-if="editInfoFieldErrors.email" class="mt-1.5 text-xs text-error-500">{{ editInfoFieldErrors.email[0] }}</p>
+              </div>
+
+              <div>
+                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('profile.phone') }}</label>
+                <input
+                  v-model="editInfoForm.phone_number"
+                  type="tel"
+                  class="h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  :class="editInfoFieldErrors.phone_number ? 'border-error-500 dark:border-error-500' : 'border-gray-300 dark:border-gray-700'"
+                />
+                <p v-if="editInfoFieldErrors.phone_number" class="mt-1.5 text-xs text-error-500">{{ editInfoFieldErrors.phone_number[0] }}</p>
+              </div>
+
+              <div>
+                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('profile.dateOfBirth') }}</label>
+                <input
+                  v-model="editInfoForm.date_of_birth"
+                  type="date"
+                  class="h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90"
+                  :class="editInfoFieldErrors.date_of_birth ? 'border-error-500 dark:border-error-500' : 'border-gray-300 dark:border-gray-700'"
+                />
+                <p v-if="editInfoFieldErrors.date_of_birth" class="mt-1.5 text-xs text-error-500">{{ editInfoFieldErrors.date_of_birth[0] }}</p>
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('profile.address') }}</label>
+                <input
+                  v-model="editInfoForm.address"
+                  type="text"
+                  class="h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  :class="editInfoFieldErrors.address ? 'border-error-500 dark:border-error-500' : 'border-gray-300 dark:border-gray-700'"
+                />
+                <p v-if="editInfoFieldErrors.address" class="mt-1.5 text-xs text-error-500">{{ editInfoFieldErrors.address[0] }}</p>
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.medicalFeatures') }}</label>
+                <textarea
+                  v-model="editInfoForm.medical_features"
+                  rows="3"
+                  :placeholder="t('students.medicalFeaturesPlaceholder')"
+                  class="w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                  :class="editInfoFieldErrors.medical_features ? 'border-error-500 dark:border-error-500' : 'border-gray-300 dark:border-gray-700'"
+                ></textarea>
+                <p v-if="editInfoFieldErrors.medical_features" class="mt-1.5 text-xs text-error-500">{{ editInfoFieldErrors.medical_features[0] }}</p>
+              </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+              <button
+                type="button"
+                @click="closeEditInfoModal"
+                class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
+              >
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                type="submit"
+                :disabled="savingInfo"
+                class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              >
+                <Loader2 v-if="savingInfo" class="h-4 w-4 animate-spin" />
+                {{ t('common.save') }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </template>
+    </Modal>
+
     <!-- History Modal -->
     <Modal v-if="showHistoryModal" :fullScreenBackdrop="true" @close="showHistoryModal = false">
       <template #body>
@@ -933,6 +1098,9 @@ import {
   FileText,
   Paperclip,
   Sparkles,
+  Pencil,
+  HeartPulse,
+  Users,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
@@ -941,11 +1109,12 @@ import DocumentPreviewModal from '@/components/ui/DocumentPreviewModal.vue'
 import StudentClubsSection from '@/components/students/StudentClubsSection.vue'
 import {
   getStudentDetailApi,
+  updateStudentApi,
   createPsychologicalStateApi,
   deletePsychologicalStateApi,
   getPsychologicalStateTemplatesApi,
 } from '@/api/students'
-import type { StudentDetail, PsychologicalState, PsychologicalStateTemplate } from '@/types/student'
+import type { StudentDetail, PsychologicalState, PsychologicalStateTemplate, UpdateStudentRequest } from '@/types/student'
 import {
   getAchievementsApi,
   createAchievementApi,
@@ -970,11 +1139,13 @@ const { t } = useI18n()
 const route = useRoute()
 const { user: authUser } = useAuth()
 const isAdmin = computed(() =>
-  ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(authUser.value?.role || ''),
+  authUser.value?.roles.some(role => ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal', 'psychologist'].includes(role))
 )
 
+const isHomeroomTeacher = computed(() => authUser.value?.roles.includes('homeroom_teacher') ?? false)
+
 const canGenerateReport = computed(() =>
-  ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(authUser.value?.role || ''),
+  authUser.value?.roles.some(role => ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(role))
 )
 
 const showReportModal = ref(false)
@@ -1528,6 +1699,99 @@ async function removeReadingEntry(id: number) {
     await deleteReadingEntryApi(id)
     readingEntries.value = readingEntries.value.filter(r => r.id !== id)
   } catch { /* silent */ }
+}
+
+// ─── Personal info edit (homeroom teacher only) ─────────────────────────────
+const showEditInfoModal = ref(false)
+const savingInfo = ref(false)
+const editInfoError = ref('')
+const editInfoFieldErrors = ref<Record<string, string[]>>({})
+
+type EditableInfoField = 'email' | 'first_name' | 'last_name' | 'phone_number' | 'date_of_birth' | 'address'
+const editableInfoFields: EditableInfoField[] = ['email', 'first_name', 'last_name', 'phone_number', 'date_of_birth', 'address']
+
+const editInfoForm = ref<Record<EditableInfoField | 'medical_features', string>>({
+  email: '',
+  first_name: '',
+  last_name: '',
+  phone_number: '',
+  date_of_birth: '',
+  address: '',
+  medical_features: '',
+})
+
+function openEditInfoModal() {
+  if (!student.value) return
+  const u = student.value.user
+  editInfoForm.value = {
+    email: u.email || '',
+    first_name: u.first_name || '',
+    last_name: u.last_name || '',
+    phone_number: u.phone_number || '',
+    date_of_birth: u.date_of_birth || '',
+    address: u.address || '',
+    medical_features: student.value.medical_features || '',
+  }
+  editInfoFieldErrors.value = {}
+  editInfoError.value = ''
+  showEditInfoModal.value = true
+}
+
+function closeEditInfoModal() {
+  showEditInfoModal.value = false
+}
+
+async function submitEditInfo() {
+  if (!student.value || !studentPk.value) return
+  // Only send fields the user actually changed — a PATCH with untouched
+  // values (e.g. an empty date) is rejected by the backend.
+  const payload: UpdateStudentRequest = {}
+  const userPayload: Partial<Record<EditableInfoField, string>> = {}
+  for (const field of editableInfoFields) {
+    const next = editInfoForm.value[field].trim()
+    if (next !== (student.value.user[field] || '')) userPayload[field] = next
+  }
+  Object.assign(payload, userPayload)
+
+  // medical_features lives on the student profile, not the user — an empty
+  // string clears it server-side.
+  const nextMedical = editInfoForm.value.medical_features.trim()
+  const medicalChanged = nextMedical !== (student.value.medical_features || '')
+  if (medicalChanged) payload.medical_features = nextMedical
+
+  if (Object.keys(payload).length === 0) {
+    closeEditInfoModal()
+    return
+  }
+
+  savingInfo.value = true
+  editInfoError.value = ''
+  editInfoFieldErrors.value = {}
+  try {
+    await updateStudentApi(studentPk.value, payload)
+    Object.assign(student.value.user, userPayload)
+    if (medicalChanged) student.value.medical_features = nextMedical
+    closeEditInfoModal()
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err) && err.response?.data && typeof err.response.data === 'object') {
+      const data = err.response.data as Record<string, unknown>
+      const fieldErrors: Record<string, string[]> = {}
+      for (const [key, value] of Object.entries(data)) {
+        if (key === 'medical_features' || editableInfoFields.includes(key as EditableInfoField)) {
+          fieldErrors[key] = Array.isArray(value) ? value.map(String) : [String(value)]
+        }
+      }
+      editInfoFieldErrors.value = fieldErrors
+      const detail = data.detail
+      if (Object.keys(fieldErrors).length === 0) {
+        editInfoError.value = typeof detail === 'string' ? detail : t('common.serverError')
+      }
+    } else {
+      editInfoError.value = t('common.serverError')
+    }
+  } finally {
+    savingInfo.value = false
+  }
 }
 
 // ─── Fetch ───────────────────────────────────────────────────────────────────

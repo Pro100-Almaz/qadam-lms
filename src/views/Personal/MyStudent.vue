@@ -269,7 +269,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const student = ref<StudentDetail | null>(null)
 
-const isParent = computed(() => authUser.value?.role === 'parent')
+const isParent = computed(() => authUser.value?.roles.includes('parent'))
 
 const fullName = computed(() => {
   if (!student.value) return ''

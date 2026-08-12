@@ -10,18 +10,18 @@ export const useAuthStore = defineStore('auth', () => {
   const isSessionLoading = ref(true)
 
   const isAuthenticated = computed(() => !!user.value)
-  const userRole = computed(() => user.value?.role ?? null)
+  const userRoles = computed(() => user.value?.roles ?? null)
 
   const isAdmin = computed(() =>
-    (['admin', 'supervisor', 'principal'] as UserRole[]).includes(userRole.value!)
+    userRoles.value?.some(role => (['admin', 'supervisor', 'principal'] as UserRole[]).includes(role))
   )
   const isStaff = computed(() =>
-    (['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'] as UserRole[]).includes(userRole.value!)
+    userRoles.value?.some(role => (['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'] as UserRole[]).includes(role))
   )
-  const isStudent = computed(() => userRole.value === 'student')
-  const isParent = computed(() => userRole.value === 'parent')
+  const isStudent = computed(() => userRoles.value?.includes('student'))
+  const isParent = computed(() => userRoles.value?.includes('parent'))
   const isTeacher = computed(() =>
-    (['teacher', 'homeroom_teacher'] as UserRole[]).includes(userRole.value!)
+    userRoles.value?.some(role => (['teacher', 'homeroom_teacher'] as UserRole[]).includes(role))
   )
 
   async function fetchCurrentUser() {
@@ -123,7 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user, isSessionLoading, isAuthenticated,
-    userRole, isAdmin, isStaff, isStudent, isParent, isTeacher,
+    userRoles, isAdmin, isStaff, isStudent, isParent, isTeacher,
     login, logout, initSession, fetchCurrentUser,
     updateProfile, uploadAvatar,
   }

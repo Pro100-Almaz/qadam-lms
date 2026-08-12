@@ -510,7 +510,7 @@ import { useRouter } from 'vue-router'
 const { t, locale } = useI18n()
 const router = useRouter()
 const { user: authUser } = useAuth()
-const canAddLesson = computed(() => authUser.value?.role !== 'parent')
+const canAddLesson = computed(() => !authUser.value?.roles.includes('parent'))
 
 type ViewType = 'month' | 'week' | 'day'
 const views: ViewType[] = ['month', 'week', 'day']

@@ -154,8 +154,8 @@ const lessons = ref<Lesson[]>([])
 const selectedQuarter = ref(0)
 
 const isTeacher = computed(() => {
-  const role = authUser.value?.role
-  return role === 'teacher' || role === 'homeroom_teacher'
+  const roles = authUser.value?.roles
+  return roles?.includes('teacher') || roles?.includes('homeroom_teacher')
 })
 
 const filteredLessons = computed(() => {
