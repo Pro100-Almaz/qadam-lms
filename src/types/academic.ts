@@ -1,7 +1,7 @@
 export interface QuarterDates {
   quarter: number
-  start: string
-  end: string
+  start: string | null
+  end: string | null
 }
 
 export interface AcademicYear {

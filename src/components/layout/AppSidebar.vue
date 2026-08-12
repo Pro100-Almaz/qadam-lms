@@ -197,8 +197,8 @@
   </aside>
 </template>
 
-<script setup>
-import { computed, watch } from "vue";
+<script setup lang="ts">
+import { computed, watch, type Component } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import {
@@ -212,6 +212,8 @@ import {
   LayoutDashboard,
   Briefcase,
   Puzzle,
+  ClipboardCheck,
+  CalendarCog,
 } from "lucide-vue-next";
 
 import {
@@ -220,6 +222,26 @@ import {
 } from "../../icons";
 import { useSidebar } from "@/composables/useSidebar";
 import { useAuth } from "@/composables/useAuth";
+import type { UserRole } from "@/types/auth";
+
+interface MenuSubItem {
+  name: string;
+  path: string;
+  new?: boolean;
+  pro?: boolean;
+}
+
+interface MenuItem {
+  icon: Component;
+  name: string;
+  path?: string;
+  subItems?: MenuSubItem[];
+}
+
+interface MenuGroup {
+  title: string;
+  items: MenuItem[];
+}
 
 const route = useRoute();
 const { t } = useI18n();
@@ -234,10 +256,10 @@ const isParent = computed(() => roles.value?.includes('parent'));
 const isClubManager = computed(() => roles.value?.includes('clubmanager'));
 const isPsychologist = computed(() => roles.value?.includes('psychologist'));
 
-const isAdmin = computed(() => ['admin', 'supervisor', 'principal'].some(role => roles.value?.includes(role)));
-const isTeacher = computed(() => ['teacher', 'homeroom_teacher'].some(role => roles.value?.includes(role)));
+const isAdmin = computed(() => (['admin', 'supervisor', 'principal'] as UserRole[]).some(role => roles.value?.includes(role)));
+const isTeacher = computed(() => (['teacher', 'homeroom_teacher'] as UserRole[]).some(role => roles.value?.includes(role)));
 
-const menuGroups = computed(() => {
+const menuGroups = computed<MenuGroup[]>(() => {
   if (isStudent.value) {
     return [
       {
@@ -293,9 +315,9 @@ const menuGroups = computed(() => {
     ];
   }
 
-  const menu = [];
-  const managementItems = [];
-  const personalItems = [];
+  const menu: MenuGroup[] = [];
+  const managementItems: MenuItem[] = [];
+  const personalItems: MenuItem[] = [];
 
   if (isTeacher.value) {
     personalItems.push({
@@ -320,7 +342,7 @@ const menuGroups = computed(() => {
     });
   }
 
-  if (roles.value.includes('homeroom_teacher')) {
+  if (roles.value?.includes('homeroom_teacher')) {
     personalItems.splice(-1, 0, {
       icon: School,
       name: t("nav.myClass"),
@@ -343,6 +365,24 @@ const menuGroups = computed(() => {
       name: t("nav.lessons"),
       path: "/lessons",
     },
+    ...(isTeacher.value
+      ? [
+          {
+            icon: ClipboardCheck,
+            name: t("nav.attendance"),
+            path: "/attendance",
+          },
+        ]
+      : []),
+    ...(isAdmin.value
+      ? [
+          {
+            icon: CalendarCog,
+            name: t("nav.scheduleBuilder"),
+            path: "/schedule-builder",
+          },
+        ]
+      : []),
     {
       icon: Users,
       name: t("nav.teachers"),
@@ -394,9 +434,9 @@ const menuGroups = computed(() => {
   return menu;
 });
 
-const isActive = (path) => route.path === path || (path === '/clubs' && route.path.startsWith('/clubs/'));
+const isActive = (path?: string) => route.path === path || (path === '/clubs' && route.path.startsWith('/clubs/'));
 
-const toggleSubmenu = (groupIndex, itemIndex) => {
+const toggleSubmenu = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`;
   openSubmenu.value = openSubmenu.value === key ? null : key;
 };
@@ -416,7 +456,7 @@ const isAnySubmenuRouteActive = computed(() => {
   );
 });
 
-const isSubmenuOpen = (groupIndex, itemIndex) => {
+const isSubmenuOpen = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`;
   return (
     openSubmenu.value === key ||
@@ -427,7 +467,8 @@ const isSubmenuOpen = (groupIndex, itemIndex) => {
   );
 };
 
-const startTransition = (el) => {
+const startTransition = (element: Element) => {
+  const el = element as HTMLElement;
   el.style.height = "auto";
   const height = el.scrollHeight;
   el.style.height = "0px";
@@ -435,7 +476,7 @@ const startTransition = (el) => {
   el.style.height = height + "px";
 };
 
-const endTransition = (el) => {
-  el.style.height = "";
+const endTransition = (element: Element) => {
+  (element as HTMLElement).style.height = "";
 };
 </script>
