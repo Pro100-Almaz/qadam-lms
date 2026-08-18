@@ -86,15 +86,27 @@
             </div>
           </div>
 
-          <!-- Add Lesson button (admin + teacher only) -->
-          <button
-            v-if="canAddLesson"
-            @click="openAddLessonModal"
-            class="inline-flex items-center gap-2 self-start rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
-          >
-            <Plus class="h-4 w-4" />
-            {{ $t('subjects.addLesson') }}
-          </button>
+          <div class="flex flex-wrap items-center gap-2 self-start">
+            <!-- Create Homework — teachers only, the homework routes are not open to admins -->
+            <button
+              v-if="canAddHomework"
+              @click="goToCreateHomework"
+              class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5"
+            >
+              <NotebookPen class="h-4 w-4" />
+              {{ $t('homeworks.create') }}
+            </button>
+
+            <!-- Add Lesson button (admin + teacher only) -->
+            <button
+              v-if="canAddLesson"
+              @click="openAddLessonModal"
+              class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
+            >
+              <Plus class="h-4 w-4" />
+              {{ $t('subjects.addLesson') }}
+            </button>
+          </div>
         </div>
 
         <!-- ── Stats row ──────────────────────────────────────── -->
@@ -523,6 +535,7 @@ import {
   Trophy,
   Plus,
   Copy,
+  NotebookPen,
   X,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
@@ -551,6 +564,19 @@ const activeClassGroup = ref(0)
 const canAddLesson = computed(() =>
   authUser.value?.roles.some((role) => ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'].includes(role))
 )
+// `/homeworks/create` is gated to teachers, so admins/supervisors must not see the button.
+const canAddHomework = computed(() =>
+  authUser.value?.roles.some((role) => ['teacher', 'homeroom_teacher'].includes(role))
+)
+
+/** Opens the homework form with this subject preselected. */
+function goToCreateHomework() {
+  router.push({
+    path: '/homeworks/create',
+    query: subject.value?.name ? { subject: subject.value.name } : undefined,
+  })
+}
+
 const showAddLessonModal = ref(false)
 const addLessonBackdrop = useBackdropClose(() => { showAddLessonModal.value = false })
 const savingLesson = ref(false)

@@ -214,6 +214,7 @@ import {
   Puzzle,
   ClipboardCheck,
   CalendarCog,
+  NotebookPen,
 } from "lucide-vue-next";
 
 import {
@@ -269,6 +270,11 @@ const menuGroups = computed<MenuGroup[]>(() => {
             icon: BookOpen,
             name: t("nav.mySubjects"),
             path: "/my-subjects",
+          },
+          {
+            icon: NotebookPen,
+            name: t("nav.myHomeworks"),
+            path: "/my-homeworks",
           },
           {
             icon: CalendarDays,
@@ -372,6 +378,11 @@ const menuGroups = computed<MenuGroup[]>(() => {
             name: t("nav.attendance"),
             path: "/attendance",
           },
+          {
+            icon: NotebookPen,
+            name: t("nav.homeworks"),
+            path: "/homeworks",
+          },
         ]
       : []),
     ...(isAdmin.value
@@ -434,7 +445,10 @@ const menuGroups = computed<MenuGroup[]>(() => {
   return menu;
 });
 
-const isActive = (path?: string) => route.path === path || (path === '/clubs' && route.path.startsWith('/clubs/'));
+const isActive = (path?: string) =>
+  route.path === path
+  || (path === '/clubs' && route.path.startsWith('/clubs/'))
+  || (path === '/homeworks' && route.path.startsWith('/homeworks/'));
 
 const toggleSubmenu = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`;

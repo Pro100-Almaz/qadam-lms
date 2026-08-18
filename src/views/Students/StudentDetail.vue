@@ -348,6 +348,15 @@
       </div>
 
       <!-- TAB: Clubs -->
+      <!-- TAB: Homeworks (read-only) -->
+      <StudentHomeworksSection
+        v-if="canViewHomeworks"
+        v-show="activeTab === 'homeworks'"
+        :student-id="studentPk"
+        :subjects="studentSubjects"
+        :heading="t('studentHomeworks.title')"
+      />
+
       <StudentClubsSection v-show="activeTab === 'clubs'" :student-id="studentPk" />
 
       <!-- TAB: Achievements -->
@@ -1101,12 +1110,16 @@ import {
   Pencil,
   HeartPulse,
   Users,
+  NotebookPen,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
 import DocumentPreviewModal from '@/components/ui/DocumentPreviewModal.vue'
 import StudentClubsSection from '@/components/students/StudentClubsSection.vue'
+import StudentHomeworksSection, {
+  type HomeworkSubjectOption,
+} from '@/components/students/StudentHomeworksSection.vue'
 import {
   getStudentDetailApi,
   updateStudentApi,
@@ -1164,9 +1177,24 @@ const student = ref<StudentDetail | null>(null)
 const templates = ref<PsychologicalStateTemplate[]>([])
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
-const activeTab = ref<'subjects' | 'clubs' | 'psych' | 'achievements' | 'reports' | 'info'>('subjects')
+const activeTab = ref<'subjects' | 'homeworks' | 'clubs' | 'psych' | 'achievements' | 'reports' | 'info'>('subjects')
+
+/**
+ * Roles the backend's `can_access_student()` lets read another student's
+ * homework grades. Plain `teacher` is deliberately absent — a subject teacher
+ * grades through the homework list instead.
+ */
+const canViewHomeworks = computed(() =>
+  authUser.value?.roles.some(role =>
+    ['homeroom_teacher', 'psychologist', 'admin', 'principal', 'supervisor'].includes(role),
+  ) ?? false,
+)
+
 const tabs = computed(() => [
   { key: 'subjects' as const, label: t('subjects.title'), icon: BookMarked, disabled: false },
+  ...(canViewHomeworks.value
+    ? [{ key: 'homeworks' as const, label: t('studentHomeworks.title'), icon: NotebookPen, disabled: false }]
+    : []),
   { key: 'clubs' as const, label: t('students.clubs'), icon: Puzzle, disabled: false },
   { key: 'psych' as const, label: t('students.psychologicalStates'), icon: Brain, disabled: false },
   { key: 'achievements' as const, label: t('students.achievements'), icon: Trophy, disabled: false },
@@ -1562,6 +1590,13 @@ function openHistoryModal(stateName: string) {
 
 // ─── Achievements CRUD ──────────────────────────────────────────────────────
 const studentPk = computed(() => student.value?.id ?? 0)
+
+/** Subject filter options for the homeworks tab — taken from the student's own offerings. */
+const studentSubjects = computed<HomeworkSubjectOption[]>(() =>
+  (student.value?.offerings ?? [])
+    .filter(offering => offering.subject?.id && offering.subject?.name)
+    .map(offering => ({ id: offering.subject.id, name: offering.subject.name })),
+)
 
 async function fetchAchievements() {
   if (!studentPk.value) return

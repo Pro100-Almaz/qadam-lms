@@ -126,6 +126,9 @@
           </table>
         </div>
       </div>
+
+      <!-- Homework across every subject taught to this class. -->
+      <ClassHomeworksSection v-if="myClass" :class-group-id="myClass.class_group_id" />
     </div>
   </AdminLayout>
 </template>
@@ -140,6 +143,7 @@ import {
   Eye,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import ClassHomeworksSection from '@/components/homeworks/ClassHomeworksSection.vue'
 import { getStudentsApi } from '@/api/students'
 import { getHomeroomClassApi } from '@/api/teacherDashboard'
 import { useAuth } from '@/composables/useAuth'

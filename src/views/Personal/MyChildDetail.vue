@@ -224,6 +224,14 @@
         </div>
       </div>
 
+      <!-- TAB: Homeworks (read-only) -->
+      <StudentHomeworksSection
+        v-show="activeTab === 'homeworks'"
+        :student-id="studentPk"
+        :subjects="childSubjects"
+        :heading="t('studentHomeworks.title')"
+      />
+
       <!-- TAB: Clubs (read-only) -->
       <StudentClubsSection v-show="activeTab === 'clubs'" :student-id="studentPk" />
 
@@ -585,12 +593,16 @@ import {
   Eye,
   Paperclip,
   Sparkles,
+  NotebookPen,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
 import DocumentPreviewModal from '@/components/ui/DocumentPreviewModal.vue'
 import StudentClubsSection from '@/components/students/StudentClubsSection.vue'
+import StudentHomeworksSection, {
+  type HomeworkSubjectOption,
+} from '@/components/students/StudentHomeworksSection.vue'
 import { getMyChildDetailApi } from '@/api/parentSelf'
 import { getSchoolGroupApi, type SchoolGroup } from '@/api/auth'
 import {
@@ -627,9 +639,10 @@ function adjustColor(hex: string, amount: number): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
 }
 
-const activeTab = ref<'subjects' | 'clubs' | 'psych' | 'achievements' | 'reports' | 'info'>('subjects')
+const activeTab = ref<'subjects' | 'homeworks' | 'clubs' | 'psych' | 'achievements' | 'reports' | 'info'>('subjects')
 const tabs = computed(() => [
   { key: 'subjects' as const, label: t('subjects.title'), icon: BookMarked },
+  { key: 'homeworks' as const, label: t('studentHomeworks.title'), icon: NotebookPen },
   { key: 'clubs' as const, label: t('students.clubs'), icon: Puzzle },
   { key: 'psych' as const, label: t('students.psychologicalStates'), icon: Brain },
   { key: 'achievements' as const, label: t('students.achievements'), icon: Trophy },
@@ -674,6 +687,12 @@ const initials = computed(() => {
 })
 
 const studentPk = computed(() => student.value?.id ?? 0)
+
+const childSubjects = computed<HomeworkSubjectOption[]>(() =>
+  (student.value?.offerings ?? [])
+    .filter(offering => offering.subject?.id && offering.subject?.name)
+    .map(offering => ({ id: offering.subject.id, name: offering.subject.name })),
+)
 
 const subjectIdByName = computed<Record<string, number>>(() => {
   if (!student.value) return {}
