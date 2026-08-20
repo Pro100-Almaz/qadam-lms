@@ -357,6 +357,14 @@
         :heading="t('studentHomeworks.title')"
       />
 
+      <!-- TAB: Grades — marks on lesson, exam and final assignments (read-only) -->
+      <StudentGradesSection
+        v-show="activeTab === 'grades'"
+        :student-id="studentPk"
+        :subjects="studentSubjects"
+        :heading="t('studentGrades.title')"
+      />
+
       <StudentClubsSection v-show="activeTab === 'clubs'" :student-id="studentPk" />
 
       <!-- TAB: Achievements -->
@@ -1111,6 +1119,7 @@ import {
   HeartPulse,
   Users,
   NotebookPen,
+  SquareCheckBig,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
@@ -1120,6 +1129,7 @@ import StudentClubsSection from '@/components/students/StudentClubsSection.vue'
 import StudentHomeworksSection, {
   type HomeworkSubjectOption,
 } from '@/components/students/StudentHomeworksSection.vue'
+import StudentGradesSection from '@/components/students/StudentGradesSection.vue'
 import {
   getStudentDetailApi,
   updateStudentApi,
@@ -1177,7 +1187,7 @@ const student = ref<StudentDetail | null>(null)
 const templates = ref<PsychologicalStateTemplate[]>([])
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
-const activeTab = ref<'subjects' | 'homeworks' | 'clubs' | 'psych' | 'achievements' | 'reports' | 'info'>('subjects')
+const activeTab = ref<'subjects' | 'grades' | 'homeworks' | 'clubs' | 'psych' | 'achievements' | 'reports' | 'info'>('subjects')
 
 /**
  * Roles the backend's `can_access_student()` lets read another student's
@@ -1192,6 +1202,9 @@ const canViewHomeworks = computed(() =>
 
 const tabs = computed(() => [
   { key: 'subjects' as const, label: t('subjects.title'), icon: BookMarked, disabled: false },
+  // No role gate: `/subject-grades/` scopes itself to the caller, so a subject
+  // teacher sees their own marks for this student rather than a 403.
+  { key: 'grades' as const, label: t('studentGrades.title'), icon: SquareCheckBig, disabled: false },
   ...(canViewHomeworks.value
     ? [{ key: 'homeworks' as const, label: t('studentHomeworks.title'), icon: NotebookPen, disabled: false }]
     : []),

@@ -141,6 +141,14 @@ const router = createRouter({
       meta: { title: 'Edit Homework', roles: teacherRoles },
     },
 
+    // Grading — a teacher's graded assignments; writes are offering-scoped
+    {
+      path: '/grading',
+      name: 'Grading',
+      component: () => import('../views/Grading/AssignmentsList.vue'),
+      meta: { title: 'Grading', roles: teacherRoles },
+    },
+
     // Teachers (staff only)
     {
       path: '/teachers',

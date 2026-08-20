@@ -142,7 +142,10 @@ function hasAttachmentEdits(edits?: HomeworkAttachmentEdits): boolean {
 
 export interface StudentHomeworkGrade {
   id: number
-  grade: number
+  /** Nullable — the teacher may have left a comment without a mark. */
+  grade: number | null
+  /** The teacher's note on the mark. `''` when they left it blank. */
+  comments: string
   created_at: string
 }
 
@@ -184,7 +187,13 @@ export interface HomeworkGrade {
   student: number
   student_user_id: number
   student_name: string
-  grade: number
+  /**
+   * Nullable: a row may carry only a comment. `null` is "no mark recorded",
+   * which is distinct from a row that does not exist at all.
+   */
+  grade: number | null
+  /** The teacher's note on the mark. `''` when they left it blank. */
+  comments: string
 }
 
 /** Every grade recorded against a homework. `student` filters by profile id. */
@@ -207,13 +216,19 @@ export async function getHomeworkGradesApi(
  */
 export function createHomeworkGradeApi(
   homeworkId: number | string,
-  data: { student: number; grade: number },
+  data: { student: number; grade: number | null; comments?: string },
 ) {
   return api.post<HomeworkGrade>(`/homeworks/${homeworkId}/grades/`, data)
 }
 
-/** Only the grade is patched — `student` is sent only when reassigning a row. */
-export function updateHomeworkGradeApi(gradeId: number, data: { grade: number }) {
+/**
+ * Only the grade and its comment are patched — `student` is sent only when
+ * reassigning a row. Passing `comments: ''` clears an existing note.
+ */
+export function updateHomeworkGradeApi(
+  gradeId: number,
+  data: { grade?: number | null; comments?: string },
+) {
   return api.patch<HomeworkGrade>(`/homework-grades/${gradeId}/`, data)
 }
 

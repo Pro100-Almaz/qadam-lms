@@ -215,6 +215,7 @@ import {
   ClipboardCheck,
   CalendarCog,
   NotebookPen,
+  SquareCheckBig,
 } from "lucide-vue-next";
 
 import {
@@ -382,6 +383,11 @@ const menuGroups = computed<MenuGroup[]>(() => {
             icon: NotebookPen,
             name: t("nav.homeworks"),
             path: "/homeworks",
+          },
+          {
+            icon: SquareCheckBig,
+            name: t("nav.grading"),
+            path: "/grading",
           },
         ]
       : []),

@@ -129,6 +129,9 @@
 
       <!-- Homework across every subject taught to this class. -->
       <ClassHomeworksSection v-if="myClass" :class-group-id="myClass.class_group_id" />
+
+      <!-- Graded assignments set for this class, and the marks students earned. -->
+      <ClassGradingSection v-if="myClass" :class-group-id="myClass.class_group_id" />
     </div>
   </AdminLayout>
 </template>
@@ -144,6 +147,7 @@ import {
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import ClassHomeworksSection from '@/components/homeworks/ClassHomeworksSection.vue'
+import ClassGradingSection from '@/components/grading/ClassGradingSection.vue'
 import { getStudentsApi } from '@/api/students'
 import { getHomeroomClassApi } from '@/api/teacherDashboard'
 import { useAuth } from '@/composables/useAuth'
