@@ -23,6 +23,13 @@ export interface User {
   roles: UserRole[]
   role_display: string
   primary_group: string
+  /**
+   * The caller's *profile* pk, distinct from `id` (the user id). It is
+   * role-polymorphic — Student pk for students, Teacher pk for teachers,
+   * Parent pk for parents — so only read it once `roles` says which one it is.
+   * Student-scoped routes (`/students/<student_id>/…`) expect this, not `id`.
+   */
+  profile_id?: number | null
 }
 
 export interface AuthTokens {

@@ -121,6 +121,26 @@ const router = createRouter({
       meta: { title: 'Attendance', roles: ['teacher', 'homeroom_teacher'] },
     },
 
+    // Homeworks — a teacher's own tasks; not a school-wide view, so staff are out
+    {
+      path: '/homeworks',
+      name: 'Homeworks',
+      component: () => import('../views/Homeworks/HomeworksList.vue'),
+      meta: { title: 'Homeworks', roles: teacherRoles },
+    },
+    {
+      path: '/homeworks/create',
+      name: 'CreateHomework',
+      component: () => import('../views/Homeworks/HomeworkForm.vue'),
+      meta: { title: 'Create Homework', roles: teacherRoles },
+    },
+    {
+      path: '/homeworks/:id/edit',
+      name: 'EditHomework',
+      component: () => import('../views/Homeworks/HomeworkForm.vue'),
+      meta: { title: 'Edit Homework', roles: teacherRoles },
+    },
+
     // Teachers (staff only)
     {
       path: '/teachers',
@@ -209,6 +229,12 @@ const router = createRouter({
       name: 'MySubjects',
       component: () => import('../views/Personal/MySubjects.vue'),
       meta: { title: 'My Subjects', roles: ['student'] },
+    },
+    {
+      path: '/my-homeworks',
+      name: 'MyHomeworks',
+      component: () => import('../views/Personal/MyHomeworks.vue'),
+      meta: { title: 'My Homeworks', roles: ['student'] },
     },
     {
       path: '/my-teachers',
