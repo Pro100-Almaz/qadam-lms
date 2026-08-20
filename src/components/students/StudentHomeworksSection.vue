@@ -100,18 +100,32 @@
                   {{ homework.offering.class_group_name }}
                 </span>
               </div>
+
+              <!-- The teacher's note on the mark, when they left one. -->
+              <div
+                v-if="homework.student_grade?.comments"
+                class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800/60"
+              >
+                <p class="text-[11px] font-medium uppercase text-gray-400">
+                  {{ t('homeworks.teacherComment') }}
+                </p>
+                <p class="mt-0.5 whitespace-pre-line text-sm text-gray-600 dark:text-gray-300">
+                  {{ homework.student_grade.comments }}
+                </p>
+              </div>
             </div>
           </div>
 
           <!-- Grade -->
+          <!-- A row with a comment but no mark still counts as ungraded here. -->
           <div
             class="shrink-0 rounded-lg border px-4 py-2.5 text-center"
-            :class="homework.student_grade
+            :class="homework.student_grade?.grade != null
               ? 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/60'
               : 'border-dashed border-gray-200 dark:border-gray-700'"
           >
             <p class="text-[11px] font-medium uppercase text-gray-400">{{ t('studentHomeworks.grade') }}</p>
-            <p v-if="homework.student_grade" class="mt-0.5 text-lg font-bold" :class="gradeColor(homework)">
+            <p v-if="homework.student_grade?.grade != null" class="mt-0.5 text-lg font-bold" :class="gradeColor(homework)">
               {{ homework.student_grade.grade }}<span class="text-sm font-medium text-gray-400">/{{ homework.max_grade }}</span>
             </p>
             <p v-else class="mt-0.5 text-sm font-medium text-gray-400">
