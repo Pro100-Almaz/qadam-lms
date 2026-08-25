@@ -224,6 +224,16 @@
         </div>
       </div>
 
+      <!-- TAB: Grades — marks on lesson, exam and final assignments (read-only),
+           and the quarter report a parent may download for their child. -->
+      <StudentGradesSection
+        v-show="activeTab === 'grades'"
+        :student-id="studentPk"
+        :subjects="childSubjects"
+        :heading="t('studentGrades.title')"
+        :student-name="fullName"
+      />
+
       <!-- TAB: Homeworks (read-only) -->
       <StudentHomeworksSection
         v-show="activeTab === 'homeworks'"
@@ -594,12 +604,14 @@ import {
   Paperclip,
   Sparkles,
   NotebookPen,
+  SquareCheckBig,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import Modal from '@/components/ui/Modal.vue'
 import DocumentPreviewModal from '@/components/ui/DocumentPreviewModal.vue'
 import StudentClubsSection from '@/components/students/StudentClubsSection.vue'
+import StudentGradesSection from '@/components/students/StudentGradesSection.vue'
 import StudentHomeworksSection, {
   type HomeworkSubjectOption,
 } from '@/components/students/StudentHomeworksSection.vue'
@@ -639,9 +651,10 @@ function adjustColor(hex: string, amount: number): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
 }
 
-const activeTab = ref<'subjects' | 'homeworks' | 'clubs' | 'psych' | 'achievements' | 'reports' | 'info'>('subjects')
+const activeTab = ref<'subjects' | 'grades' | 'homeworks' | 'clubs' | 'psych' | 'achievements' | 'reports' | 'info'>('subjects')
 const tabs = computed(() => [
   { key: 'subjects' as const, label: t('subjects.title'), icon: BookMarked },
+  { key: 'grades' as const, label: t('studentGrades.title'), icon: SquareCheckBig },
   { key: 'homeworks' as const, label: t('studentHomeworks.title'), icon: NotebookPen },
   { key: 'clubs' as const, label: t('students.clubs'), icon: Puzzle },
   { key: 'psych' as const, label: t('students.psychologicalStates'), icon: Brain },

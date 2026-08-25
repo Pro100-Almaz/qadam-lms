@@ -73,7 +73,14 @@
             </p>
           </div>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- The class in view, optionally narrowed to one of its students. -->
+          <GradeReportButton
+            :classes="reportClasses"
+            :default-class-group-id="selectedClass.class_group_id"
+            :classes-loading="subjectsLoading"
+            allow-student-scope
+          />
           <!-- All subjects toggle (for homeroom teachers) -->
           <label v-if="selectedClass.is_homeroom" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
             <input
@@ -235,6 +242,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Users, ArrowLeft, Search, ArrowUpDown, Eye } from 'lucide-vue-next'
 import { getTeacherMyClassesApi, getClassStudentsApi } from '@/api/teacherDashboard'
+import GradeReportButton from '@/components/grading/GradeReportButton.vue'
+import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
+import { useSubjectNameLookup } from '@/composables/useSubjectNameLookup'
 import type { TeacherClassGroup, ClassStudentsResponse, ClassStudent, ClassStudentSubject } from '@/types/teacherDashboard'
 
 const { t } = useI18n()
@@ -329,6 +339,30 @@ function getSubjectGrade(student: ClassStudent, subjectName: string): ClassStude
   return student.subjects.find((s) => s.subject_name === subjectName)
 }
 
+// ─── Grade report ───────────────────────────────────────────────────────────
+// The table's own columns are the subject list to report on — for a homeroom
+// class with "all subjects" on, that is every subject the class is taught.
+
+const {
+  loading: subjectsLoading,
+  load: loadSubjectNames,
+  toOptions: subjectOptionsFor,
+} = useSubjectNameLookup()
+
+const reportClasses = computed<GradeReportClassOption[]>(() => {
+  const cls = selectedClass.value
+  if (!cls) return []
+  return [
+    {
+      classGroupId: cls.class_group_id,
+      displayName: studentsData.value?.class_group ?? cls.display_name,
+      subjects: subjectOptionsFor(subjectColumns.value),
+      // Only a homeroom teacher may pull a class's whole workbook.
+      requiresSubject: !cls.is_homeroom,
+    },
+  ]
+})
+
 function initials(name: string): string {
   return name.split(' ').map((p) => p[0] || '').join('').toUpperCase().slice(0, 2)
 }
@@ -356,5 +390,9 @@ function psychDotClass(score: number) {
   return 'bg-green-500'
 }
 
-onMounted(fetchClasses)
+onMounted(() => {
+  fetchClasses()
+  // Names are all the dashboard carries; the report endpoint wants subject ids.
+  loadSubjectNames()
+})
 </script>

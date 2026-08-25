@@ -7,7 +7,7 @@
           {{ t('studentGrades.summary', { count: total, percent: averagePercent }) }}
         </p>
       </div>
-      <div class="flex flex-col gap-3 sm:flex-row">
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <div class="w-full sm:w-48">
           <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
             {{ t('studentGrades.subject') }}
@@ -60,6 +60,14 @@
             :input-class="dateInputClass"
           />
         </div>
+        <!-- The workbook covers a whole quarter, so it ignores the filters
+             above and asks for its own subject and quarter. -->
+        <GradeReportButton
+          v-if="studentId"
+          class="h-11 w-full sm:w-auto"
+          :student="{ id: studentId, name: studentName }"
+          :subjects="subjects"
+        />
       </div>
     </div>
 
@@ -188,6 +196,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CircleAlert, SquareCheckBig } from 'lucide-vue-next'
 import AssignmentCategoryBadge from '@/components/grading/AssignmentCategoryBadge.vue'
+import GradeReportButton from '@/components/grading/GradeReportButton.vue'
 import DatePicker from '@/components/ui/DatePicker.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
@@ -218,6 +227,8 @@ const props = defineProps<{
   /** Subjects offered to this student — the filter's option list. */
   subjects: GradeSubjectOption[]
   heading?: string
+  /** Shown in the report dialog so the reader sees whose marks they are asking for. */
+  studentName?: string
 }>()
 
 const { t } = useI18n()

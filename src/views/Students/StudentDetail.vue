@@ -363,6 +363,7 @@
         :student-id="studentPk"
         :subjects="studentSubjects"
         :heading="t('studentGrades.title')"
+        :student-name="fullName"
       />
 
       <StudentClubsSection v-show="activeTab === 'clubs'" :student-id="studentPk" />

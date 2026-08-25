@@ -6,14 +6,23 @@
           <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">{{ t('assignments.title') }}</h1>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('assignments.subtitle') }}</p>
         </div>
-        <button
-          v-if="canCreate"
-          type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600"
-          @click="openCreate"
-        >
-          <Plus class="h-4 w-4" /> {{ t('assignments.create') }}
-        </button>
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Whole class, or one student the teacher teaches. -->
+          <GradeReportButton
+            v-if="isTeacher"
+            :classes="reportClasses"
+            :classes-loading="offeringsLoading"
+            allow-student-scope
+          />
+          <button
+            v-if="canCreate"
+            type="button"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600"
+            @click="openCreate"
+          >
+            <Plus class="h-4 w-4" /> {{ t('assignments.create') }}
+          </button>
+        </div>
       </div>
 
       <!-- Filters -->
@@ -328,6 +337,8 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import AssignmentCategoryBadge from '@/components/grading/AssignmentCategoryBadge.vue'
 import AssignmentFormModal from '@/components/grading/AssignmentFormModal.vue'
 import AssignmentGradingModal from '@/components/grading/AssignmentGradingModal.vue'
+import GradeReportButton from '@/components/grading/GradeReportButton.vue'
+import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
 import DatePicker from '@/components/ui/DatePicker.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
@@ -341,6 +352,7 @@ import {
 import { getMySubjectsApi } from '@/api/subjects'
 import { useAssignmentPermissions } from '@/composables/useAssignmentPermissions'
 import { useBackdropClose } from '@/composables/useBackdropClose'
+import { matchSubjectNames } from '@/composables/useSubjectNameLookup'
 import { useToast } from '@/composables/useToast'
 import { formatAcademicDate, formatRecordedAt } from '@/utils/gradeDates'
 import type { Subject } from '@/types/subject'
@@ -348,12 +360,14 @@ import type { Subject } from '@/types/subject'
 const { t } = useI18n()
 const { success } = useToast()
 const {
+  isTeacher,
   canCreate,
   canManage,
   loadOfferings,
   offeringsLoading,
   subjectGroups,
-  classOptions: teacherClasses,
+  classOptions: teacherClassOptions,
+  teacherClasses,
 } = useAssignmentPermissions()
 
 const assignments = ref<SubjectAssignment[]>([])
@@ -489,7 +503,28 @@ const subjectOptions = computed<SelectOption[]>(() =>
 
 /** A teacher filters within the classes they are assigned to. */
 const classOptions = computed<SelectOption[]>(() =>
-  teacherClasses.value.map(option => ({ value: option.classGroupId, label: option.displayName })),
+  teacherClassOptions.value.map(option => ({ value: option.classGroupId, label: option.displayName })),
+)
+
+/**
+ * The report picker's classes. Subjects are matched by name against the
+ * teacher's own subject list, already loaded for the filter above — on this
+ * page the teacher reports on what they teach, which is the same set.
+ */
+const reportClasses = computed<GradeReportClassOption[]>(() =>
+  teacherClasses.value
+    .slice()
+    .sort((a, b) => a.grade_level - b.grade_level || a.display_name.localeCompare(b.display_name))
+    .map(classGroup => ({
+      classGroupId: classGroup.class_group_id,
+      displayName: classGroup.display_name,
+      subjects: matchSubjectNames(
+        subjects.value,
+        classGroup.subjects.map(subject => subject.subject_name),
+      ),
+      // Only a homeroom teacher may pull a class's whole workbook.
+      requiresSubject: !classGroup.is_homeroom,
+    })),
 )
 
 const categoryOptions = computed<SelectOption[]>(() =>

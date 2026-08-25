@@ -36,7 +36,18 @@
                 {{ t('students.yearOfEducation') }}: {{ myClass.academic_year || '—' }}
               </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Nothing preselected: the homeroom teacher reports on any
+                   subject their class is taught, or on one of its students.
+                   The only screen that offers the sheet layout, because it is
+                   the only one whose report can span every subject. -->
+              <GradeReportButton
+                :classes="reportClasses"
+                :default-class-group-id="myClass.class_group_id"
+                :classes-loading="subjectsLoading"
+                allow-student-scope
+                allow-layout-choice
+              />
               <div class="flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-2 dark:bg-brand-500/10">
                 <Users class="h-4 w-4 text-brand-500" />
                 <span class="text-sm font-semibold text-brand-600 dark:text-brand-400">
@@ -148,6 +159,9 @@ import {
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import ClassHomeworksSection from '@/components/homeworks/ClassHomeworksSection.vue'
 import ClassGradingSection from '@/components/grading/ClassGradingSection.vue'
+import GradeReportButton from '@/components/grading/GradeReportButton.vue'
+import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
+import { useSubjectNameLookup } from '@/composables/useSubjectNameLookup'
 import { getStudentsApi } from '@/api/students'
 import { getHomeroomClassApi } from '@/api/teacherDashboard'
 import { useAuth } from '@/composables/useAuth'
@@ -163,6 +177,35 @@ const students = ref<Student[]>([])
 const myClass = ref<HomeroomTeacherDashboard | null>(null)
 
 const isHomeroomTeacher = computed(() => authUser.value?.roles.includes('homeroom_teacher'))
+
+// ─── Grade report ───────────────────────────────────────────────────────────
+
+const {
+  loading: subjectsLoading,
+  load: loadSubjectNames,
+  toOptions: subjectOptionsFor,
+} = useSubjectNameLookup()
+
+/** Every subject the class is taught, whoever teaches it. */
+const classSubjectNames = computed(() => {
+  const names = new Set<string>()
+  myClass.value?.students.forEach(student => {
+    student.subjects.forEach(subject => names.add(subject.subject_name))
+  })
+  return [...names].sort()
+})
+
+const reportClasses = computed<GradeReportClassOption[]>(() => {
+  const homeroom = myClass.value
+  if (!homeroom) return []
+  return [
+    {
+      classGroupId: homeroom.class_group_id,
+      displayName: homeroom.class_group,
+      subjects: subjectOptionsFor(classSubjectNames.value),
+    },
+  ]
+})
 
 async function fetchData() {
   if (!isHomeroomTeacher.value) {
@@ -186,5 +229,9 @@ async function fetchData() {
   }
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  // The dashboard names subjects; the report endpoint wants their ids.
+  loadSubjectNames()
+})
 </script>

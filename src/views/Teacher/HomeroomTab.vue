@@ -10,7 +10,17 @@
               {{ t('teacherDashboard.homeroomOverview') }}
             </p>
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Nothing is preselected: a homeroom teacher reports on any
+                 subject their class is taught, not only the ones they teach.
+                 The "Мой класс" tab, so the sheet layout is on offer here. -->
+            <GradeReportButton
+              :classes="reportClasses"
+              :default-class-group-id="data.class_group_id"
+              :classes-loading="subjectsLoading"
+              allow-student-scope
+              allow-layout-choice
+            />
             <div class="flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-2 dark:bg-brand-500/10">
               <Users class="h-4 w-4 text-brand-500" />
               <span class="text-sm font-semibold text-brand-600 dark:text-brand-400">{{ data.student_count }}</span>
@@ -146,9 +156,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Users, BookOpen, Search, ArrowUpDown, Eye } from 'lucide-vue-next'
+import GradeReportButton from '@/components/grading/GradeReportButton.vue'
+import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
+import { useSubjectNameLookup } from '@/composables/useSubjectNameLookup'
 import type { HomeroomTeacherDashboard, HomeroomStudent, HomeroomStudentSubject } from '@/types/teacherDashboard'
 
 const props = defineProps<{ data: HomeroomTeacherDashboard }>()
@@ -167,6 +180,26 @@ const subjectColumns = computed(() => {
   }
   return [...subjects].sort()
 })
+
+// ─── Grade report ───────────────────────────────────────────────────────────
+
+const {
+  loading: subjectsLoading,
+  load: loadSubjectNames,
+  toOptions: subjectOptionsFor,
+} = useSubjectNameLookup()
+
+/** Every subject the class is taught — the same set the table columns show. */
+const reportClasses = computed<GradeReportClassOption[]>(() => [
+  {
+    classGroupId: props.data.class_group_id,
+    displayName: props.data.class_group,
+    subjects: subjectOptionsFor(subjectColumns.value),
+  },
+])
+
+// The dashboard names subjects; the report endpoint wants their ids.
+onMounted(loadSubjectNames)
 
 function toggleSort(key: 'name' | 'overall') {
   if (sortKey.value === key) sortAsc.value = !sortAsc.value
