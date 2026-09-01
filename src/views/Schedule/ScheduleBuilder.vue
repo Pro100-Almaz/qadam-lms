@@ -60,21 +60,11 @@
         <div class="flex items-center gap-2 sm:ml-auto sm:pb-0.5">
           <button
             type="button"
-            :disabled="!filledCount || submitting"
-            class="h-10 flex-1 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50 sm:flex-none dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-            @click="clearAll"
+            class="flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition hover:bg-brand-600"
+            @click="openCreate({ weekday: 1, start: 9 * 60, end: 9 * 60 + 45 })"
           >
-            {{ t('scheduleBuilder.clearAll') }}
-          </button>
-          <button
-            type="button"
-            :disabled="!canSubmit"
-            class="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
-            @click="submitSchedule"
-          >
-            <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
-            <Check v-else class="h-4 w-4" />
-            {{ t('scheduleBuilder.submit') }}
+            <Plus class="h-4 w-4" />
+            {{ t('scheduleBuilder.addEntry') }}
           </button>
         </div>
       </div>
@@ -87,111 +77,211 @@
       </div>
 
       <template v-else>
-        <!-- Grid -->
-        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-            <div>
-              <h2 class="flex items-center gap-2 text-base font-semibold text-gray-800 dark:text-white/90">
-                {{ selectedClassGroup?.display_name }}
-                <span
-                  v-if="dirty"
-                  class="rounded-full bg-warning-50 px-2 py-0.5 text-[11px] font-medium text-warning-700 dark:bg-warning-500/10 dark:text-warning-400"
-                >
-                  {{ t('scheduleBuilder.unsaved') }}
-                </span>
-              </h2>
-              <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                {{ t('scheduleBuilder.hint') }} · {{ t('scheduleBuilder.filled', { n: filledCount }) }}
-              </p>
-            </div>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">
+              {{ selectedClassGroup?.display_name }}
+            </h2>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('scheduleBuilder.dragHint') }} · {{ t('scheduleBuilder.filled', { n: sessionCount }) }}
+            </p>
           </div>
-
-          <div v-if="gridLoading" class="flex min-h-52 items-center justify-center">
-            <Loader2 class="h-6 w-6 animate-spin text-brand-500" />
-          </div>
-
-          <div
-            v-else-if="gridError"
-            class="flex flex-col items-center justify-center gap-3 px-5 py-16 text-center"
-          >
-            <CircleAlert class="h-7 w-7 text-red-500" />
-            <p class="text-sm text-gray-600 dark:text-gray-300">{{ gridError }}</p>
-            <button
-              type="button"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-              @click="loadGrid"
-            >
-              {{ t('scheduleBuilder.retry') }}
-            </button>
-          </div>
-
-          <div
-            v-else-if="!assignmentOptions.length"
-            class="px-5 py-16 text-center text-sm text-gray-500 dark:text-gray-400"
-          >
-            {{ t('scheduleBuilder.noAssignments') }}
-          </div>
-
-          <div v-else class="max-w-full overflow-x-auto custom-scrollbar">
-            <!-- table-fixed + a sized first column splits the rest evenly across the 5 days. -->
-            <table class="w-full min-w-[680px] table-fixed border-collapse">
-              <colgroup>
-                <col class="w-14 sm:w-20" />
-                <col v-for="weekday in WEEKDAYS" :key="weekday" />
-              </colgroup>
-              <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-800">
-                  <th
-                    class="sticky left-0 z-10 bg-gray-50 px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 dark:bg-gray-800/60 dark:text-gray-400"
-                  >
-                    {{ t('scheduleBuilder.lesson') }}
-                  </th>
-                  <th
-                    v-for="weekday in WEEKDAYS"
-                    :key="weekday"
-                    class="border-l border-gray-100 bg-gray-50 px-2 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-3 dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-400"
-                  >
-                    <span class="lg:hidden">{{ t(`scheduleBuilder.weekdaysShort.${weekday}`) }}</span>
-                    <span class="hidden lg:inline">{{ t(`scheduleBuilder.weekdays.${weekday}`) }}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="order in LESSON_ORDERS"
-                  :key="order"
-                  class="border-b border-gray-100 last:border-0 dark:border-gray-800"
-                >
-                  <td
-                    class="sticky left-0 z-10 bg-white px-3 py-2 text-sm font-semibold text-gray-700 sm:px-4 dark:bg-gray-900 dark:text-gray-300"
-                  >
-                    {{ order }}
-                  </td>
-                  <td
-                    v-for="weekday in WEEKDAYS"
-                    :key="weekday"
-                    class="border-l border-gray-100 p-1.5 align-middle dark:border-gray-800"
-                  >
-                    <SelectMenu
-                      :model-value="assignmentIdAt(weekday, order) ?? null"
-                      :options="assignmentOptions"
-                      :placeholder="'+'"
-                      :disabled="!assignmentOptions.length"
-                      :aria-label="t('scheduleBuilder.addSubject')"
-                      :trigger-class="cellTriggerClass(weekday, order)"
-                      clearable
-                      hide-chevron
-                      :clear-label="t('scheduleBuilder.empty')"
-                      @update:model-value="applyAssignment(weekday, order, $event)"
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <span class="flex items-center gap-1.5">
+              <span class="h-3 w-3 rounded-sm border border-brand-200 bg-brand-50 dark:border-brand-500/30 dark:bg-brand-500/15"></span>
+              {{ t('scheduleBuilder.legendSubject') }}
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="h-3 w-3 rounded-sm border border-gray-300 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"></span>
+              {{ t('scheduleBuilder.legendOther') }}
+            </span>
           </div>
         </div>
+
+        <div v-if="gridLoading" class="flex min-h-52 items-center justify-center rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+          <Loader2 class="h-6 w-6 animate-spin text-brand-500" />
+        </div>
+
+        <div
+          v-else-if="gridError"
+          class="flex flex-col items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-5 py-16 text-center dark:border-gray-800 dark:bg-gray-900"
+        >
+          <CircleAlert class="h-7 w-7 text-red-500" />
+          <p class="text-sm text-gray-600 dark:text-gray-300">{{ gridError }}</p>
+          <button
+            type="button"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            @click="loadGrid"
+          >
+            {{ t('scheduleBuilder.retry') }}
+          </button>
+        </div>
+
+        <WeekScheduleGrid
+          v-else
+          :events="events"
+          :pending-range="pendingRange"
+          :day-start="dayWindow.start"
+          :day-end="dayWindow.end"
+          @create="openCreate"
+          @select="openEdit"
+        />
       </template>
     </div>
+
+    <!-- Entry editor -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="editor"
+          class="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-4 sm:items-center"
+          @click.self="closeEditor"
+        >
+          <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
+            <div class="flex items-start justify-between">
+              <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
+                {{ editor.mode === 'create' ? t('scheduleBuilder.newEntry') : t('scheduleBuilder.editEntry') }}
+              </h3>
+              <button
+                type="button"
+                class="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 dark:hover:bg-white/5"
+                :aria-label="t('common.cancel')"
+                @click="closeEditor"
+              >
+                <X class="h-5 w-5" />
+              </button>
+            </div>
+
+            <div class="mt-5 space-y-4">
+              <!-- A schedule is either a taught subject or a free entry; the
+                   description only exists for the second. -->
+              <div class="inline-flex w-full rounded-lg border border-gray-300 p-1 dark:border-gray-700">
+                <button
+                  v-for="kind in (['subject', 'other'] as const)"
+                  :key="kind"
+                  type="button"
+                  class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition"
+                  :class="
+                    editor.kind === kind
+                      ? 'bg-brand-500 text-white'
+                      : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5'
+                  "
+                  @click="editor.kind = kind"
+                >
+                  {{ kind === 'subject' ? t('scheduleBuilder.kindSubject') : t('scheduleBuilder.kindOther') }}
+                </button>
+              </div>
+
+              <div v-if="editor.kind === 'subject'">
+                <label class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  {{ t('scheduleBuilder.addSubject') }}
+                </label>
+                <SelectMenu
+                  :model-value="editor.offeringId"
+                  :options="assignmentOptions"
+                  :disabled="!assignmentOptions.length"
+                  :placeholder="t('scheduleBuilder.pickSubject')"
+                  :aria-label="t('scheduleBuilder.addSubject')"
+                  @update:model-value="editor.offeringId = $event === null ? null : Number($event)"
+                />
+                <p v-if="!assignmentOptions.length" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t('scheduleBuilder.noAssignments') }}
+                </p>
+              </div>
+
+              <div v-else>
+                <label class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  {{ t('scheduleBuilder.description') }}
+                </label>
+                <input
+                  v-model="editor.description"
+                  type="text"
+                  :placeholder="t('scheduleBuilder.descriptionPlaceholder')"
+                  class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                />
+              </div>
+
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    {{ t('scheduleBuilder.weekday') }}
+                  </label>
+                  <SelectMenu
+                    :model-value="editor.weekday"
+                    :options="weekdayOptions"
+                    :aria-label="t('scheduleBuilder.weekday')"
+                    @update:model-value="editor.weekday = Number($event)"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    {{ t('scheduleBuilder.startTime') }}
+                  </label>
+                  <!-- `step` stays at a minute so typing "30" is not fought
+                       digit by digit; the snap to five happens on blur. -->
+                  <input
+                    v-model="editor.start"
+                    type="time"
+                    step="60"
+                    :class="[timeFieldClass, rangeError ? invalidFieldClass : validFieldClass]"
+                    @blur="editor.start = snapTime(editor.start)"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    {{ t('scheduleBuilder.endTime') }}
+                  </label>
+                  <input
+                    v-model="editor.end"
+                    type="time"
+                    step="60"
+                    :class="[timeFieldClass, rangeError ? invalidFieldClass : validFieldClass]"
+                    @blur="editor.end = snapTime(editor.end)"
+                  />
+                </div>
+              </div>
+
+              <p v-if="rangeError" class="text-sm text-red-600 dark:text-red-400">{{ rangeError }}</p>
+
+              <p v-if="editorError" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                {{ editorError }}
+              </p>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                v-if="editor.mode === 'edit'"
+                type="button"
+                :disabled="saving"
+                class="flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 px-3 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+                @click="removeEntry"
+              >
+                <Trash2 class="h-4 w-4" />
+                {{ t('scheduleBuilder.delete') }}
+              </button>
+              <button
+                type="button"
+                :disabled="saving"
+                class="ml-auto h-10 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                @click="closeEditor"
+              >
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                type="button"
+                :disabled="saving || Boolean(rangeError)"
+                class="flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                @click="saveEntry"
+              >
+                <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+                <Check v-else class="h-4 w-4" />
+                {{ t('common.save') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </AdminLayout>
 </template>
 
@@ -199,9 +289,22 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AxiosError } from 'axios'
-import { AlertCircle, Check, CircleAlert, Loader2, ShieldAlert } from 'lucide-vue-next'
+import {
+  AlertCircle,
+  Check,
+  CircleAlert,
+  Loader2,
+  Plus,
+  ShieldAlert,
+  Trash2,
+  X,
+} from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
+import WeekScheduleGrid, {
+  type ScheduleEvent,
+  type ScheduleRange,
+} from '@/components/schedule/WeekScheduleGrid.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
@@ -210,9 +313,16 @@ import {
   createScheduleSessionApi,
   createSubjectScheduleApi,
   deleteScheduleSessionApi,
+  deleteSubjectScheduleApi,
   fromApiWeekday,
   getSubjectSchedulesApi,
+  minutesToTime,
+  timeToMinutes,
   toApiWeekday,
+  updateScheduleSessionApi,
+  updateSubjectScheduleApi,
+  type ScheduleSession,
+  type SubjectSchedule,
 } from '@/api/schedule'
 import type { UserRole } from '@/types/auth'
 import type { ClassGroup } from '@/types/academic'
@@ -227,19 +337,19 @@ const canView = computed(() =>
   (['admin', 'supervisor', 'principal'] as UserRole[]).some(role => roles.value?.includes(role)),
 )
 
-/** Monday…Friday as the UI numbers them; the API is 0-based (see `toApiWeekday`). */
-type Weekday = 1 | 2 | 3 | 4 | 5
-
-const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5]
-const LESSON_ORDERS = Array.from({ length: 12 }, (_, index) => index + 1)
+const WEEKDAYS = [1, 2, 3, 4, 5]
 const QUARTERS = [1, 2, 3, 4]
 /** One page has to cover every subject a class group is taught in a quarter. */
 const PAGE_SIZE = 200
+/** The grid always shows at least a school day, and stretches to fit outliers. */
+const DEFAULT_DAY_START = 7 * 60
+const DEFAULT_DAY_END = 19 * 60
+/** Lessons land on a five-minute mark — 16:15 or 16:20, never 16:17. */
+const SNAP_MINUTES = 5
 
 const initialLoading = ref(true)
 const gridLoading = ref(false)
-const submitting = ref(false)
-const dirty = ref(false)
+const saving = ref(false)
 const loadError = ref<string | null>(null)
 /** Grid-level failure — keeps the toolbar usable so another class can be picked. */
 const gridError = ref<string | null>(null)
@@ -251,18 +361,12 @@ const academicYearId = ref<number | null>(null)
 const classGroupId = ref<number | null>(null)
 const quarter = ref(1)
 
-/** A lesson as it exists on the backend: which offering, and the session row holding it. */
-interface SavedCell {
-  assignmentId: number
-  sessionId: number
-}
-
-/** `${weekday}-${order}` → offering (teaching assignment) id. */
-const grid = ref<Record<string, number>>({})
-/** Last loaded backend state, diffed against `grid` on submit. */
-const savedGrid = ref<Record<string, SavedCell>>({})
-/** offering id → its schedule id for the selected quarter, filled as we load/create. */
-const scheduleIdByOffering = ref<Record<number, number>>({})
+/**
+ * The class group's own schedules plus every free entry of the quarter. Free
+ * entries have no offering, so they have no class group either — a lunch break
+ * belongs to the whole school and is drawn on every class's week.
+ */
+const schedules = ref<SubjectSchedule[]>([])
 
 const selectedClassGroup = computed(
   () => classGroups.value.find(group => group.id === classGroupId.value) ?? null,
@@ -272,6 +376,9 @@ const classGroupOptions = computed<SelectOption[]>(() =>
 )
 const quarterOptions = computed<SelectOption[]>(() =>
   QUARTERS.map(value => ({ value, label: t('scheduleBuilder.quarterN', { n: value }) })),
+)
+const weekdayOptions = computed<SelectOption[]>(() =>
+  WEEKDAYS.map(value => ({ value, label: t(`scheduleBuilder.weekdays.${value}`) })),
 )
 /**
  * One subject can be taught by several teachers, so each assignment is its own
@@ -290,51 +397,50 @@ const assignmentOptions = computed<SelectOption[]>(() =>
       sublabel: assignment.teacher_name,
     })),
 )
-const filledCount = computed(() => Object.keys(grid.value).length)
-const canSubmit = computed(
-  () =>
-    !submitting.value &&
-    !gridLoading.value &&
-    !gridError.value &&
-    dirty.value &&
-    classGroupId.value !== null,
+
+/** session id → the session and the schedule it hangs off, for the editor. */
+const sessionIndex = computed(() => {
+  const index = new Map<number, { schedule: SubjectSchedule; session: ScheduleSession }>()
+  for (const schedule of schedules.value) {
+    for (const session of schedule.sessions ?? []) index.set(session.id, { schedule, session })
+  }
+  return index
+})
+
+const sessionCount = computed(() => sessionIndex.value.size)
+
+const events = computed<ScheduleEvent[]>(() =>
+  schedules.value.flatMap(schedule =>
+    (schedule.sessions ?? []).map(session => ({
+      id: String(session.id),
+      weekday: fromApiWeekday(session.weekday),
+      start: timeToMinutes(session.time_start),
+      end: timeToMinutes(session.time_end),
+      title: schedule.title || schedule.offering?.subject || schedule.description || '',
+      subtitle: teacherNameOf(schedule.offering_id),
+      tone: schedule.type === 'other' ? 'other' : 'subject',
+      colorKey: String(schedule.offering_id ?? `other-${schedule.id}`),
+    })),
+  ),
 )
 
-function cellKey(weekday: Weekday, order: number): string {
-  return `${weekday}-${order}`
+/** Lessons outside the default window still have to be reachable. */
+const dayWindow = computed(() => {
+  let start = DEFAULT_DAY_START
+  let end = DEFAULT_DAY_END
+  for (const event of events.value) {
+    start = Math.min(start, Math.floor(event.start / 60) * 60)
+    end = Math.max(end, Math.ceil(event.end / 60) * 60)
+  }
+  return { start, end }
+})
+
+function teacherNameOf(offeringId: number | null): string | undefined {
+  if (offeringId === null) return undefined
+  return assignments.value.find(assignment => assignment.id === offeringId)?.teacher_name
 }
 
-function parseCellKey(key: string): { weekday: Weekday; order: number } {
-  const [weekday, order] = key.split('-').map(Number)
-  return { weekday: weekday as Weekday, order }
-}
-
-function assignmentIdAt(weekday: Weekday, order: number): number | undefined {
-  return grid.value[cellKey(weekday, order)]
-}
-
-/** Filled cells read as a chip, empty ones as a dashed placeholder. */
-function cellTriggerClass(weekday: Weekday, order: number): string {
-  const base =
-    'flex min-h-12 w-full min-w-0 items-center justify-center rounded-lg px-2 py-1 text-xs font-medium transition sm:text-sm'
-  return assignmentIdAt(weekday, order)
-    ? `${base} bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20`
-    : `${base} border border-dashed border-gray-300 text-gray-400 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:text-gray-600 dark:hover:border-brand-500/40`
-}
-
-function applyAssignment(weekday: Weekday, order: number, value: number | string | null): void {
-  const key = cellKey(weekday, order)
-  const next = { ...grid.value }
-  if (value === null) delete next[key]
-  else next[key] = Number(value)
-  grid.value = next
-  dirty.value = true
-}
-
-function clearAll(): void {
-  grid.value = {}
-  dirty.value = true
-}
+// ─── Loading ──────────────────────────────────────────────────────────────────
 
 async function loadFilters(): Promise<void> {
   initialLoading.value = true
@@ -359,7 +465,6 @@ async function loadAssignments(): Promise<void> {
     assignments.value = []
     return
   }
-  gridLoading.value = true
   try {
     const { data } = await getTeachingAssignmentsApi({
       academic_year: academicYearId.value ?? undefined,
@@ -368,60 +473,154 @@ async function loadAssignments(): Promise<void> {
     assignments.value = data
   } catch {
     assignments.value = []
-  } finally {
-    gridLoading.value = false
   }
 }
 
-/**
- * The grid is assembled from every schedule the class group has that quarter —
- * one per subject offering, each carrying its own sessions.
- */
 async function loadGrid(): Promise<void> {
   if (classGroupId.value === null) return
   gridLoading.value = true
   gridError.value = null
   try {
-    const { data } = await getSubjectSchedulesApi({
-      class_group: classGroupId.value,
-      quarter: quarter.value,
-      academic_year: academicYearId.value ?? undefined,
-      page_size: PAGE_SIZE,
-    })
-    const next: Record<string, number> = {}
-    const saved: Record<string, SavedCell> = {}
-    const schedules: Record<number, number> = {}
-    for (const schedule of data) {
-      schedules[schedule.offering_id] = schedule.id
-      for (const session of schedule.sessions ?? []) {
-        const key = cellKey(fromApiWeekday(session.weekday) as Weekday, session.order)
-        next[key] = schedule.offering_id
-        saved[key] = { assignmentId: schedule.offering_id, sessionId: session.id }
-      }
-    }
-    scheduleIdByOffering.value = schedules
-    grid.value = next
-    savedGrid.value = saved
+    const [subjectSchedules, freeEntries] = await Promise.all([
+      getSubjectSchedulesApi({
+        class_group: classGroupId.value,
+        quarter: quarter.value,
+        academic_year: academicYearId.value ?? undefined,
+        page_size: PAGE_SIZE,
+      }),
+      // Offering-less entries carry no class group, so the class filter would
+      // drop them — they are fetched on their own and shown on every week.
+      getSubjectSchedulesApi({ type: 'other', quarter: quarter.value, page_size: PAGE_SIZE }),
+    ])
+    schedules.value = [...subjectSchedules.data, ...freeEntries.data]
   } catch {
-    // An empty grid here is indistinguishable from a failed load, so say so
-    // rather than let a submit overwrite a schedule we never actually saw.
-    grid.value = {}
-    savedGrid.value = {}
-    scheduleIdByOffering.value = {}
+    // An empty grid is indistinguishable from a failed load, so say so rather
+    // than let an edit sit on top of a schedule we never actually saw.
+    schedules.value = []
     gridError.value = t('scheduleBuilder.loadFailed')
   } finally {
-    dirty.value = false
     gridLoading.value = false
   }
 }
 
-/** Schedules are created lazily — a subject only gets one once it's placed. */
-async function ensureScheduleId(offeringId: number): Promise<number> {
-  const known = scheduleIdByOffering.value[offeringId]
-  if (known !== undefined) return known
+// ─── Editor ───────────────────────────────────────────────────────────────────
+
+interface EditorState {
+  mode: 'create' | 'edit'
+  sessionId: number | null
+  /** The schedule the session currently hangs off — `null` while creating. */
+  scheduleId: number | null
+  kind: 'subject' | 'other'
+  offeringId: number | null
+  description: string
+  weekday: number
+  /** `"HH:MM"`, as `<input type="time">` speaks it. */
+  start: string
+  end: string
+}
+
+const editor = ref<EditorState | null>(null)
+const editorError = ref<string | null>(null)
+
+/**
+ * What the grid keeps highlighted while the editor is open — the range the drag
+ * produced, and then whatever the time fields are edited to.
+ */
+const pendingRange = computed<ScheduleRange | null>(() => {
+  const state = editor.value
+  if (!state) return null
+  const start = timeToMinutes(state.start)
+  const end = timeToMinutes(state.end)
+  if (end <= start) return null
+  return { weekday: state.weekday, start, end }
+})
+
+function openCreate(range: ScheduleRange): void {
+  editorError.value = null
+  editor.value = {
+    mode: 'create',
+    sessionId: null,
+    scheduleId: null,
+    kind: 'subject',
+    offeringId: assignmentOptions.value.length ? Number(assignmentOptions.value[0].value) : null,
+    description: '',
+    weekday: range.weekday,
+    start: minutesToTime(range.start),
+    end: minutesToTime(range.end),
+  }
+}
+
+function openEdit(event: ScheduleEvent): void {
+  const found = sessionIndex.value.get(Number(event.id))
+  if (!found) return
+  const { schedule, session } = found
+  editorError.value = null
+  editor.value = {
+    mode: 'edit',
+    sessionId: session.id,
+    scheduleId: schedule.id,
+    kind: schedule.type === 'other' ? 'other' : 'subject',
+    offeringId: schedule.offering_id,
+    description: schedule.description ?? '',
+    weekday: fromApiWeekday(session.weekday),
+    start: minutesToTime(timeToMinutes(session.time_start)),
+    end: minutesToTime(timeToMinutes(session.time_end)),
+  }
+}
+
+/** `"16:17"` → `"16:15"`. Leaves an empty field alone for the save to reject. */
+function snapTime(value: string): string {
+  if (!value) return value
+  return minutesToTime(Math.round(timeToMinutes(value) / SNAP_MINUTES) * SNAP_MINUTES)
+}
+
+const timeFieldClass =
+  'h-10 w-full rounded-lg border bg-white px-3 text-sm text-gray-800 focus:outline-hidden focus:ring-3 dark:bg-gray-900 dark:text-white/90 dark:[color-scheme:dark]'
+const validFieldClass =
+  'border-gray-300 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700'
+const invalidFieldClass =
+  'border-red-300 focus:border-red-400 focus:ring-red-500/10 dark:border-red-500/50'
+
+/**
+ * The range is checked as it is typed rather than only on save, so the Save
+ * button is never live over a range the API would reject anyway.
+ */
+const rangeError = computed<string | null>(() => {
+  const state = editor.value
+  if (!state) return null
+  if (!state.start || !state.end) return t('scheduleBuilder.timeRequired')
+  if (timeToMinutes(state.end) <= timeToMinutes(state.start)) {
+    return t('scheduleBuilder.invalidRange')
+  }
+  return null
+})
+
+function closeEditor(): void {
+  editor.value = null
+  editorError.value = null
+}
+
+/** The API answers per field; any of them is more useful than a generic line. */
+function readScheduleError(error: unknown): string {
+  const data = (error as AxiosError)?.response?.data
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>
+    const first =
+      record.non_field_errors ?? record.detail ?? record.time_end ?? Object.values(record)[0]
+    if (typeof first === 'string') return first
+    if (Array.isArray(first) && typeof first[0] === 'string') return first[0]
+  }
+  return t('scheduleBuilder.saveFailed')
+}
+
+/** A subject only gets a schedule once something is placed on it. */
+async function ensureSubjectSchedule(offeringId: number): Promise<number> {
+  const known = schedules.value.find(
+    schedule => schedule.offering_id === offeringId && schedule.quarter === quarter.value,
+  )
+  if (known) return known.id
   try {
     const { data } = await createSubjectScheduleApi({ offering: offeringId, quarter: quarter.value })
-    scheduleIdByOffering.value = { ...scheduleIdByOffering.value, [offeringId]: data.id }
     return data.id
   } catch (error) {
     // 400 unique_together — someone else created it between our load and now.
@@ -431,47 +630,113 @@ async function ensureScheduleId(offeringId: number): Promise<number> {
       quarter: quarter.value,
       page_size: 1,
     })
-    const existing = data[0]
-    if (!existing) throw error
-    scheduleIdByOffering.value = { ...scheduleIdByOffering.value, [offeringId]: existing.id }
-    return existing.id
+    if (!data[0]) throw error
+    return data[0].id
+  }
+}
+
+async function saveEntry(): Promise<void> {
+  const state = editor.value
+  if (!state || saving.value) return
+
+  // Snapped once more here: a field saved without ever losing focus, or a
+  // browser whose time picker ignores `step`, would slip an odd minute through.
+  state.start = snapTime(state.start)
+  state.end = snapTime(state.end)
+  if (rangeError.value) {
+    editorError.value = rangeError.value
+    return
+  }
+  if (state.kind === 'subject' && state.offeringId === null) {
+    editorError.value = t('scheduleBuilder.subjectRequired')
+    return
+  }
+  if (state.kind === 'other' && !state.description.trim()) {
+    editorError.value = t('scheduleBuilder.descriptionRequired')
+    return
+  }
+
+  saving.value = true
+  editorError.value = null
+  const payload = {
+    weekday: toApiWeekday(state.weekday),
+    time_start: state.start,
+    time_end: state.end,
+  }
+
+  try {
+    const current = state.sessionId === null ? null : sessionIndex.value.get(state.sessionId)
+    const wasSameSchedule =
+      current !== null &&
+      current !== undefined &&
+      ((state.kind === 'subject' && current.schedule.offering_id === state.offeringId) ||
+        (state.kind === 'other' && current.schedule.type === 'other'))
+
+    if (current && wasSameSchedule) {
+      // Same schedule — only the times, and possibly a free entry's wording, moved.
+      if (state.kind === 'other' && state.description.trim() !== (current.schedule.description ?? '')) {
+        await updateSubjectScheduleApi(current.schedule.id, {
+          description: state.description.trim(),
+        })
+      }
+      await updateScheduleSessionApi(current.session.id, payload)
+    } else {
+      // A different subject, or a subject turned into a free entry: there is no
+      // move endpoint, so the session is recreated under the new schedule.
+      const scheduleId =
+        state.kind === 'subject'
+          ? await ensureSubjectSchedule(state.offeringId as number)
+          : (
+              await createSubjectScheduleApi({
+                description: state.description.trim(),
+                quarter: quarter.value,
+              })
+            ).data.id
+      if (current) await deleteScheduleSessionApi(current.session.id)
+      await createScheduleSessionApi(scheduleId, payload)
+      if (current) await pruneEmptyFreeEntry(current.schedule, current.session.id)
+    }
+
+    toast.success(t('scheduleBuilder.saved'))
+    closeEditor()
+  } catch (error) {
+    editorError.value = readScheduleError(error)
+  } finally {
+    saving.value = false
+    await loadGrid()
   }
 }
 
 /**
- * There is no bulk replace, so the grid is saved as a diff against what was
- * loaded: sessions that changed or went away are deleted, new ones created.
+ * A free entry exists only for its sessions — an empty one would linger in the
+ * `type=other` list forever, so it goes when its last session does.
  */
-async function submitSchedule(): Promise<void> {
-  if (!canSubmit.value || classGroupId.value === null) return
-  submitting.value = true
-
-  const removed: number[] = []
-  const added: Array<{ weekday: Weekday; order: number; assignmentId: number }> = []
-  for (const [key, cell] of Object.entries(savedGrid.value)) {
-    if (grid.value[key] !== cell.assignmentId) removed.push(cell.sessionId)
-  }
-  for (const [key, assignmentId] of Object.entries(grid.value)) {
-    if (savedGrid.value[key]?.assignmentId === assignmentId) continue
-    added.push({ ...parseCellKey(key), assignmentId })
-  }
-
+async function pruneEmptyFreeEntry(schedule: SubjectSchedule, removedSessionId: number): Promise<void> {
+  if (schedule.type !== 'other') return
+  const remaining = (schedule.sessions ?? []).filter(session => session.id !== removedSessionId)
+  if (remaining.length) return
   try {
-    // Deletes go first so a moved lesson frees its slot before the new one claims it.
-    for (const sessionId of removed) await deleteScheduleSessionApi(sessionId)
-    for (const cell of added) {
-      const scheduleId = await ensureScheduleId(cell.assignmentId)
-      await createScheduleSessionApi(scheduleId, {
-        order: cell.order,
-        weekday: toApiWeekday(cell.weekday),
-      })
-    }
-    toast.success(t('scheduleBuilder.submitted'), selectedClassGroup.value?.display_name)
+    await deleteSubjectScheduleApi(schedule.id)
   } catch {
-    toast.error(t('scheduleBuilder.submitFailed'))
+    // Not worth failing the edit over — the session it held is already gone.
+  }
+}
+
+async function removeEntry(): Promise<void> {
+  const state = editor.value
+  if (!state || state.sessionId === null || saving.value) return
+  const current = sessionIndex.value.get(state.sessionId)
+  saving.value = true
+  editorError.value = null
+  try {
+    await deleteScheduleSessionApi(state.sessionId)
+    if (current) await pruneEmptyFreeEntry(current.schedule, state.sessionId)
+    toast.success(t('scheduleBuilder.deleted'))
+    closeEditor()
+  } catch (error) {
+    editorError.value = readScheduleError(error)
   } finally {
-    submitting.value = false
-    // Resync either way: a partial failure leaves the backend holding some of the diff.
+    saving.value = false
     await loadGrid()
   }
 }

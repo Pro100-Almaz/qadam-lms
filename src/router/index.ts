@@ -105,6 +105,14 @@ const router = createRouter({
       meta: { title: 'Lesson Grading', roles: staffRoles },
     },
 
+    // Weekly timetable — everyone sees their own; staff pick a class group.
+    {
+      path: '/timetable',
+      name: 'Timetable',
+      component: () => import('../views/Schedule/WeekTimetable.vue'),
+      meta: { title: 'Timetable' },
+    },
+
     // Schedule builder (admins only)
     {
       path: '/schedule-builder',

@@ -10,7 +10,17 @@
               {{ t('teacherDashboard.homeroomOverview') }}
             </p>
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Nothing is preselected: a homeroom teacher reports on any
+                 subject their class is taught, not only the ones they teach.
+                 The "Мой класс" tab, so the sheet layout is on offer here. -->
+            <GradeReportButton
+              :classes="reportClasses"
+              :default-class-group-id="data.class_group_id"
+              :classes-loading="subjectsLoading"
+              allow-student-scope
+              allow-layout-choice
+            />
             <div class="flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-2 dark:bg-brand-500/10">
               <Users class="h-4 w-4 text-brand-500" />
               <span class="text-sm font-semibold text-brand-600 dark:text-brand-400">{{ data.student_count }}</span>
@@ -124,13 +134,25 @@
                 <span v-else class="text-xs text-gray-400">—</span>
               </td>
               <td class="px-4 py-3 text-right">
-                <router-link
-                  :to="`/students/${student.user_id}`"
-                  class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors"
-                >
-                  <Eye class="h-3 w-3" />
-                  {{ t('common.view') }}
-                </router-link>
+                <div class="flex items-center justify-end gap-1.5">
+                  <!-- One shared modal for the whole table, targeted by the row. -->
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"
+                    :title="t('statistics.button')"
+                    :aria-label="t('statistics.button')"
+                    @click="statsStudent = { id: student.student_id, name: student.full_name }"
+                  >
+                    <ChartColumnBig class="h-3 w-3" />
+                  </button>
+                  <router-link
+                    :to="`/students/${student.user_id}`"
+                    class="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors"
+                  >
+                    <Eye class="h-3 w-3" />
+                    {{ t('common.view') }}
+                  </router-link>
+                </div>
               </td>
             </tr>
             <tr v-if="filteredStudents.length === 0">
@@ -142,17 +164,39 @@
         </table>
       </div>
     </div>
+
+    <StudentStatisticsModal
+      v-if="statsStudent"
+      :open="Boolean(statsStudent)"
+      :student="statsStudent"
+      @close="statsStudent = null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Users, BookOpen, Search, ArrowUpDown, Eye } from 'lucide-vue-next'
+import { Users, BookOpen, Search, ArrowUpDown, Eye, ChartColumnBig } from 'lucide-vue-next'
+import StudentStatisticsModal, {
+  type StatisticsStudentTarget,
+} from '@/components/analytics/StudentStatisticsModal.vue'
+import GradeReportButton from '@/components/grading/GradeReportButton.vue'
+import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
+import { useSubjectNameLookup } from '@/composables/useSubjectNameLookup'
 import type { HomeroomTeacherDashboard, HomeroomStudent, HomeroomStudentSubject } from '@/types/teacherDashboard'
 
 const props = defineProps<{ data: HomeroomTeacherDashboard }>()
 const { t } = useI18n()
+
+/**
+ * The row whose statistics the shared modal is showing, or `null` when closed.
+ *
+ * Only the per-student charts are on offer here. The class heatmap is per
+ * offering, and this dashboard carries subject *names* rather than offering
+ * ids — a homeroom teacher reaches it from "My students" instead.
+ */
+const statsStudent = ref<StatisticsStudentTarget | null>(null)
 
 const search = ref('')
 const sortKey = ref<'name' | 'overall'>('name')
@@ -167,6 +211,26 @@ const subjectColumns = computed(() => {
   }
   return [...subjects].sort()
 })
+
+// ─── Grade report ───────────────────────────────────────────────────────────
+
+const {
+  loading: subjectsLoading,
+  load: loadSubjectNames,
+  toOptions: subjectOptionsFor,
+} = useSubjectNameLookup()
+
+/** Every subject the class is taught — the same set the table columns show. */
+const reportClasses = computed<GradeReportClassOption[]>(() => [
+  {
+    classGroupId: props.data.class_group_id,
+    displayName: props.data.class_group,
+    subjects: subjectOptionsFor(subjectColumns.value),
+  },
+])
+
+// The dashboard names subjects; the report endpoint wants their ids.
+onMounted(loadSubjectNames)
 
 function toggleSort(key: 'name' | 'overall') {
   if (sortKey.value === key) sortAsc.value = !sortAsc.value

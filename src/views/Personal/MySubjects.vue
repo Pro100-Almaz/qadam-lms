@@ -2,13 +2,22 @@
   <AdminLayout>
     <div class="space-y-6">
       <!-- Header -->
-      <div>
-        <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">
-          {{ t('nav.mySubjects') }}
-        </h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {{ t('common.total') }}: {{ subjects.length }}
-        </p>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">
+            {{ t('nav.mySubjects') }}
+          </h1>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {{ t('common.total') }}: {{ subjects.length }}
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- A student's own marks as charts. The class-wide heatmap is not on
+               offer here: it names every classmate, and the API 403s a student. -->
+          <StatisticsButton v-if="myStudentId" :student="{ id: myStudentId }" />
+          <!-- A student's own marks, one subject or all of them. -->
+          <GradeReportButton v-if="myStudentId" :student="{ id: myStudentId }" :subjects="reportSubjects" />
+        </div>
       </div>
 
       <!-- Loading -->
@@ -114,17 +123,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { BookOpen } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import StatisticsButton from '@/components/analytics/StatisticsButton.vue'
+import GradeReportButton from '@/components/grading/GradeReportButton.vue'
+import type { GradeReportSubjectOption } from '@/components/grading/GradeReportModal.vue'
 import { getMySubjectsApi } from '@/api/studentSelf'
+import { useAuth } from '@/composables/useAuth'
 import type { MySubject } from '@/types/studentSelf'
 
 const { t } = useI18n()
+const { user } = useAuth()
 
 const subjects = ref<MySubject[]>([])
 const loading = ref(false)
+
+/**
+ * `profile_id` is the Student pk for a student — the id `/grade/student/<id>/`
+ * expects, and a different number from `user.id`.
+ */
+const myStudentId = computed(() => user.value?.profile_id ?? null)
+
+const reportSubjects = computed<GradeReportSubjectOption[]>(() =>
+  subjects.value.map(subject => ({ id: subject.subject_id, name: subject.subject_name })),
+)
 
 function teacherInitials(name?: string | null): string {
   if (!name) return '?'

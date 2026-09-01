@@ -26,6 +26,19 @@ export function formatAcademicDate(value: string): string {
 }
 
 /**
+ * The same academic day without the year, for places where the date is a label
+ * rather than a fact to read — a gradebook column header, where every column
+ * sits inside the range the reader already picked.
+ */
+export function formatAcademicDay(value: string): string {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat(localeTag(), {
+    day: '2-digit',
+    month: 'short',
+  }).format(parseIsoDate(value))
+}
+
+/**
  * A `created_at` timestamp — when the row was actually typed in, which for a
  * grade is a different fact from the day the work was done. Shown to the minute
  * because marks entered on the same day are otherwise indistinguishable.

@@ -36,7 +36,18 @@
                 {{ t('students.yearOfEducation') }}: {{ myClass.academic_year || '—' }}
               </p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Nothing preselected: the homeroom teacher reports on any
+                   subject their class is taught, or on one of its students.
+                   The only screen that offers the sheet layout, because it is
+                   the only one whose report can span every subject. -->
+              <GradeReportButton
+                :classes="reportClasses"
+                :default-class-group-id="myClass.class_group_id"
+                :classes-loading="subjectsLoading"
+                allow-student-scope
+                allow-layout-choice
+              />
               <div class="flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-2 dark:bg-brand-500/10">
                 <Users class="h-4 w-4 text-brand-500" />
                 <span class="text-sm font-semibold text-brand-600 dark:text-brand-400">
@@ -108,13 +119,27 @@
                   <span class="text-sm text-gray-600 dark:text-gray-300">{{ s.user.phone_number || '—' }}</span>
                 </td>
                 <td class="px-5 py-3.5 text-right">
-                  <router-link
-                    :to="`/students/${s.user.id}`"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors"
-                  >
-                    <Eye class="h-3.5 w-3.5" />
-                    {{ t('common.view') || 'View' }}
-                  </router-link>
+                  <div class="flex items-center justify-end gap-1.5">
+                    <!-- `s.id` is the Student profile id the analytics endpoints
+                         want; `s.user.id`, which the link uses, is another id
+                         space and would 404. -->
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"
+                      :title="t('statistics.button')"
+                      :aria-label="t('statistics.button')"
+                      @click="statsStudent = { id: s.id, name: `${s.user.last_name} ${s.user.first_name}` }"
+                    >
+                      <ChartColumnBig class="h-3.5 w-3.5" />
+                    </button>
+                    <router-link
+                      :to="`/students/${s.user.id}`"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <Eye class="h-3.5 w-3.5" />
+                      {{ t('common.view') || 'View' }}
+                    </router-link>
+                  </div>
                 </td>
               </tr>
               <tr v-if="students.length === 0">
@@ -133,6 +158,13 @@
       <!-- Graded assignments set for this class, and the marks students earned. -->
       <ClassGradingSection v-if="myClass" :class-group-id="myClass.class_group_id" />
     </div>
+
+    <StudentStatisticsModal
+      v-if="statsStudent"
+      :open="Boolean(statsStudent)"
+      :student="statsStudent"
+      @close="statsStudent = null"
+    />
   </AdminLayout>
 </template>
 
@@ -144,10 +176,17 @@ import {
   ShieldAlert,
   Users,
   Eye,
+  ChartColumnBig,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import ClassHomeworksSection from '@/components/homeworks/ClassHomeworksSection.vue'
 import ClassGradingSection from '@/components/grading/ClassGradingSection.vue'
+import StudentStatisticsModal, {
+  type StatisticsStudentTarget,
+} from '@/components/analytics/StudentStatisticsModal.vue'
+import GradeReportButton from '@/components/grading/GradeReportButton.vue'
+import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
+import { useSubjectNameLookup } from '@/composables/useSubjectNameLookup'
 import { getStudentsApi } from '@/api/students'
 import { getHomeroomClassApi } from '@/api/teacherDashboard'
 import { useAuth } from '@/composables/useAuth'
@@ -157,12 +196,44 @@ import type { HomeroomTeacherDashboard } from '@/types/teacherDashboard'
 const { t } = useI18n()
 const { user: authUser } = useAuth()
 
+/** The row whose statistics the shared modal is showing, or `null` when closed. */
+const statsStudent = ref<StatisticsStudentTarget | null>(null)
+
 const loading = ref(true)
 const error = ref<string | null>(null)
 const students = ref<Student[]>([])
 const myClass = ref<HomeroomTeacherDashboard | null>(null)
 
 const isHomeroomTeacher = computed(() => authUser.value?.roles.includes('homeroom_teacher'))
+
+// ─── Grade report ───────────────────────────────────────────────────────────
+
+const {
+  loading: subjectsLoading,
+  load: loadSubjectNames,
+  toOptions: subjectOptionsFor,
+} = useSubjectNameLookup()
+
+/** Every subject the class is taught, whoever teaches it. */
+const classSubjectNames = computed(() => {
+  const names = new Set<string>()
+  myClass.value?.students.forEach(student => {
+    student.subjects.forEach(subject => names.add(subject.subject_name))
+  })
+  return [...names].sort()
+})
+
+const reportClasses = computed<GradeReportClassOption[]>(() => {
+  const homeroom = myClass.value
+  if (!homeroom) return []
+  return [
+    {
+      classGroupId: homeroom.class_group_id,
+      displayName: homeroom.class_group,
+      subjects: subjectOptionsFor(classSubjectNames.value),
+    },
+  ]
+})
 
 async function fetchData() {
   if (!isHomeroomTeacher.value) {
@@ -186,5 +257,9 @@ async function fetchData() {
   }
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  // The dashboard names subjects; the report endpoint wants their ids.
+  loadSubjectNames()
+})
 </script>

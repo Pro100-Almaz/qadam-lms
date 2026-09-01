@@ -214,6 +214,7 @@ import {
   Puzzle,
   ClipboardCheck,
   CalendarCog,
+  CalendarClock,
   NotebookPen,
   SquareCheckBig,
 } from "lucide-vue-next";
@@ -278,6 +279,11 @@ const menuGroups = computed<MenuGroup[]>(() => {
             path: "/my-homeworks",
           },
           {
+            icon: CalendarClock,
+            name: t("nav.timetable"),
+            path: "/timetable",
+          },
+          {
             icon: CalendarDays,
             name: t("nav.calendar"),
             path: "/lessons",
@@ -306,6 +312,11 @@ const menuGroups = computed<MenuGroup[]>(() => {
             icon: GraduationCap,
             name: t("nav.myChildren"),
             path: "/my-children",
+          },
+          {
+            icon: CalendarClock,
+            name: t("nav.timetable"),
+            path: "/timetable",
           },
           {
             icon: CalendarDays,
@@ -370,7 +381,10 @@ const menuGroups = computed<MenuGroup[]>(() => {
     {
       icon: CalendarDays,
       name: t("nav.lessons"),
-      path: "/lessons",
+      subItems: [
+        { name: t("nav.timetable"), path: "/timetable" },
+        { name: t("nav.lessonCalendar"), path: "/lessons" },
+      ],
     },
     ...(isTeacher.value
       ? [

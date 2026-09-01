@@ -58,5 +58,7 @@ export function useAssignmentPermissions() {
     offeringsLoading: offerings.loading,
     subjectGroups: offerings.subjectGroups,
     classOptions: offerings.classOptions,
+    /** The raw class groups, for callers that need each one's subject names. */
+    teacherClasses: offerings.classes,
   }
 }
