@@ -38,7 +38,7 @@
             class="absolute left-0 top-full z-50 mt-1 w-48 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
           >
             <button
-              @click="selectedYearId = null; yearDropdownOpen = false"
+              @click="selectYear(null)"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
               :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedYearId }"
             >
@@ -47,7 +47,7 @@
             <button
               v-for="year in academicYears"
               :key="year.id"
-              @click="selectedYearId = year.id; yearDropdownOpen = false"
+              @click="selectYear(year.id)"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
               :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedYearId === year.id }"
             >
@@ -71,7 +71,7 @@
             class="absolute left-0 top-full z-50 mt-1 max-h-60 w-44 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
           >
             <button
-              @click="selectedClassGroupId = null; classDropdownOpen = false"
+              @click="selectClassGroup(null)"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
               :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedClassGroupId }"
             >
@@ -80,7 +80,7 @@
             <button
               v-for="cg in classGroups"
               :key="cg.id"
-              @click="selectedClassGroupId = cg.id; classDropdownOpen = false"
+              @click="selectClassGroup(cg.id)"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
               :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedClassGroupId === cg.id }"
             >
@@ -117,7 +117,7 @@
             </thead>
             <tbody>
               <tr
-                v-for="student in paginatedStudents"
+                v-for="student in pagedStudents"
                 :key="student.id"
                 class="border-b border-gray-100 last:border-0 dark:border-gray-800"
               >
@@ -186,7 +186,7 @@
                   </div>
                 </td>
               </tr>
-              <tr v-if="filteredStudents.length === 0">
+              <tr v-if="pagedStudents.length === 0">
                 <td colspan="4" class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                   {{ $t('common.noData') }}
                 </td>
@@ -221,7 +221,7 @@ import {
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Pagination from '@/components/ui/Pagination.vue'
-import { getStudentsApi } from '@/api/students'
+import { getAllStudentsApi } from '@/api/students'
 import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
 import type { Student } from '@/types/student'
 import type { AcademicYear, ClassGroup } from '@/types/academic'
@@ -262,33 +262,66 @@ const selectedClassLabel = computed(() => {
 
 async function fetchFilters() {
   try {
-    const [yearsRes, classesRes] = await Promise.all([
-      getAcademicYearsApi(),
-      getClassGroupsApi(),
-    ])
-    academicYears.value = yearsRes.data
-    classGroups.value = classesRes.data
-
-    const activeYear = academicYears.value.find((y) => y.is_active)
-    if (activeYear) selectedYearId.value = activeYear.id
+    const { data: years } = await getAcademicYearsApi()
+    academicYears.value = years
+    // The active year is the default filter, so its classes are the ones to list.
+    const activeYear = years.find((y) => y.is_active)
+    selectedYearId.value = activeYear?.id ?? null
+    await loadClassGroups(selectedYearId.value)
   } catch {
     // filters stay empty
   }
 }
 
+async function loadClassGroups(yearId: number | null) {
+  try {
+    const { data } = await getClassGroupsApi(yearId ? { year: yearId } : undefined)
+    classGroups.value = data
+  } catch {
+    classGroups.value = []
+  }
+}
+
+/**
+ * Filter clicks can outrun their responses, so only the newest one is allowed
+ * to write — otherwise a slow answer for the previous class lands last and wins.
+ */
+let requestId = 0
+
 async function fetchStudents() {
+  const request = (requestId += 1)
   loading.value = true
   try {
-    const params: Record<string, number> = {}
-    if (selectedYearId.value) params.year = selectedYearId.value
-    if (selectedClassGroupId.value) params.class_group = selectedClassGroupId.value
-    const { data } = await getStudentsApi(params)
+    const { data } = await getAllStudentsApi({
+      year: selectedYearId.value ?? undefined,
+      class_group: selectedClassGroupId.value ?? undefined,
+    })
+    if (request !== requestId) return
     students.value = data
   } catch {
+    if (request !== requestId) return
     students.value = []
   } finally {
-    loading.value = false
+    if (request === requestId) loading.value = false
   }
+}
+
+async function selectYear(yearId: number | null) {
+  yearDropdownOpen.value = false
+  if (yearId === selectedYearId.value) return
+  selectedYearId.value = yearId
+  // A class group belongs to one year, so the class filter cannot survive it.
+  selectedClassGroupId.value = null
+  currentPage.value = 1
+  await Promise.all([loadClassGroups(yearId), fetchStudents()])
+}
+
+function selectClassGroup(classGroupId: number | null) {
+  classDropdownOpen.value = false
+  if (classGroupId === selectedClassGroupId.value) return
+  selectedClassGroupId.value = classGroupId
+  currentPage.value = 1
+  fetchStudents()
 }
 
 function fullName(student: Student) {
@@ -332,21 +365,19 @@ watch([searchQuery, pageSize], () => {
   currentPage.value = 1
 })
 
-watch([selectedYearId, selectedClassGroupId], () => {
-  currentPage.value = 1
-  fetchStudents()
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(filteredStudents.value.length / pageSize.value)),
+)
+
+/**
+ * Clamped: a filter that shrinks the result set while the reader sits on a late
+ * page would otherwise leave them on an empty one with no way to tell why.
+ */
+watch(pageCount, (count) => {
+  if (currentPage.value > count) currentPage.value = count
 })
 
-watch(selectedYearId, (yearId) => {
-  selectedClassGroupId.value = null
-  if (yearId) {
-    getClassGroupsApi({ year: yearId }).then(({ data }) => {
-      classGroups.value = data
-    }).catch(() => { /* keep existing */ })
-  }
-})
-
-const paginatedStudents = computed(() => {
+const pagedStudents = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return filteredStudents.value.slice(start, start + pageSize.value)
 })

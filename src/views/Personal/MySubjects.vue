@@ -11,8 +11,13 @@
             {{ t('common.total') }}: {{ subjects.length }}
           </p>
         </div>
-        <!-- A student's own marks, one subject or all of them. -->
-        <GradeReportButton v-if="myStudentId" :student="{ id: myStudentId }" :subjects="reportSubjects" />
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- A student's own marks as charts. The class-wide heatmap is not on
+               offer here: it names every classmate, and the API 403s a student. -->
+          <StatisticsButton v-if="myStudentId" :student="{ id: myStudentId }" />
+          <!-- A student's own marks, one subject or all of them. -->
+          <GradeReportButton v-if="myStudentId" :student="{ id: myStudentId }" :subjects="reportSubjects" />
+        </div>
       </div>
 
       <!-- Loading -->
@@ -122,6 +127,7 @@ import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { BookOpen } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
+import StatisticsButton from '@/components/analytics/StatisticsButton.vue'
 import GradeReportButton from '@/components/grading/GradeReportButton.vue'
 import type { GradeReportSubjectOption } from '@/components/grading/GradeReportModal.vue'
 import { getMySubjectsApi } from '@/api/studentSelf'

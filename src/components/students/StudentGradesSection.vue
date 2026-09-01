@@ -60,6 +60,13 @@
             :input-class="dateInputClass"
           />
         </div>
+        <!-- Charts the same marks the table below lists. Like the workbook it
+             carries its own quarter, so the filters here do not reach it. -->
+        <StatisticsButton
+          v-if="studentId"
+          class="h-11 w-full sm:w-auto"
+          :student="{ id: studentId, name: studentName }"
+        />
         <!-- The workbook covers a whole quarter, so it ignores the filters
              above and asks for its own subject and quarter. -->
         <GradeReportButton
@@ -196,6 +203,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CircleAlert, SquareCheckBig } from 'lucide-vue-next'
 import AssignmentCategoryBadge from '@/components/grading/AssignmentCategoryBadge.vue'
+import StatisticsButton from '@/components/analytics/StatisticsButton.vue'
 import GradeReportButton from '@/components/grading/GradeReportButton.vue'
 import DatePicker from '@/components/ui/DatePicker.vue'
 import Pagination from '@/components/ui/Pagination.vue'

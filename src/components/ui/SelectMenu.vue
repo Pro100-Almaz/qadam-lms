@@ -30,7 +30,7 @@
       <div
         v-if="open"
         ref="menuRef"
-        class="fixed z-99999 overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+        class="fixed z-[100010] overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
         :style="menuStyle"
         role="listbox"
       >

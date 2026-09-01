@@ -87,6 +87,16 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2 self-start">
+            <!-- This subject's classes against the topics they were marked on —
+                 the gradebook below, charted. It follows the class-group chips
+                 above, so the grid opens on whichever class is being read. -->
+            <StatisticsButton
+              v-if="statisticsOfferings.length"
+              kind="topics"
+              :offerings="statisticsOfferings"
+              :default-offering-id="activeOfferingId"
+            />
+
             <!-- Create Homework — teachers only, the homework routes are not open to admins -->
             <button
               v-if="canAddHomework"
@@ -540,6 +550,8 @@ import {
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
+import StatisticsButton from '@/components/analytics/StatisticsButton.vue'
+import type { StatisticsOfferingOption } from '@/components/analytics/ClassStatisticsModal.vue'
 import { getSubjectDetailApi, getSubjectGradesApi } from '@/api/subjects'
 import { createLessonApi, copyLessonApi, getLessonDetailApi } from '@/api/lessons'
 import { useAuth } from '@/composables/useAuth'
@@ -560,6 +572,33 @@ const loadingGrades = ref(false)
 const detailError = ref<string | null>(null)
 const activeQuarter = ref(1)
 const activeClassGroup = ref(0)
+
+/**
+ * Every class this subject is taught to, as the heatmap's own picker.
+ *
+ * Labelled by class group rather than by subject: on this page the subject is
+ * a given, and the class is the only thing that varies between offerings.
+ */
+const statisticsOfferings = computed<StatisticsOfferingOption[]>(() =>
+  (subject.value?.offerings ?? []).map((offering) => ({
+    offeringId: offering.id,
+    label: offering.class_group.display_name,
+    sublabel: subject.value?.name,
+  }))
+)
+
+/**
+ * The offering the class-group chips are filtering the gradebook to, so the
+ * heatmap opens on the same class the reader is already looking at.
+ *
+ * `activeClassGroup` is `0` when no chip is selected — the gradebook then shows
+ * every class, but a heatmap has to be one grid, so it falls back to the first.
+ */
+const activeOfferingId = computed<number | null>(() => {
+  const offerings = subject.value?.offerings ?? []
+  const selected = offerings.find((offering) => offering.class_group.id === activeClassGroup.value)
+  return selected?.id ?? offerings[0]?.id ?? null
+})
 
 const canAddLesson = computed(() =>
   authUser.value?.roles.some((role) => ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'].includes(role))

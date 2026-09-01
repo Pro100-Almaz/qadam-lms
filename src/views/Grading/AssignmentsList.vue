@@ -7,6 +7,16 @@
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('assignments.subtitle') }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
+          <!-- One offering's class against the assignments on this page — the
+               same record the table below lists, not the lesson-topic gradebook
+               a subject's own page charts. Teachers only: the grid names every
+               student in the class. -->
+          <StatisticsButton
+            v-if="isTeacher"
+            kind="assignments"
+            :offerings="statisticsOfferings"
+            :offerings-loading="offeringsLoading"
+          />
           <!-- Whole class, or one student the teacher teaches. -->
           <GradeReportButton
             v-if="isTeacher"
@@ -93,9 +103,9 @@
       <!-- Loading -->
       <div v-if="loading" class="space-y-3">
         <div
-          v-for="index in 4"
+          v-for="index in 2"
           :key="index"
-          class="h-20 animate-pulse rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+          class="h-64 animate-pulse rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
         ></div>
       </div>
 
@@ -115,78 +125,23 @@
         </button>
       </div>
 
-      <!-- Table -->
-      <div
-        v-else-if="assignments.length"
-        class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
-      >
-        <div class="max-w-full overflow-x-auto custom-scrollbar">
-          <table class="w-full min-w-[920px]">
-            <thead>
-              <tr class="border-b border-gray-200 dark:border-gray-800">
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('assignments.assignmentTitle') }}</th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('assignments.date') }}</th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('assignments.subject') }}</th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('assignments.classGroup') }}</th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('assignments.category') }}</th>
-                <th class="px-5 py-3.5 text-left text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('assignments.maxGrade') }}</th>
-                <!-- `w-px` collapses the column to its content: just the kebab. -->
-                <th class="w-px whitespace-nowrap px-5 py-3.5 text-right text-sm font-medium text-gray-500 dark:text-gray-400">{{ t('common.actions') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="assignment in assignments"
-                :key="assignment.id"
-                class="border-b border-gray-100 last:border-0 dark:border-gray-800"
-              >
-                <td class="px-5 py-4 align-top">
-                  <div class="flex items-start gap-3">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-500/10">
-                      <ClipboardList class="h-4 w-4 text-brand-500" />
-                    </div>
-                    <div class="min-w-0">
-                      <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ assignment.title }}</p>
-                    </div>
-                  </div>
-                </td>
-                <td class="whitespace-nowrap px-5 py-4 align-top">
-                  <span class="text-sm text-gray-700 dark:text-gray-300">{{ formatAcademicDate(assignment.date) }}</span>
-                  <!-- When the row was typed in — a different fact from the lesson day. -->
-                  <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                    {{ t('assignments.addedAt', { date: formatRecordedAt(assignment.created_at) }) }}
-                  </p>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <span class="text-sm text-gray-700 dark:text-gray-300">{{ assignment.subject_name || '—' }}</span>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <span class="inline-flex items-center rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                    {{ assignment.class_group_name }}
-                  </span>
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <AssignmentCategoryBadge :category="assignment.category" />
-                </td>
-                <td class="px-5 py-4 align-top">
-                  <span class="text-sm text-gray-700 dark:text-gray-300">{{ assignment.max_grade }}</span>
-                </td>
-                <td class="w-px px-5 py-4 text-right align-top">
-                  <button
-                    type="button"
-                    class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
-                    :aria-label="t('common.actions')"
-                    aria-haspopup="menu"
-                    :aria-expanded="menuTarget?.id === assignment.id"
-                    @click.stop="toggleMenu(assignment, $event)"
-                  >
-                    <MoreVertical class="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <!-- One gradebook per subject and class: assignments across in date order,
+           the class down the rows. -->
+      <div v-else-if="pagedGroups.length" class="space-y-6">
+        <GradebookTable
+          v-for="group in pagedGroups"
+          :key="group.offeringId"
+          :offering-id="group.offeringId"
+          :subject-name="group.subjectName"
+          :class-group-name="group.classGroupName"
+          :assignments="group.assignments"
+          :open-assignment-id="menuTarget?.id ?? null"
+          :category="categoryFilter"
+          :date-from="filters.dateFrom"
+          :date-to="filters.dateTo"
+          :reload-token="reloadTokens[group.offeringId] ?? 0"
+          @assignment-menu="toggleMenu"
+        />
       </div>
 
       <!-- Empty -->
@@ -198,12 +153,14 @@
         <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ t('assignments.noResults') }}</p>
       </div>
 
+      <!-- Paginates the tables, not the assignments: every table loads its own
+           grid, so putting them all on one page would fan out a request each. -->
       <Pagination
-        v-if="!loading && !loadError && total > 0"
+        v-if="!loading && !loadError && groups.length"
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
-        :total="total"
-        :page-sizes="[20, 50, 100, 200]"
+        :total="groups.length"
+        :page-sizes="[5, 10, 20]"
       />
     </div>
 
@@ -221,10 +178,12 @@
       :assignment="gradingTarget"
       :can-grade="canManage(gradingTarget)"
       @close="gradingOpen = false"
+      @saved="onGradesSaved"
     />
 
-    <!-- Row actions. Teleported and fixed-positioned because the table scrolls
-         horizontally, and that scroll container clips an absolute dropdown. -->
+    <!-- One column's actions. Teleported and fixed-positioned because the
+         gradebook scrolls horizontally, and that scroll container clips an
+         absolute dropdown. -->
     <Teleport to="body">
       <div
         v-if="menuTarget"
@@ -324,9 +283,7 @@ import {
   AlertTriangle,
   CircleAlert,
   ClipboardCheck,
-  ClipboardList,
   Loader2,
-  MoreVertical,
   Pencil,
   Plus,
   SearchX,
@@ -334,9 +291,11 @@ import {
   X,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import AssignmentCategoryBadge from '@/components/grading/AssignmentCategoryBadge.vue'
 import AssignmentFormModal from '@/components/grading/AssignmentFormModal.vue'
 import AssignmentGradingModal from '@/components/grading/AssignmentGradingModal.vue'
+import GradebookTable from '@/components/grading/GradebookTable.vue'
+import StatisticsButton from '@/components/analytics/StatisticsButton.vue'
+import type { StatisticsOfferingOption } from '@/components/analytics/ClassStatisticsModal.vue'
 import GradeReportButton from '@/components/grading/GradeReportButton.vue'
 import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
 import DatePicker from '@/components/ui/DatePicker.vue'
@@ -354,7 +313,6 @@ import { useAssignmentPermissions } from '@/composables/useAssignmentPermissions
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { matchSubjectNames } from '@/composables/useSubjectNameLookup'
 import { useToast } from '@/composables/useToast'
-import { formatAcademicDate, formatRecordedAt } from '@/utils/gradeDates'
 import type { Subject } from '@/types/subject'
 
 const { t } = useI18n()
@@ -370,8 +328,16 @@ const {
   teacherClasses,
 } = useAssignmentPermissions()
 
+/** One gradebook: an offering's assignments, oldest first. */
+interface OfferingGroup {
+  offeringId: number
+  subjectName: string
+  classGroupName: string
+  assignments: SubjectAssignment[]
+}
+
+/** Every assignment matching the filters, across every page of the list. */
 const assignments = ref<SubjectAssignment[]>([])
-const total = ref(0)
 const loading = ref(true)
 const loadError = ref(false)
 
@@ -386,9 +352,69 @@ const filters = ref({
   dateTo: '',
 })
 const currentPage = ref(1)
-const pageSize = ref(50)
+/** Tables per page — each one loads a grid of its own, so the page stays small. */
+const pageSize = ref(5)
 
-// ─── Row actions menu ────────────────────────────────────────────────────────
+// ─── Gradebooks ──────────────────────────────────────────────────────────────
+
+/**
+ * The assignments regrouped into one table per offering — which is one subject
+ * taught to one class. Sorted the way a teacher scans them: by subject, then by
+ * class; columns within a table run oldest to newest.
+ */
+const groups = computed<OfferingGroup[]>(() => {
+  const grouped = new Map<number, OfferingGroup>()
+  assignments.value.forEach(assignment => {
+    const existing = grouped.get(assignment.offering_id)
+    if (existing) {
+      existing.assignments.push(assignment)
+      return
+    }
+    grouped.set(assignment.offering_id, {
+      offeringId: assignment.offering_id,
+      subjectName: assignment.subject_name,
+      classGroupName: assignment.class_group_name,
+      assignments: [assignment],
+    })
+  })
+
+  return [...grouped.values()]
+    .map(group => ({
+      ...group,
+      assignments: group.assignments
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id),
+    }))
+    .sort(
+      (a, b) =>
+        a.subjectName.localeCompare(b.subjectName) ||
+        a.classGroupName.localeCompare(b.classGroupName),
+    )
+})
+
+/** The select stores its option value untyped; the grids take the union. */
+const categoryFilter = computed<SubjectAssignmentCategory | null>(
+  () => (filters.value.category as SubjectAssignmentCategory) || null,
+)
+
+const pagedGroups = computed(() =>
+  groups.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value),
+)
+
+/**
+ * Per-offering reload counters. A table holds its own grid, so a save has to
+ * tell it to refetch — but only the table whose marks actually changed.
+ */
+const reloadTokens = ref<Record<number, number>>({})
+
+function reloadOffering(offeringId: number) {
+  reloadTokens.value = {
+    ...reloadTokens.value,
+    [offeringId]: (reloadTokens.value[offeringId] ?? 0) + 1,
+  }
+}
+
+// ─── Column actions menu ─────────────────────────────────────────────────────
 
 const MENU_WIDTH = 176 // w-44
 const MENU_ITEM_HEIGHT = 36
@@ -404,7 +430,7 @@ function toggleMenu(assignment: SubjectAssignment, event: MouseEvent) {
   }
 
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  // Read-only rows only get the grading entry; the rest also edit and delete.
+  // A read-only column only gets the grading entry; the rest also edit and delete.
   const height = (canManage(assignment) ? 3 : 1) * MENU_ITEM_HEIGHT + MENU_PADDING
   const below = rect.bottom + 4
 
@@ -444,12 +470,15 @@ function openEdit(assignment: SubjectAssignment) {
 }
 
 function onSaved(saved: SubjectAssignment) {
-  // A new row may not belong on the current page or match the active filters,
-  // so refetch rather than splicing it in at a guessed position. An edit is
-  // patched in place — it cannot change offering, and so cannot move.
+  // A new assignment may not match the active filters at all, so refetch rather
+  // than guessing it into a table. An edit is patched in place — it cannot
+  // change offering, and so cannot move to another table.
   const index = assignments.value.findIndex(assignment => assignment.id === saved.id)
   if (index === -1) fetchAssignments()
   else assignments.value[index] = saved
+  // The grid holds its own copy of the columns; a new or retitled assignment
+  // only reaches it on a refetch.
+  reloadOffering(saved.offering_id)
 }
 
 // ─── Grading ─────────────────────────────────────────────────────────────────
@@ -460,6 +489,11 @@ const gradingTarget = ref<SubjectAssignment | null>(null)
 function openGrading(assignment: SubjectAssignment) {
   gradingTarget.value = assignment
   gradingOpen.value = true
+}
+
+/** Only the graded offering's table is stale; the others were not touched. */
+function onGradesSaved() {
+  if (gradingTarget.value) reloadOffering(gradingTarget.value.offering_id)
 }
 
 // ─── Delete ──────────────────────────────────────────────────────────────────
@@ -482,12 +516,13 @@ async function confirmDelete() {
   try {
     await deleteSubjectAssignmentApi(target.id)
     assignments.value = assignments.value.filter(assignment => assignment.id !== target.id)
-    total.value = Math.max(0, total.value - 1)
     deleteTarget.value = null
     success(t('assignments.deletedSuccess'))
-    // Deleting the last row of a trailing page would strand the user on an empty
-    // page, so step back — the `currentPage` watcher refetches.
-    if (!assignments.value.length && currentPage.value > 1) currentPage.value -= 1
+    // The column goes with it, and so do the grades that were recorded on it.
+    reloadOffering(target.offering_id)
+    // Deleting an offering's last assignment takes its whole table away, which
+    // can empty a trailing page — step back rather than strand the user there.
+    if (!pagedGroups.value.length && currentPage.value > 1) currentPage.value -= 1
   } catch {
     // The API client's interceptor surfaces the failure; keep the dialog open.
   } finally {
@@ -527,6 +562,21 @@ const reportClasses = computed<GradeReportClassOption[]>(() =>
     })),
 )
 
+/**
+ * The offerings the heatmap may be asked for — the teacher's own, flattened out
+ * of the subject → classes grouping. The API 403s any other offering, so this
+ * list is the boundary, not just a convenience.
+ */
+const statisticsOfferings = computed<StatisticsOfferingOption[]>(() =>
+  subjectGroups.value.flatMap(group =>
+    group.offerings.map(offering => ({
+      offeringId: offering.offeringId,
+      label: group.subjectName,
+      sublabel: offering.displayName,
+    })),
+  ),
+)
+
 const categoryOptions = computed<SelectOption[]>(() =>
   SUBJECT_ASSIGNMENT_CATEGORIES.map(category => ({
     value: category,
@@ -547,29 +597,41 @@ function resetFilters() {
   filters.value = { subject: null, classGroup: null, category: null, dateFrom: '', dateTo: '' }
 }
 
+/** Well past a term's assignments for one class, and under any sane API cap. */
+const LIST_PAGE_SIZE = 200
+/** A stop against a runaway `count`; 2000 assignments is already unreadable. */
+const MAX_LIST_PAGES = 10
+
 async function fetchAssignments() {
   loading.value = true
   loadError.value = false
   closeMenu()
 
   try {
+    // Every page, not just the first: an offering's assignments are spread
+    // across the list by date, so a single page would leave columns out of the
+    // tables built from it.
+    //
     // The endpoint scopes itself: a teacher gets the offerings they teach plus
-    // their homeroom class, so no teacher id is passed. Rows from the homeroom
-    // widening are read-only — `canManage()` decides per row.
-    const { data } = await getSubjectAssignmentsApi({
-      subject: filters.value.subject ? Number(filters.value.subject) : undefined,
-      class_group: filters.value.classGroup ? Number(filters.value.classGroup) : undefined,
-      category: (filters.value.category as SubjectAssignmentCategory) || undefined,
-      date_from: filters.value.dateFrom || undefined,
-      date_to: filters.value.dateTo || undefined,
-      page: currentPage.value,
-      page_size: pageSize.value,
-    })
-    assignments.value = data.results
-    total.value = data.count
+    // their homeroom class, so no teacher id is passed. Assignments from the
+    // homeroom widening are read-only — `canManage()` decides per assignment.
+    const collected: SubjectAssignment[] = []
+    for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
+      const { data } = await getSubjectAssignmentsApi({
+        subject: filters.value.subject ? Number(filters.value.subject) : undefined,
+        class_group: filters.value.classGroup ? Number(filters.value.classGroup) : undefined,
+        category: (filters.value.category as SubjectAssignmentCategory) || undefined,
+        date_from: filters.value.dateFrom || undefined,
+        date_to: filters.value.dateTo || undefined,
+        page,
+        page_size: LIST_PAGE_SIZE,
+      })
+      collected.push(...data.results)
+      if (!data.results.length || collected.length >= data.count) break
+    }
+    assignments.value = collected
   } catch {
     assignments.value = []
-    total.value = 0
     loadError.value = true
   } finally {
     loading.value = false
@@ -583,14 +645,26 @@ watch(
     filters.value.category,
     filters.value.dateFrom,
     filters.value.dateTo,
-    pageSize.value,
   ],
   () => {
-    if (currentPage.value === 1) fetchAssignments()
-    else currentPage.value = 1
+    currentPage.value = 1
+    fetchAssignments()
   },
 )
-watch(currentPage, fetchAssignments)
+
+// The tables are paginated client-side, so paging is free — nothing to refetch.
+watch(pageSize, () => {
+  currentPage.value = 1
+})
+
+// A filter narrowing the tables can leave the reader past the last page.
+watch(
+  () => groups.value.length,
+  () => {
+    const lastPage = Math.max(1, Math.ceil(groups.value.length / pageSize.value))
+    if (currentPage.value > lastPage) currentPage.value = lastPage
+  },
+)
 
 onMounted(() => {
   fetchAssignments()

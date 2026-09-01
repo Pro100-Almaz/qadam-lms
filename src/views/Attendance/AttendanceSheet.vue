@@ -23,9 +23,22 @@
     </div>
 
     <div v-else class="space-y-5">
-      <div>
-        <h1 class="text-xl font-bold text-gray-800 dark:text-white/90">{{ t('attendance.title') }}</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('attendance.subtitle') }}</p>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-gray-800 dark:text-white/90">{{ t('attendance.title') }}</h1>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('attendance.subtitle') }}</p>
+        </div>
+        <!-- The registers behind this sheet, read back: the class's grid lesson
+             by lesson, or the whole class group ranked. Both name every student,
+             which this page's own role gate already allows for. -->
+        <StatisticsButton
+          v-if="classrooms.length"
+          kind="attendance"
+          :offerings="statisticsOfferings"
+          :class-groups="statisticsClassGroups"
+          :default-class-group-id="classroomId"
+          :offerings-loading="sheetLoading"
+        />
       </div>
 
       <AttendanceToolbar
@@ -191,26 +204,29 @@
                   >
                     {{ t('attendance.studentsColumn') }}
                   </th>
-                  <!-- Every slot 1…12 is a column, whether or not a lesson sits in it. -->
+                  <!-- One column per lesson actually scheduled that day, in time order. -->
                   <th
                     v-for="lesson in dayLessons"
-                    :key="lesson.order"
+                    :key="lesson.sessionId"
                     :class="[
-                      'min-w-[92px] border-l border-gray-100 px-2 py-2 text-center text-[11px] font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400',
+                      'min-w-[100px] border-l border-gray-100 px-2 py-2 text-center text-[11px] font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400',
                       lesson.editable ? 'bg-gray-50 dark:bg-gray-800/60' : 'bg-gray-100/70 dark:bg-gray-800/30',
                     ]"
                   >
-                    <span class="block text-sm font-semibold text-gray-600 dark:text-gray-300">
-                      {{ lesson.order }}
+                    <span
+                      class="block whitespace-nowrap text-sm font-semibold tabular-nums text-gray-600 dark:text-gray-300"
+                      :title="formatTimeRange(lesson.timeStart, lesson.timeEnd)"
+                    >
+                      {{ formatTimeLabel(lesson.timeStart) }}
                     </span>
                     <span
                       class="mt-0.5 block truncate text-[11px] font-normal text-gray-500 dark:text-gray-400"
-                      :title="lesson.subjectName || t('attendance.freeSlot')"
+                      :title="lesson.subjectName"
                     >
                       {{ lesson.subjectName || '—' }}
                     </span>
                     <input
-                      v-if="lesson.editable && lesson.sessionId !== null"
+                      v-if="lesson.editable"
                       type="checkbox"
                       class="mt-1.5 h-3.5 w-3.5 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900"
                       :checked="isColumnFull(lesson.sessionId)"
@@ -262,17 +278,15 @@
                   </td>
                   <td
                     v-for="lesson in dayLessons"
-                    :key="lesson.order"
+                    :key="lesson.sessionId"
                     :class="[
                       'border-l border-gray-100 px-2 py-2.5 text-center dark:border-gray-800',
-                      lesson.sessionId === null ? 'bg-gray-50/60 dark:bg-gray-800/20' : '',
-                      lesson.sessionId !== null && isPresent(lesson.sessionId, student.student_id)
+                      isPresent(lesson.sessionId, student.student_id)
                         ? 'bg-success-50/60 dark:bg-success-500/5'
                         : '',
                     ]"
                   >
                     <input
-                      v-if="lesson.sessionId !== null"
                       type="checkbox"
                       :class="[
                         'h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900',
@@ -284,7 +298,6 @@
                       :aria-label="`${student.full_name} — ${lesson.subjectName}`"
                       @change="setPresent(lesson.sessionId, student.student_id, ($event.target as HTMLInputElement).checked)"
                     />
-                    <span v-else class="text-xs text-gray-300 dark:text-gray-700">·</span>
                   </td>
                   <td class="border-l border-gray-100 px-3 py-2.5 text-center dark:border-gray-800">
                     <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -300,10 +313,10 @@
                   </td>
                   <td
                     v-for="lesson in dayLessons"
-                    :key="lesson.order"
+                    :key="lesson.sessionId"
                     class="border-l border-gray-100 px-2 py-3 text-center text-sm font-semibold text-gray-700 dark:border-gray-800 dark:text-gray-300"
                   >
-                    {{ lesson.sessionId === null ? '—' : columnCount(lesson.sessionId) }}
+                    {{ columnCount(lesson.sessionId) }}
                   </td>
                   <td class="border-l border-gray-100 px-3 py-3 text-center text-sm font-semibold text-gray-700 dark:border-gray-800 dark:text-gray-300">
                     {{ dayPresentCount }}
@@ -324,10 +337,19 @@ import { useI18n } from 'vue-i18n'
 import { AlertCircle, Check, CircleAlert, Loader2, ShieldAlert } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import AttendanceToolbar from '@/components/attendance/AttendanceToolbar.vue'
+import StatisticsButton from '@/components/analytics/StatisticsButton.vue'
+import type { StatisticsOfferingOption } from '@/components/analytics/ClassStatisticsModal.vue'
+import type { StatisticsClassGroupOption } from '@/components/analytics/AttendanceStatisticsModal.vue'
 import { useAuth } from '@/composables/useAuth'
 import { getTeacherMyClassesApi, getClassStudentsApi } from '@/api/teacherDashboard'
 import { getAcademicYearsApi } from '@/api/academic'
-import { getSubjectSchedulesApi, type SubjectSchedule } from '@/api/schedule'
+import {
+  formatTimeLabel,
+  formatTimeRange,
+  getSubjectSchedulesApi,
+  timeToMinutes,
+  type SubjectSchedule,
+} from '@/api/schedule'
 import {
   createSessionAttendanceApi,
   getSessionAttendanceApi,
@@ -441,17 +463,47 @@ const selectedQuarter = computed(
     null,
 )
 
-/** Every lesson slot of a school day — the sheet always shows all twelve. */
-const LESSON_ORDERS = Array.from({ length: 12 }, (_, index) => index + 1)
+/**
+ * The offerings the register grid may be asked for — the caller's own lessons
+ * in the class on screen. `other_sessions` are deliberately not here: those are
+ * another teacher's lessons, shown read-only on the sheet, and the analytics
+ * endpoint would 403 them.
+ *
+ * Deduplicated, because `schedules` holds one row per quarter and a subject
+ * taught all year appears in each.
+ */
+const statisticsOfferings = computed<StatisticsOfferingOption[]>(() => {
+  const seen = new Map<number, StatisticsOfferingOption>()
+  for (const schedule of schedules.value) {
+    // A free entry — a break, a club — has no offering to run analytics over.
+    if (schedule.offering_id === null || !schedule.offering) continue
+    if (seen.has(schedule.offering_id)) continue
+    seen.set(schedule.offering_id, {
+      offeringId: schedule.offering_id,
+      label: schedule.offering.subject,
+      sublabel: schedule.offering.class_group,
+    })
+  }
+  return [...seen.values()]
+})
+
+/** Every class the caller teaches — the overview aggregates all their subjects. */
+const statisticsClassGroups = computed<StatisticsClassGroupOption[]>(() =>
+  classrooms.value.map(classroom => ({
+    classGroupId: classroom.class_group_id,
+    label: classroom.display_name,
+  })),
+)
 
 /**
- * A column of the sheet. A slot either holds a lesson the caller may mark, one
- * of the class group's other subjects (shown, not editable), or nothing at all.
+ * A column of the sheet — one lesson actually on the timetable that day. It is
+ * either the caller's own (markable) or another teacher's (shown, read-only).
  */
 interface DayLesson {
-  /** Lesson slot of the school day, 1…12. */
-  order: number
-  sessionId: number | null
+  sessionId: number
+  /** `"09:00:00"`. Lessons are placed by time, so the range names the column. */
+  timeStart: string
+  timeEnd: string
   subjectName: string
   editable: boolean
 }
@@ -462,51 +514,53 @@ function apiWeekdayOf(iso: string): number {
 }
 
 /**
- * The full day, slot by slot. `sessions` are the caller's own lessons and
- * `other_sessions` the rest of the class group's timetable, so a slot filled by
- * another teacher still shows its subject and marks — just not editable.
+ * The day's lessons in time order. `sessions` are the caller's own and
+ * `other_sessions` the rest of the class group's timetable, so a lesson taken
+ * by another teacher still shows its subject and marks — just not editable.
  */
 const dayLessons = computed<DayLesson[]>(() => {
   if (!selectedDay.value) return []
   const weekday = apiWeekdayOf(selectedDay.value)
 
-  const own = new Map<number, { sessionId: number; subjectName: string }>()
-  const foreign = new Map<number, { sessionId: number; subjectName: string }>()
+  const byId = new Map<number, DayLesson>()
+  for (const schedule of schedules.value) {
+    for (const session of schedule.other_sessions ?? []) {
+      if (session.weekday !== weekday) continue
+      byId.set(session.id, {
+        sessionId: session.id,
+        timeStart: session.time_start,
+        timeEnd: session.time_end,
+        subjectName: session.subject_name,
+        editable: false,
+      })
+    }
+  }
+  // Own lessons go in last: a session reachable both ways is the editable one,
+  // and every schedule repeats the others under `other_sessions`.
   for (const schedule of schedules.value) {
     for (const session of schedule.sessions ?? []) {
       if (session.weekday !== weekday) continue
-      own.set(session.order, {
+      byId.set(session.id, {
         sessionId: session.id,
-        subjectName: schedule.offering.subject_name,
-      })
-    }
-    for (const session of schedule.other_sessions ?? []) {
-      if (session.weekday !== weekday) continue
-      foreign.set(session.order, {
-        sessionId: session.id,
-        subjectName: session.subject_name,
+        timeStart: session.time_start,
+        timeEnd: session.time_end,
+        subjectName: schedule.title || schedule.offering?.subject || '',
+        editable: true,
       })
     }
   }
 
-  return LESSON_ORDERS.map(order => {
-    // Own lessons win the slot: if both claim it, the editable one is the useful one.
-    const editable = own.get(order)
-    if (editable) return { order, ...editable, editable: true }
-    const readOnly = foreign.get(order)
-    if (readOnly) return { order, ...readOnly, editable: false }
-    return { order, sessionId: null, subjectName: '', editable: false }
-  })
+  return [...byId.values()].sort(
+    (a, b) =>
+      timeToMinutes(a.timeStart) - timeToMinutes(b.timeStart) ||
+      timeToMinutes(a.timeEnd) - timeToMinutes(b.timeEnd),
+  )
 })
 
-/** Slots that hold a lesson at all — what attendance is loaded and counted for. */
-const scheduledLessons = computed(() =>
-  dayLessons.value.filter(
-    (lesson): lesson is DayLesson & { sessionId: number } => lesson.sessionId !== null,
-  ),
-)
+/** Every lesson of the day — what attendance is loaded and counted for. */
+const scheduledLessons = computed(() => dayLessons.value)
 
-/** Slots the caller may actually mark and submit. */
+/** Lessons the caller may actually mark and submit. */
 const editableLessons = computed(() =>
   scheduledLessons.value.filter(lesson => lesson.editable),
 )

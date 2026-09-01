@@ -119,13 +119,27 @@
                   <span class="text-sm text-gray-600 dark:text-gray-300">{{ s.user.phone_number || '—' }}</span>
                 </td>
                 <td class="px-5 py-3.5 text-right">
-                  <router-link
-                    :to="`/students/${s.user.id}`"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors"
-                  >
-                    <Eye class="h-3.5 w-3.5" />
-                    {{ t('common.view') || 'View' }}
-                  </router-link>
+                  <div class="flex items-center justify-end gap-1.5">
+                    <!-- `s.id` is the Student profile id the analytics endpoints
+                         want; `s.user.id`, which the link uses, is another id
+                         space and would 404. -->
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"
+                      :title="t('statistics.button')"
+                      :aria-label="t('statistics.button')"
+                      @click="statsStudent = { id: s.id, name: `${s.user.last_name} ${s.user.first_name}` }"
+                    >
+                      <ChartColumnBig class="h-3.5 w-3.5" />
+                    </button>
+                    <router-link
+                      :to="`/students/${s.user.id}`"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <Eye class="h-3.5 w-3.5" />
+                      {{ t('common.view') || 'View' }}
+                    </router-link>
+                  </div>
                 </td>
               </tr>
               <tr v-if="students.length === 0">
@@ -144,6 +158,13 @@
       <!-- Graded assignments set for this class, and the marks students earned. -->
       <ClassGradingSection v-if="myClass" :class-group-id="myClass.class_group_id" />
     </div>
+
+    <StudentStatisticsModal
+      v-if="statsStudent"
+      :open="Boolean(statsStudent)"
+      :student="statsStudent"
+      @close="statsStudent = null"
+    />
   </AdminLayout>
 </template>
 
@@ -155,10 +176,14 @@ import {
   ShieldAlert,
   Users,
   Eye,
+  ChartColumnBig,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import ClassHomeworksSection from '@/components/homeworks/ClassHomeworksSection.vue'
 import ClassGradingSection from '@/components/grading/ClassGradingSection.vue'
+import StudentStatisticsModal, {
+  type StatisticsStudentTarget,
+} from '@/components/analytics/StudentStatisticsModal.vue'
 import GradeReportButton from '@/components/grading/GradeReportButton.vue'
 import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
 import { useSubjectNameLookup } from '@/composables/useSubjectNameLookup'
@@ -170,6 +195,9 @@ import type { HomeroomTeacherDashboard } from '@/types/teacherDashboard'
 
 const { t } = useI18n()
 const { user: authUser } = useAuth()
+
+/** The row whose statistics the shared modal is showing, or `null` when closed. */
+const statsStudent = ref<StatisticsStudentTarget | null>(null)
 
 const loading = ref(true)
 const error = ref<string | null>(null)
