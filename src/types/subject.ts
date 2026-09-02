@@ -10,7 +10,7 @@ export interface Subject {
   name: string
   language_group: LanguageGroup
   status: SubjectStatus
-  added_by: User
+  added_by: User | null
 }
 
 export interface SubjectOffering {

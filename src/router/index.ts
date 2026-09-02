@@ -113,12 +113,12 @@ const router = createRouter({
       meta: { title: 'Timetable' },
     },
 
-    // Schedule builder (admins only)
+    // Schedule builder (admins; homeroom teachers for their class's free entries)
     {
       path: '/schedule-builder',
       name: 'ScheduleBuilder',
       component: () => import('../views/Schedule/ScheduleBuilder.vue'),
-      meta: { title: 'Schedule Builder', roles: adminRoles },
+      meta: { title: 'Schedule Builder', roles: [...adminRoles, 'homeroom_teacher'] },
     },
 
     // Attendance (teachers & homeroom teachers)

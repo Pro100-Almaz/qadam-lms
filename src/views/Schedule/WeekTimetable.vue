@@ -115,10 +115,10 @@
                   {{ formatTimeRange(selectedDetail.session.time_start, selectedDetail.session.time_end) }}
                 </span>
               </div>
-              <div v-if="selectedDetail.schedule.offering" class="flex items-center gap-3">
+              <div v-if="selectedDetail.schedule.class_group" class="flex items-center gap-3">
                 <Users class="h-4 w-4 shrink-0 text-gray-400" />
                 <span class="text-gray-700 dark:text-gray-300">
-                  {{ selectedDetail.schedule.offering.class_group }}
+                  {{ selectedDetail.schedule.class_group.name }}
                 </span>
               </div>
               <div class="flex items-center gap-3">
@@ -171,7 +171,8 @@ const isTeacher = computed(() =>
 )
 /** Students and parents see their own week; only staff choose whose to look at. */
 const showClassFilter = computed(() => isAdmin.value || isTeacher.value)
-const canEdit = computed(() => isAdmin.value)
+/** Homeroom teachers may not place subjects, but the breaks are theirs to set. */
+const canEdit = computed(() => isAdmin.value || (roles.value?.includes('homeroom_teacher') ?? false))
 
 const QUARTERS = [1, 2, 3, 4]
 const PAGE_SIZE = 200
@@ -213,8 +214,10 @@ const events = computed<ScheduleEvent[]>(() =>
       weekday: fromApiWeekday(session.weekday),
       start: timeToMinutes(session.time_start),
       end: timeToMinutes(session.time_end),
-      title: schedule.title || schedule.offering?.subject || schedule.description || '',
-      subtitle: schedule.offering?.class_group,
+      title: schedule.title || schedule.description || '',
+      // Every entry names its class now, so a break is no longer anonymous on
+      // an all-classes week.
+      subtitle: schedule.class_group?.name,
       tone: schedule.type === 'other' ? 'other' : 'subject',
       colorKey: String(schedule.offering_id ?? `other-${schedule.id}`),
     })),
@@ -250,18 +253,15 @@ async function loadSchedules(): Promise<void> {
   loading.value = true
   loadError.value = null
   try {
+    // Free entries belong to a class group, so the class filter keeps them —
+    // the one request is the whole week, breaks and clubs included.
     const { data } = await getSubjectSchedulesApi({
       quarter: quarter.value,
       class_group: classGroupId.value ?? undefined,
       academic_year: academicYearId.value ?? undefined,
       page_size: PAGE_SIZE,
     })
-    // Free entries have no class group, so a filtered request drops them.
-    const free = classGroupId.value
-      ? (await getSubjectSchedulesApi({ type: 'other', quarter: quarter.value, page_size: PAGE_SIZE }))
-          .data
-      : []
-    schedules.value = [...data, ...free]
+    schedules.value = data
   } catch {
     schedules.value = []
     loadError.value = t('scheduleBuilder.loadFailed')

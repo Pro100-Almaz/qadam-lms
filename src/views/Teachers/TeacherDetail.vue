@@ -162,7 +162,7 @@
                       <div class="mt-1 flex flex-wrap items-center gap-1.5">
                         <!-- Language badge -->
                         <span :class="languageBadgeClass(subject.language_group)">
-                          {{ t('subjects.languages.' + subject.language_group) }}
+                          {{ formatLanguageGroup(subject.language_group, t) }}
                         </span>
                         <!-- Status badge -->
                         <span :class="statusBadgeClass(subject.status)">
@@ -349,6 +349,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { formatLanguageGroup } from '@/utils/subjectLanguage'
 import {
   BookOpen,
   ClipboardList,

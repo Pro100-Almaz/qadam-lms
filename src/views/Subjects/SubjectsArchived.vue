@@ -91,12 +91,12 @@
                 </td>
                 <td class="px-5 py-4">
                   <span class="text-sm text-gray-700 dark:text-gray-300">
-                    {{ $t('subjects.languages.' + subject.language_group) }}
+                    {{ formatLanguageGroup(subject.language_group, t) }}
                   </span>
                 </td>
                 <td class="px-5 py-4">
                   <span class="text-sm text-gray-700 dark:text-gray-300">
-                    {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
+                    {{ formatUserName(subject.added_by) }}
                   </span>
                 </td>
                 <td class="px-5 py-4 text-right">
@@ -174,6 +174,8 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import { getSubjectsApi, changeSubjectStatusApi, deleteSubjectApi } from '@/api/subjects'
 import type { Subject } from '@/types/subject'
+import { formatUserName } from '@/utils/userName'
+import { formatLanguageGroup } from '@/utils/subjectLanguage'
 
 const { t } = useI18n()
 const router = useRouter()

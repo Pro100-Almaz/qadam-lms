@@ -9,7 +9,7 @@
             {{ subjectName }}
           </h1>
           <span :class="langBadgeClass(languageGroup)">
-            {{ t('subjects.languages.' + languageGroup) }}
+            {{ formatLanguageGroup(languageGroup, t) }}
           </span>
           <span :class="statusBadgeClass(status)">
             {{ statusLabel(status) }}
@@ -54,6 +54,7 @@ import { useI18n } from 'vue-i18n'
 import { GraduationCap, Users, CalendarDays } from 'lucide-vue-next'
 import type { LanguageGroup, SubjectStatus } from '@/types/subject'
 import { useGradeHelpers } from '@/composables/useGradeHelpers'
+import { formatLanguageGroup } from '@/utils/subjectLanguage'
 
 defineProps<{
   subjectName: string

@@ -414,6 +414,8 @@ const academicYearId = ref<number | null>(null)
 const selectedClassroom = computed(
   () => classrooms.value.find(item => item.class_group_id === classroomId.value) ?? null,
 )
+/** Free entries belong to the class group, so its homeroom teacher marks them. */
+const isHomeroomOfSelected = computed(() => selectedClassroom.value?.is_homeroom === true)
 const selectedWeek = computed(
   () => weeks.value.find(week => week.id === weekId.value) ?? weeks.value[0],
 )
@@ -480,8 +482,8 @@ const statisticsOfferings = computed<StatisticsOfferingOption[]>(() => {
     if (seen.has(schedule.offering_id)) continue
     seen.set(schedule.offering_id, {
       offeringId: schedule.offering_id,
-      label: schedule.offering.subject,
-      sublabel: schedule.offering.class_group,
+      label: schedule.title || schedule.offering.subject_name,
+      sublabel: schedule.class_group?.name ?? schedule.offering.class_group_name,
     })
   }
   return [...seen.values()]
@@ -517,6 +519,10 @@ function apiWeekdayOf(iso: string): number {
  * The day's lessons in time order. `sessions` are the caller's own and
  * `other_sessions` the rest of the class group's timetable, so a lesson taken
  * by another teacher still shows its subject and marks — just not editable.
+ *
+ * Free entries now belong to the class group, so they arrive as schedules of
+ * their own rather than only as foreign sessions: a break is a column like any
+ * other, markable by the homeroom teacher who owns it.
  */
 const dayLessons = computed<DayLesson[]>(() => {
   if (!selectedDay.value) return []
@@ -544,8 +550,8 @@ const dayLessons = computed<DayLesson[]>(() => {
         sessionId: session.id,
         timeStart: session.time_start,
         timeEnd: session.time_end,
-        subjectName: schedule.title || schedule.offering?.subject || '',
-        editable: true,
+        subjectName: schedule.title || schedule.description || '',
+        editable: schedule.type === 'other' ? isHomeroomOfSelected.value : true,
       })
     }
   }

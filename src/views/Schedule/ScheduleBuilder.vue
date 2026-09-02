@@ -6,7 +6,7 @@
         <ShieldAlert class="h-8 w-8 text-orange-500" />
       </div>
       <p class="text-base font-medium text-gray-800 dark:text-white/90">
-        {{ t('scheduleBuilder.adminsOnly') }}
+        {{ t('scheduleBuilder.noAccess') }}
       </p>
     </div>
 
@@ -24,7 +24,9 @@
     <div v-else class="space-y-5">
       <div>
         <h1 class="text-xl font-bold text-gray-800 dark:text-white/90">{{ t('scheduleBuilder.title') }}</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('scheduleBuilder.subtitle') }}</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {{ canPlaceSubjects ? t('scheduleBuilder.subtitle') : t('scheduleBuilder.subtitleHomeroom') }}
+        </p>
       </div>
 
       <!-- Toolbar -->
@@ -154,8 +156,13 @@
 
             <div class="mt-5 space-y-4">
               <!-- A schedule is either a taught subject or a free entry; the
-                   description only exists for the second. -->
-              <div class="inline-flex w-full rounded-lg border border-gray-300 p-1 dark:border-gray-700">
+                   description only exists for the second. Homeroom teachers own
+                   their class's free entries but never place subjects, so the
+                   choice is not theirs to make. -->
+              <div
+                v-if="canPlaceSubjects"
+                class="inline-flex w-full rounded-lg border border-gray-300 p-1 dark:border-gray-700"
+              >
                 <button
                   v-for="kind in (['subject', 'other'] as const)"
                   :key="kind"
@@ -308,6 +315,7 @@ import WeekScheduleGrid, {
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
+import { getTeacherMyClassesApi } from '@/api/teacherDashboard'
 import { getTeachingAssignmentsApi } from '@/api/teachingAssignments'
 import {
   createScheduleSessionApi,
@@ -325,7 +333,6 @@ import {
   type SubjectSchedule,
 } from '@/api/schedule'
 import type { UserRole } from '@/types/auth'
-import type { ClassGroup } from '@/types/academic'
 import type { TeachingAssignment } from '@/types/teachingAssignment'
 
 const { t } = useI18n()
@@ -333,9 +340,17 @@ const { user } = useAuth()
 const toast = useToast()
 
 const roles = computed(() => user.value?.roles)
-const canView = computed(() =>
+const isAdmin = computed(() =>
   (['admin', 'supervisor', 'principal'] as UserRole[]).some(role => roles.value?.includes(role)),
 )
+/**
+ * Free entries belong to a class group, and its homeroom teacher may place them
+ * — so the builder is theirs too, narrowed to their own class and to entries
+ * that are not a taught subject.
+ */
+const isHomeroomTeacher = computed(() => roles.value?.includes('homeroom_teacher') ?? false)
+const canView = computed(() => isAdmin.value || isHomeroomTeacher.value)
+const canPlaceSubjects = computed(() => isAdmin.value)
 
 const WEEKDAYS = [1, 2, 3, 4, 5]
 const QUARTERS = [1, 2, 3, 4]
@@ -354,7 +369,17 @@ const loadError = ref<string | null>(null)
 /** Grid-level failure — keeps the toolbar usable so another class can be picked. */
 const gridError = ref<string | null>(null)
 
-const classGroups = ref<ClassGroup[]>([])
+/**
+ * The classes this user may build a week for: every class of the active year
+ * for an admin, only the homeroom ones for a homeroom teacher. The two sources
+ * name their fields differently, so both are mapped onto this shape.
+ */
+interface BuilderClassGroup {
+  id: number
+  display_name: string
+}
+
+const classGroups = ref<BuilderClassGroup[]>([])
 /** Subject + teacher pairs the selected class group is actually taught. */
 const assignments = ref<TeachingAssignment[]>([])
 const academicYearId = ref<number | null>(null)
@@ -362,9 +387,9 @@ const classGroupId = ref<number | null>(null)
 const quarter = ref(1)
 
 /**
- * The class group's own schedules plus every free entry of the quarter. Free
- * entries have no offering, so they have no class group either — a lunch break
- * belongs to the whole school and is drawn on every class's week.
+ * The selected class group's whole timetable for the quarter — taught subjects
+ * and free entries alike. A break belongs to one class group, so it arrives
+ * with the rest of that class's week instead of being fetched separately.
  */
 const schedules = ref<SubjectSchedule[]>([])
 
@@ -416,7 +441,7 @@ const events = computed<ScheduleEvent[]>(() =>
       weekday: fromApiWeekday(session.weekday),
       start: timeToMinutes(session.time_start),
       end: timeToMinutes(session.time_end),
-      title: schedule.title || schedule.offering?.subject || schedule.description || '',
+      title: schedule.title || schedule.description || '',
       subtitle: teacherNameOf(schedule.offering_id),
       tone: schedule.type === 'other' ? 'other' : 'subject',
       colorKey: String(schedule.offering_id ?? `other-${schedule.id}`),
@@ -449,8 +474,15 @@ async function loadFilters(): Promise<void> {
     const { data: years } = await getAcademicYearsApi()
     const activeYear = years.find(year => year.is_active)
     academicYearId.value = activeYear?.id ?? null
-    const { data } = await getClassGroupsApi(activeYear ? { year: activeYear.id } : undefined)
-    classGroups.value = data
+    if (isAdmin.value) {
+      const { data } = await getClassGroupsApi(activeYear ? { year: activeYear.id } : undefined)
+      classGroups.value = data.map(group => ({ id: group.id, display_name: group.display_name }))
+    } else {
+      const { data } = await getTeacherMyClassesApi()
+      classGroups.value = (Array.isArray(data) ? data : [])
+        .filter(classroom => classroom.is_homeroom)
+        .map(classroom => ({ id: classroom.class_group_id, display_name: classroom.display_name }))
+    }
     if (classGroups.value.length) classGroupId.value = classGroups.value[0].id
   } catch {
     loadError.value = t('scheduleBuilder.loadFailed')
@@ -461,7 +493,8 @@ async function loadFilters(): Promise<void> {
 
 /** Assignments are per class group, so they reload with the class selection. */
 async function loadAssignments(): Promise<void> {
-  if (classGroupId.value === null) {
+  // Only subjects are placed from them, and only an admin places those.
+  if (!canPlaceSubjects.value || classGroupId.value === null) {
     assignments.value = []
     return
   }
@@ -481,18 +514,15 @@ async function loadGrid(): Promise<void> {
   gridLoading.value = true
   gridError.value = null
   try {
-    const [subjectSchedules, freeEntries] = await Promise.all([
-      getSubjectSchedulesApi({
-        class_group: classGroupId.value,
-        quarter: quarter.value,
-        academic_year: academicYearId.value ?? undefined,
-        page_size: PAGE_SIZE,
-      }),
-      // Offering-less entries carry no class group, so the class filter would
-      // drop them — they are fetched on their own and shown on every week.
-      getSubjectSchedulesApi({ type: 'other', quarter: quarter.value, page_size: PAGE_SIZE }),
-    ])
-    schedules.value = [...subjectSchedules.data, ...freeEntries.data]
+    // One request is the whole week: the class filter is the schedule's own
+    // class group now, so free entries come back with the subjects.
+    const { data } = await getSubjectSchedulesApi({
+      class_group: classGroupId.value,
+      quarter: quarter.value,
+      academic_year: academicYearId.value ?? undefined,
+      page_size: PAGE_SIZE,
+    })
+    schedules.value = data
   } catch {
     // An empty grid is indistinguishable from a failed load, so say so rather
     // than let an edit sit on top of a schedule we never actually saw.
@@ -541,7 +571,7 @@ function openCreate(range: ScheduleRange): void {
     mode: 'create',
     sessionId: null,
     scheduleId: null,
-    kind: 'subject',
+    kind: canPlaceSubjects.value ? 'subject' : 'other',
     offeringId: assignmentOptions.value.length ? Number(assignmentOptions.value[0].value) : null,
     description: '',
     weekday: range.weekday,
@@ -554,6 +584,9 @@ function openEdit(event: ScheduleEvent): void {
   const found = sessionIndex.value.get(Number(event.id))
   if (!found) return
   const { schedule, session } = found
+  // A homeroom teacher sees the taught subjects on the week but cannot move
+  // them — opening the editor over one would only earn a 403 on save.
+  if (!canPlaceSubjects.value && schedule.type !== 'other') return
   editorError.value = null
   editor.value = {
     mode: 'edit',
@@ -620,7 +653,14 @@ async function ensureSubjectSchedule(offeringId: number): Promise<number> {
   )
   if (known) return known.id
   try {
-    const { data } = await createSubjectScheduleApi({ offering: offeringId, quarter: quarter.value })
+    // The class group travels with the offering even though the API derives one
+    // — it rejects a create without it. The assignments are loaded per class
+    // group, so the offering is always taught to the one on screen.
+    const { data } = await createSubjectScheduleApi({
+      offering: offeringId,
+      class_group: classGroupId.value as number,
+      quarter: quarter.value,
+    })
     return data.id
   } catch (error) {
     // 400 unique_together — someone else created it between our load and now.
@@ -635,9 +675,19 @@ async function ensureSubjectSchedule(offeringId: number): Promise<number> {
   }
 }
 
+/** A free entry has no offering at all, so its class group is all it is placed by. */
+async function createFreeEntry(description: string): Promise<number> {
+  const { data } = await createSubjectScheduleApi({
+    class_group: classGroupId.value as number,
+    description,
+    quarter: quarter.value,
+  })
+  return data.id
+}
+
 async function saveEntry(): Promise<void> {
   const state = editor.value
-  if (!state || saving.value) return
+  if (!state || saving.value || classGroupId.value === null) return
 
   // Snapped once more here: a field saved without ever losing focus, or a
   // browser whose time picker ignores `step`, would slip an odd minute through.
@@ -686,12 +736,7 @@ async function saveEntry(): Promise<void> {
       const scheduleId =
         state.kind === 'subject'
           ? await ensureSubjectSchedule(state.offeringId as number)
-          : (
-              await createSubjectScheduleApi({
-                description: state.description.trim(),
-                quarter: quarter.value,
-              })
-            ).data.id
+          : await createFreeEntry(state.description.trim())
       if (current) await deleteScheduleSessionApi(current.session.id)
       await createScheduleSessionApi(scheduleId, payload)
       if (current) await pruneEmptyFreeEntry(current.schedule, current.session.id)
@@ -708,8 +753,8 @@ async function saveEntry(): Promise<void> {
 }
 
 /**
- * A free entry exists only for its sessions — an empty one would linger in the
- * `type=other` list forever, so it goes when its last session does.
+ * A free entry exists only for its sessions — an empty one would linger on the
+ * class group's timetable forever, so it goes when its last session does.
  */
 async function pruneEmptyFreeEntry(schedule: SubjectSchedule, removedSessionId: number): Promise<void> {
   if (schedule.type !== 'other') return

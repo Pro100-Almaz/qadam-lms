@@ -41,7 +41,7 @@
               </h1>
               <!-- Language badge -->
               <span :class="langBadgeClass(subject.language_group)">
-                {{ $t('subjects.languages.' + subject.language_group) }}
+                {{ formatLanguageGroup(subject.language_group, t) }}
               </span>
               <!-- Status badge -->
               <span :class="statusBadgeClass(subject.status)">
@@ -64,7 +64,7 @@
                 <UserIcon class="h-4 w-4" />
                 <span>
                   {{ $t('subjects.addedBy') }}:
-                  {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
+                  {{ formatUserName(subject.added_by) }}
                 </span>
               </div>
             </div>
@@ -360,7 +360,7 @@
               <dl class="space-y-2 text-sm">
                 <div class="flex justify-between gap-2">
                   <dt class="text-gray-500 dark:text-gray-400">{{ $t('subjects.language') }}</dt>
-                  <dd class="font-medium text-gray-800 dark:text-white/90">{{ $t('subjects.languages.' + subject.language_group) }}</dd>
+                  <dd class="font-medium text-gray-800 dark:text-white/90">{{ formatLanguageGroup(subject.language_group, t) }}</dd>
                 </div>
                 <div class="flex justify-between gap-2">
                   <dt class="text-gray-500 dark:text-gray-400">{{ $t('common.status') }}</dt>
@@ -369,7 +369,7 @@
                 <div class="flex justify-between gap-2">
                   <dt class="text-gray-500 dark:text-gray-400">{{ $t('subjects.addedBy') }}</dt>
                   <dd class="font-medium text-gray-800 dark:text-white/90 text-right">
-                    {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
+                    {{ formatUserName(subject.added_by) }}
                   </dd>
                 </div>
                 <div v-if="subject.primary_teacher" class="flex justify-between gap-2">
@@ -557,6 +557,8 @@ import { createLessonApi, copyLessonApi, getLessonDetailApi } from '@/api/lesson
 import { useAuth } from '@/composables/useAuth'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import type { SubjectDetail, SubjectGrades } from '@/types/subject'
+import { formatUserName } from '@/utils/userName'
+import { formatLanguageGroup } from '@/utils/subjectLanguage'
 
 const { t } = useI18n()
 const route = useRoute()
