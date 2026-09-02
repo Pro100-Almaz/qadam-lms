@@ -1,14 +1,12 @@
 import api from './client'
 import { type ListResponse, unwrapList } from './client'
 
-export type ApiWeekday = 0 | 1 | 2 | 3 | 4
+export type ApiWeekday = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
 /**
  * A schedule either belongs to a subject offering (`subject`) or stands on its
  * own (`other`) — a club, a lunch break, an assembly. Free entries carry a
- * `description` instead of an offering, but they belong to one class group all
- * the same: a break is drawn on that class's week only, and is placed by an
- * admin or by the class group's homeroom teacher.
+ * `description` instead of an offering, and only admins may create them.
  */
 export type ScheduleType = 'subject' | 'other'
 
@@ -24,11 +22,7 @@ export interface ScheduleSession {
   time_end: ApiTime
 }
 
-/**
- * A session of one of the *same class group's* other schedules. The list is
- * symmetric and scoped to the class group: a subject sees the breaks around it
- * and a break sees the subjects, all on the one timetable.
- */
+/** A session of one of the class group's *other* schedules. */
 export interface ForeignScheduleSession extends ScheduleSession {
   /** `null` for a free entry — a break or a club has no offering. */
   offering_id: number | null
@@ -38,18 +32,20 @@ export interface ForeignScheduleSession extends ScheduleSession {
 
 export interface ScheduleOffering {
   id: number
-  subject_name: string
-  class_group_name: string
-  academic_year_label: string
+  subject: string
+  subject_name?: string
+  class_group: string
+  class_group_name?: string
+  academic_year: string
+  academic_year_label?: string
 }
 
-/** The class group a schedule is drawn on — free entries carry one too. */
 export interface ScheduleClassGroup {
   id: number
   name: string
-  grade_level: number
+  grade_level: number | null
   letter: string
-  academic_year_label: string
+  academic_year_label: string | null
 }
 
 export interface SubjectSchedule {
@@ -60,9 +56,8 @@ export interface SubjectSchedule {
   /** `null` on a free entry. */
   offering: ScheduleOffering | null
   offering_id: number | null
-  /** Always set — on a subject schedule it is the offering's class group. */
-  class_group: ScheduleClassGroup
-  class_group_id: number
+  class_group_id?: number | null
+  class_group?: ScheduleClassGroup | null
   /** Required when the schedule has no offering. */
   description: string | null
   quarter: number
@@ -73,30 +68,18 @@ export interface SubjectSchedule {
 export interface SubjectScheduleFilters {
   offering?: number
   quarter?: number
-  /**
-   * Filters the schedule's own class group, so it answers with that class
-   * group's whole timetable — taught subjects and free entries alike.
-   */
   class_group?: number
   subject?: number
-  /** Routes through the class group's academic year, free entries included. */
+  teacher?: number
   academic_year?: number
   type?: ScheduleType
   page?: number
   page_size?: number
 }
 
-/**
- * `offering` and `description` are alternatives — one of the two is required.
- *
- * `class_group` is required on every create, not only on free entries: the API
- * is documented as deriving it from `offering.class_group`, but a POST without
- * it answers 400 `{"class_group": ["Обязательное поле."]}` either way. Sent
- * alongside an offering it has to be that offering's class group.
- */
+/** `offering` and `description` are alternatives — one of the two is required. */
 export interface SubjectSchedulePayload {
   offering?: number
-  class_group: number
   description?: string
   quarter: number
 }
@@ -120,16 +103,13 @@ export function getSubjectScheduleApi(id: number) {
 
 /**
  * 400 with `non_field_errors` if the offering already has a schedule that
- * quarter, with `description` if an offering-less schedule was sent without
- * one, with `class_group` if it is missing or is not the offering's. Free
- * entries (no `offering`) may only be placed by an admin or the class group's
- * homeroom teacher — otherwise 403.
+ * quarter, or with `description` if an offering-less schedule was sent without
+ * one. Free entries (no `offering`) are admin-only — otherwise 403.
  */
 export function createSubjectScheduleApi(data: SubjectSchedulePayload) {
   return api.post<SubjectSchedule>('/subject-schedules/', data)
 }
 
-/** Moving a free entry with `class_group` needs rights on the *target* class. */
 export function updateSubjectScheduleApi(id: number, data: Partial<SubjectSchedulePayload>) {
   return api.patch<SubjectSchedule>(`/subject-schedules/${id}/`, data)
 }

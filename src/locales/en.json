@@ -857,6 +857,7 @@
     },
     "lessons": {
         "title": "Schedule",
+        "teacherSchedule": "Teacher Schedule",
         "addNew": "Add Lesson",
         "subject": "Subject",
         "class": "Class",
@@ -878,6 +879,8 @@
         "allQuarters": "All quarters",
         "quarter": "Quarter",
         "noLessons": "No lessons found",
+        "noScheduledSubjects": "No subjects scheduled",
+        "noTeachers": "No teachers found",
         "createModalPlaceholder": "Lesson creation form will be available here soon.",
         "lessonDetail": "Lesson Detail",
         "topics": "Topics",

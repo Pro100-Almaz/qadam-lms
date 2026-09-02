@@ -5,7 +5,7 @@
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">
-            {{ $t('lessons.title') }}
+            {{ $t('lessons.teacherSchedule') }}
           </h1>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {{ formattedDateRange }}
@@ -24,33 +24,22 @@
       <!-- Filters -->
       <div class="flex flex-wrap items-center gap-3">
         <select
-          v-model="filterClassGroup"
-          @change="fetchLessons()"
-          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-gray-400 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600"
+          v-model.number="filterTeacher"
+          :disabled="loadingTeachers || teachers.length === 0"
+          class="min-w-56 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-gray-400 focus:border-brand-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600"
         >
-          <option value="all">{{ $t('lessons.allClasses') }}</option>
-          <option v-for="cg in classGroups" :key="cg.id" :value="cg.id">
-            {{ cg.display_name }}
+          <option :value="null" disabled>
+            {{ loadingTeachers ? $t('common.loading') : $t('lessons.noTeachers') }}
+          </option>
+          <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
+            {{ teacherName(teacher) }}
           </option>
         </select>
 
         <select
-          v-model="filterSubject"
-          @change="fetchLessons()"
+          v-model.number="filterQuarter"
           class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-gray-400 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600"
         >
-          <option value="all">{{ $t('lessons.allSubjects') }}</option>
-          <option v-for="s in subjects" :key="s.id" :value="s.id">
-            {{ s.name }}
-          </option>
-        </select>
-
-        <select
-          v-model="filterQuarter"
-          @change="fetchLessons()"
-          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-gray-400 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600"
-        >
-          <option value="all">{{ $t('lessons.allQuarters') }}</option>
           <option v-for="q in [1, 2, 3, 4]" :key="q" :value="q">
             {{ $t('lessons.quarter') }} {{ q }}
           </option>
@@ -107,9 +96,16 @@
         <Loader2 class="h-8 w-8 animate-spin text-brand-500" />
       </div>
 
+      <div
+        v-else-if="allEvents.length === 0"
+        class="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white py-16 dark:border-gray-800 dark:bg-gray-900"
+      >
+        <CalendarDays class="h-12 w-12 text-gray-300 dark:text-gray-600" />
+        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ $t('lessons.noScheduledSubjects') }}</p>
+      </div>
+
       <!-- Month View -->
       <div v-else-if="currentView === 'month'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-        <!-- Day headers -->
         <div class="grid grid-cols-7 border-b border-gray-200 dark:border-gray-800">
           <div
             v-for="day in weekDayNames"
@@ -119,7 +115,6 @@
             {{ day }}
           </div>
         </div>
-        <!-- Calendar grid -->
         <div class="grid grid-cols-7">
           <div
             v-for="(day, idx) in monthDays"
@@ -143,16 +138,18 @@
               </span>
             </div>
             <div class="space-y-0.5">
-              <div
+              <button
                 v-for="event in getEventsForDate(day.date).slice(0, 3)"
                 :key="event.id"
+                type="button"
                 @click="selectedEvent = event"
-                class="cursor-pointer truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight sm:text-xs"
+                class="block w-full truncate rounded px-1.5 py-0.5 text-left text-[10px] font-medium leading-tight sm:text-xs"
                 :class="subjectColorClasses(event.subjectColor)"
               >
                 <span class="hidden sm:inline">{{ formatTime(event.startTime) }}</span>
-                {{ event.subjectName }}
-              </div>
+                {{ event.title }}
+                <span v-if="event.className" class="hidden opacity-75 sm:inline"> · {{ event.className }}</span>
+              </button>
               <div
                 v-if="getEventsForDate(day.date).length > 3"
                 class="px-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400"
@@ -168,7 +165,6 @@
       <div v-else-if="currentView === 'week'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
         <div class="overflow-x-auto">
           <div class="min-w-[700px]">
-            <!-- Day headers -->
             <div class="grid grid-cols-[60px_repeat(6,1fr)] border-b border-gray-200 dark:border-gray-800">
               <div class="border-r border-gray-200 dark:border-gray-800"></div>
               <div
@@ -182,15 +178,12 @@
                 </div>
                 <div
                   class="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
-                  :class="isToday(day.date)
-                    ? 'bg-brand-500 text-white'
-                    : 'text-gray-800 dark:text-white/90'"
+                  :class="isToday(day.date) ? 'bg-brand-500 text-white' : 'text-gray-800 dark:text-white/90'"
                 >
                   {{ day.date.getDate() }}
                 </div>
               </div>
             </div>
-            <!-- Time grid -->
             <div class="relative">
               <div
                 v-for="hour in timeSlots"
@@ -206,17 +199,19 @@
                   class="relative h-16 border-r border-gray-100 last:border-r-0 dark:border-gray-800"
                   :class="{ 'bg-brand-50/20 dark:bg-brand-500/[0.03]': isToday(day.date) }"
                 >
-                  <div
+                  <button
                     v-for="event in getEventsForHour(day.date, hour)"
                     :key="event.id"
+                    type="button"
                     @click="selectedEvent = event"
-                    class="absolute inset-x-0.5 z-10 cursor-pointer overflow-hidden rounded px-1.5 py-1"
+                    class="absolute inset-x-0.5 z-10 cursor-pointer overflow-hidden rounded px-1.5 py-1 text-left"
                     :class="subjectColorClasses(event.subjectColor)"
                     :style="eventPositionStyle(event, hour)"
                   >
-                    <div class="text-[10px] font-semibold leading-tight sm:text-xs">{{ event.subjectName }}</div>
-                    <div class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ event.className }}</div>
-                  </div>
+                    <div class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ formatTime(event.startTime) }}</div>
+                    <div class="text-[10px] font-semibold leading-tight sm:text-xs">{{ event.title }}</div>
+                    <div v-if="event.className" class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ event.className }}</div>
+                  </button>
                 </div>
               </div>
             </div>
@@ -235,40 +230,31 @@
             {{ formatHour(hour) }}
           </div>
           <div class="relative h-20 p-1">
-            <div
+            <button
               v-for="event in getEventsForHour(currentDate, hour)"
               :key="event.id"
+              type="button"
               @click="selectedEvent = event"
-              class="cursor-pointer rounded-lg px-3 py-2"
+              class="w-full cursor-pointer rounded-lg px-3 py-2 text-left"
               :class="subjectColorClasses(event.subjectColor)"
-              :style="eventPositionStyleDay(event, hour)"
             >
               <div class="flex items-center gap-3">
                 <div>
-                  <div class="text-sm font-semibold">{{ event.subjectName }}</div>
+                  <div class="text-sm font-semibold">{{ event.title }}</div>
                   <div class="mt-0.5 text-xs opacity-80">
-                    {{ formatTime(event.startTime) }} – {{ formatTime(event.endTime) }}
+                    {{ formatTime(event.startTime) }} - {{ formatTime(event.endTime) }}
                   </div>
                 </div>
                 <div class="ml-auto text-right text-xs opacity-80">
                   <div>{{ event.className }}</div>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Empty state -->
-      <div
-        v-if="!loading && allEvents.length === 0"
-        class="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white py-16 dark:border-gray-800 dark:bg-gray-900"
-      >
-        <CalendarDays class="h-12 w-12 text-gray-300 dark:text-gray-600" />
-        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ $t('lessons.noLessons') }}</p>
-      </div>
-
-      <!-- Event detail modal -->
+      <!-- Schedule detail modal -->
       <div
         v-if="selectedEvent"
         class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
@@ -298,7 +284,7 @@
             <div class="flex items-center gap-3 text-sm">
               <Clock class="h-4 w-4 text-gray-400" />
               <span class="text-gray-700 dark:text-gray-300">
-                {{ formatTime(selectedEvent.startTime) }} – {{ formatTime(selectedEvent.endTime) }}
+                {{ formatTime(selectedEvent.startTime) }} - {{ formatTime(selectedEvent.endTime) }}
               </span>
             </div>
             <div class="flex items-center gap-3 text-sm">
@@ -307,7 +293,7 @@
                 {{ formatFullDate(selectedEvent.date) }}
               </span>
             </div>
-            <div class="flex items-center gap-3 text-sm">
+            <div v-if="selectedEvent.className" class="flex items-center gap-3 text-sm">
               <Users class="h-4 w-4 text-gray-400" />
               <span class="text-gray-700 dark:text-gray-300">{{ selectedEvent.className }}</span>
             </div>
@@ -315,28 +301,12 @@
               <User class="h-4 w-4 text-gray-400" />
               <span class="text-gray-700 dark:text-gray-300">{{ selectedEvent.teacher }}</span>
             </div>
-            <div v-if="selectedEvent.status" class="flex items-center gap-3 text-sm">
+            <div class="flex items-center gap-3 text-sm">
               <BookOpen class="h-4 w-4 text-gray-400" />
               <span class="text-gray-700 dark:text-gray-300">
                 {{ $t('lessons.quarter') }} {{ selectedEvent.quarter }}
-                · {{ $t('lessons.unit') }} {{ selectedEvent.unit }}
-                · {{ selectedEvent.status }}
               </span>
             </div>
-          </div>
-          <div class="mt-5 flex gap-3">
-            <router-link
-              :to="`/lessons/${selectedEvent.lessonId}`"
-              class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
-            >
-              {{ $t('common.view') }}
-            </router-link>
-            <button
-              @click="selectedEvent = null"
-              class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
-            >
-              {{ $t('common.cancel') }}
-            </button>
           </div>
         </div>
       </div>
@@ -483,7 +453,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onBeforeMount, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Plus,
@@ -498,18 +468,20 @@ import {
   Loader2,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import { getCalendarLessonsApi, createLessonApi } from '@/api/lessons'
-import { getClassGroupsApi } from '@/api/academic'
-import { getSubjectsApi, getMySubjectsApi } from '@/api/subjects'
-import type { CalendarLesson } from '@/types/lesson'
-import type { ClassGroup } from '@/types/academic'
-import type { Subject, SubjectOffering } from '@/types/subject'
+import { createLessonApi, getCalendarSubjectsApi } from '@/api/lessons'
+import { fromApiWeekday, timeToMinutes, type SubjectSchedule } from '@/api/schedule'
+import { getMySubjectsApi } from '@/api/subjects'
+import { getTeachersApi } from '@/api/teachers'
+import type { SubjectOffering } from '@/types/subject'
+import type { Teacher } from '@/types/teacher'
 import { useAuth } from '@/composables/useAuth'
+import { useCurrentQuarter } from '@/composables/useCurrentQuarter'
 import { useRouter } from 'vue-router'
 
 const { t, locale } = useI18n()
 const router = useRouter()
 const { user: authUser } = useAuth()
+const { quarter: currentQuarter, load: loadCurrentQuarter } = useCurrentQuarter()
 const canAddLesson = computed(() => !authUser.value?.roles.includes('parent'))
 
 type ViewType = 'month' | 'week' | 'day'
@@ -518,6 +490,7 @@ const currentView = ref<ViewType>('week')
 const currentDate = ref(new Date())
 const showAddModal = ref(false)
 const loading = ref(false)
+const loadingTeachers = ref(false)
 const loadingOfferings = ref(false)
 const savingLesson = ref(false)
 const teacherOfferings = ref<SubjectOffering[]>([])
@@ -578,26 +551,24 @@ async function handleCreateLesson() {
 }
 
 // Filter state
-const filterClassGroup = ref<number | 'all'>('all')
-const filterSubject = ref<number | 'all'>('all')
-const filterQuarter = ref<number | 'all'>('all')
+const filterTeacher = ref<number | null>(null)
+const filterQuarter = ref<number>(currentQuarter.value)
+const ready = ref(false)
 
 // Data from API
-const calendarLessons = ref<CalendarLesson[]>([])
-const classGroups = ref<ClassGroup[]>([])
-const subjects = ref<Subject[]>([])
+const subjectSchedules = ref<SubjectSchedule[]>([])
+const teachers = ref<Teacher[]>([])
 
 interface CalendarEvent {
-  lessonId: number
+  scheduleId: number
+  sessionId: number
   id: string
   subjectName: string
   subjectColor: string
   className: string
   title: string
   teacher: string
-  status: string
   quarter: number
-  unit: number
   date: Date
   startTime: number
   endTime: number
@@ -620,31 +591,49 @@ function hashSubjectColor(name: string): string {
   return colorPalette[Math.abs(hash) % colorPalette.length]
 }
 
-function mapLessonToEvent(lesson: CalendarLesson): CalendarEvent {
-  const lessonDate = new Date(lesson.date + 'T00:00:00')
-  const startTime = 7 + (lesson.order || 1)
-  const endTime = startTime + 1
-
-  return {
-    lessonId: lesson.id,
-    id: String(lesson.id),
-    subjectName: lesson.subject_name,
-    subjectColor: hashSubjectColor(lesson.subject_name),
-    className: lesson.class_group_name,
-    title: lesson.title,
-    teacher: lesson.teacher?.full_name || '',
-    status: lesson.status,
-    quarter: lesson.quarter,
-    unit: lesson.unit,
-    date: lessonDate,
-    startTime,
-    endTime,
-    dayOfWeek: (lessonDate.getDay() + 6) % 7,
-  }
-}
-
 const allEvents = computed<CalendarEvent[]>(() => {
-  return calendarLessons.value.map(mapLessonToEvent)
+  const { start_date, end_date } = getDateRange()
+  const start = parseLocalDate(start_date)
+  const end = parseLocalDate(end_date)
+  const selectedTeacher = teachers.value.find(teacher => teacher.id === filterTeacher.value)
+  const selectedTeacherName = selectedTeacher ? teacherName(selectedTeacher) : ''
+  const events: CalendarEvent[] = []
+
+  for (const schedule of subjectSchedules.value) {
+    for (const session of schedule.sessions ?? []) {
+      const sessionWeekday = fromApiWeekday(session.weekday)
+      for (const date of eachDate(start, end)) {
+        if (uiWeekday(date) !== sessionWeekday) continue
+
+        const subjectName = schedule.offering?.subject_name
+          || schedule.offering?.subject
+          || schedule.title
+          || schedule.description
+          || ''
+        const className = schedule.class_group?.name
+          || schedule.offering?.class_group_name
+          || schedule.offering?.class_group
+          || ''
+        events.push({
+          scheduleId: schedule.id,
+          sessionId: session.id,
+          id: `${schedule.id}-${session.id}-${formatDateParam(date)}`,
+          subjectName,
+          subjectColor: hashSubjectColor(subjectName),
+          className,
+          title: schedule.title || subjectName,
+          teacher: selectedTeacherName,
+          quarter: schedule.quarter,
+          date,
+          startTime: timeToMinutes(session.time_start),
+          endTime: timeToMinutes(session.time_end),
+          dayOfWeek: sessionWeekday - 1,
+        })
+      }
+    }
+  }
+
+  return events
 })
 
 function formatDateParam(d: Date): string {
@@ -652,6 +641,25 @@ function formatDateParam(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+function parseLocalDate(value: string): Date {
+  return new Date(`${value}T00:00:00`)
+}
+
+function eachDate(start: Date, end: Date): Date[] {
+  const dates: Date[] = []
+  const cursor = new Date(start)
+  while (cursor <= end) {
+    dates.push(new Date(cursor))
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return dates
+}
+
+function uiWeekday(date: Date): number {
+  const day = date.getDay()
+  return day === 0 ? 7 : day
 }
 
 function getDateRange(): { start_date: string; end_date: string } {
@@ -677,45 +685,65 @@ function getDateRange(): { start_date: string; end_date: string } {
   return { start_date: formatDateParam(currentDate.value), end_date: formatDateParam(currentDate.value) }
 }
 
-async function fetchLessons() {
+async function fetchSubjects() {
+  if (!filterTeacher.value) {
+    subjectSchedules.value = []
+    return
+  }
   loading.value = true
   try {
-    const range = getDateRange()
-    const params: Record<string, string | number> = { ...range }
-    if (filterClassGroup.value !== 'all') params.class_group = filterClassGroup.value
-    if (filterSubject.value !== 'all') params.subject = filterSubject.value
-    if (filterQuarter.value !== 'all') params.quarter = filterQuarter.value
-
-    const { data } = await getCalendarLessonsApi(params as any)
-    calendarLessons.value = data
+    const { data } = await getCalendarSubjectsApi({
+      teacher: filterTeacher.value,
+      quarter: filterQuarter.value,
+    })
+    subjectSchedules.value = data
   } catch (error) {
-    console.error('Failed to fetch lessons:', error)
-    calendarLessons.value = []
+    console.error('Failed to fetch calendar subjects:', error)
+    subjectSchedules.value = []
   } finally {
     loading.value = false
   }
 }
 
-async function fetchFilterData() {
+function teacherName(teacher: Teacher): string {
+  const fullName = `${teacher.user.first_name ?? ''} ${teacher.user.last_name ?? ''}`.trim()
+  return fullName || teacher.user.username
+}
+
+async function fetchTeachers() {
+  loadingTeachers.value = true
   try {
-    const [classGroupsRes, subjectsRes] = await Promise.all([
-      getClassGroupsApi(),
-      getSubjectsApi(),
-    ])
-    classGroups.value = classGroupsRes.data
-    subjects.value = subjectsRes.data
+    const { data } = await getTeachersApi()
+    teachers.value = data
+    filterTeacher.value = data[0]?.id ?? null
   } catch (error) {
-    console.error('Failed to fetch filter data:', error)
+    console.error('Failed to fetch teachers:', error)
+    teachers.value = []
+    filterTeacher.value = null
+  } finally {
+    loadingTeachers.value = false
   }
 }
 
-onMounted(() => {
-  fetchFilterData()
-  fetchLessons()
+async function initializeCalendar() {
+  loading.value = true
+  try {
+    await Promise.all([loadCurrentQuarter(), fetchTeachers()])
+    filterQuarter.value = currentQuarter.value
+    await fetchSubjects()
+    ready.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+onBeforeMount(() => {
+  initializeCalendar()
 })
 
-watch([currentDate, currentView], () => {
-  fetchLessons()
+watch([filterTeacher, filterQuarter], () => {
+  if (!ready.value) return
+  fetchSubjects()
 })
 
 function getMonday(d: Date): Date {
@@ -728,8 +756,12 @@ function getMonday(d: Date): Date {
 }
 
 const timeSlots = computed(() => {
+  const starts = allEvents.value.map(event => event.startTime)
+  const ends = allEvents.value.map(event => event.endTime)
+  const firstHour = starts.length ? Math.min(8, Math.floor(Math.min(...starts) / 60)) : 8
+  const lastHour = ends.length ? Math.max(17, Math.ceil(Math.max(...ends) / 60)) : 17
   const slots: number[] = []
-  for (let h = 8; h <= 17; h++) slots.push(h)
+  for (let h = firstHour; h <= lastHour; h++) slots.push(h)
   return slots
 })
 
@@ -753,7 +785,6 @@ const monthDays = computed(() => {
 
   const days: { date: Date; isCurrentMonth: boolean; isToday: boolean }[] = []
   const today = new Date()
-
   const startDate = new Date(firstDay)
   startDate.setDate(startDate.getDate() - startDay)
 
@@ -783,13 +814,17 @@ const weekDays = computed(() => {
 
 function getEventsForDate(date: Date): CalendarEvent[] {
   return allEvents.value.filter(
-    (e) => e.date.toDateString() === date.toDateString()
+    event => event.date.toDateString() === date.toDateString(),
   )
 }
 
 function getEventsForHour(date: Date, hour: number): CalendarEvent[] {
+  const start = hour * 60
+  const end = start + 60
   return allEvents.value.filter(
-    (e) => e.date.toDateString() === date.toDateString() && e.startTime === hour
+    event => event.date.toDateString() === date.toDateString()
+      && event.startTime >= start
+      && event.startTime < end,
   )
 }
 
@@ -806,8 +841,10 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-function formatTime(hour: number): string {
-  return `${hour.toString().padStart(2, '0')}:00`
+function formatTime(minutes: number): string {
+  const clamped = Math.max(0, Math.round(minutes))
+  const hours = Math.floor(clamped / 60)
+  return `${String(hours).padStart(2, '0')}:${String(clamped % 60).padStart(2, '0')}`
 }
 
 function formatHour(hour: number): string {
@@ -878,14 +915,10 @@ function goToToday() {
 }
 
 function eventPositionStyle(event: CalendarEvent, hour: number) {
-  const top = (event.startTime - hour) * 64
-  const height = (event.endTime - event.startTime) * 64 - 2
-  return { top: `${top}px`, height: `${height}px` }
-}
-
-function eventPositionStyleDay(event: CalendarEvent, hour: number) {
-  if (event.startTime !== hour) return { display: 'none' }
-  return {}
+  const hourStart = hour * 60
+  const top = ((event.startTime - hourStart) / 60) * 64
+  const height = ((event.endTime - event.startTime) / 60) * 64 - 2
+  return { top: `${Math.max(0, top)}px`, height: `${Math.max(18, height)}px` }
 }
 
 function subjectColorClasses(color: string): string {
