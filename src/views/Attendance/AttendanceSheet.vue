@@ -197,10 +197,19 @@
 
           <div v-else class="max-w-full overflow-x-auto custom-scrollbar">
             <table class="w-full min-w-[900px] border-collapse">
+              <colgroup>
+                <col />
+                <col
+                  v-for="index in displayColumnCount"
+                  :key="index"
+                  :style="columnWidth ? { width: columnWidth } : undefined"
+                />
+                <col />
+              </colgroup>
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
                   <th
-                    class="sticky left-0 z-10 bg-gray-50 px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400"
+                    class="sticky left-0 z-10 border-r border-gray-100 bg-gray-50 px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-400"
                   >
                     {{ t('attendance.studentsColumn') }}
                   </th>
@@ -236,6 +245,13 @@
                     <!-- Keeps every header the same height with or without a checkbox. -->
                     <span v-else class="mt-1.5 block h-3.5" aria-hidden="true"></span>
                   </th>
+                  <!-- Blank slots that hold the grid's shape; see MIN_COLUMNS. -->
+                  <th
+                    v-for="index in fillerColumns"
+                    :key="`filler-${index}`"
+                    aria-hidden="true"
+                    class="border-l border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/60"
+                  ></th>
                   <th
                     class="border-l border-gray-100 bg-gray-50 px-3 py-3 text-center text-[11px] font-medium uppercase text-gray-500 dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-400"
                   >
@@ -249,7 +265,7 @@
                   :key="student.student_id"
                   class="border-b border-gray-100 last:border-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/40"
                 >
-                  <td class="sticky left-0 z-10 bg-white px-5 py-2.5 dark:bg-gray-900">
+                  <td class="sticky left-0 z-10 border-r border-gray-100 bg-white px-5 py-2.5 dark:border-gray-800 dark:bg-gray-900">
                     <div class="flex items-center gap-3">
                       <input
                         type="checkbox"
@@ -299,6 +315,12 @@
                       @change="setPresent(lesson.sessionId, student.student_id, ($event.target as HTMLInputElement).checked)"
                     />
                   </td>
+                  <td
+                    v-for="index in fillerColumns"
+                    :key="`filler-${index}`"
+                    aria-hidden="true"
+                    class="border-l border-gray-100 dark:border-gray-800"
+                  ></td>
                   <td class="border-l border-gray-100 px-3 py-2.5 text-center dark:border-gray-800">
                     <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">
                       {{ rowCount(student.student_id) }}/{{ scheduledLessons.length }}
@@ -308,7 +330,7 @@
               </tbody>
               <tfoot>
                 <tr class="border-t border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/60">
-                  <td class="sticky left-0 z-10 bg-gray-50 px-5 py-3 text-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
+                  <td class="sticky left-0 z-10 border-r border-gray-100 bg-gray-50 px-5 py-3 text-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-400">
                     {{ t('attendance.presentPerLesson') }}
                   </td>
                   <td
@@ -318,6 +340,12 @@
                   >
                     {{ columnCount(lesson.sessionId) }}
                   </td>
+                  <td
+                    v-for="index in fillerColumns"
+                    :key="`filler-${index}`"
+                    aria-hidden="true"
+                    class="border-l border-gray-100 dark:border-gray-800"
+                  ></td>
                   <td class="border-l border-gray-100 px-3 py-3 text-center text-sm font-semibold text-gray-700 dark:border-gray-800 dark:text-gray-300">
                     {{ dayPresentCount }}
                   </td>
@@ -565,6 +593,27 @@ const dayLessons = computed<DayLesson[]>(() => {
 
 /** Every lesson of the day — what attendance is loaded and counted for. */
 const scheduledLessons = computed(() => dayLessons.value)
+
+/**
+ * A day holding one or two lessons would stretch those columns across the whole
+ * sheet and read as a pair of banners rather than a register, so the grid is
+ * padded out to this many columns and the surplus is left blank.
+ */
+const MIN_COLUMNS = 10
+
+const fillerColumns = computed(() => Math.max(0, MIN_COLUMNS - dayLessons.value.length))
+const displayColumnCount = computed(() => dayLessons.value.length + fillerColumns.value)
+
+/**
+ * Padded columns are sized by percentage rather than by a pixel width: a blank
+ * column has no content to claim space with, and a pixel minimum would widen
+ * the sheet past the scroll container for no gain. Only set while padding, so a
+ * full day keeps its natural content-driven widths. The three extra shares
+ * stand in for the sticky student column and the total column.
+ */
+const columnWidth = computed(() =>
+  fillerColumns.value ? `${(100 / (MIN_COLUMNS + 3)).toFixed(3)}%` : undefined,
+)
 
 /** Lessons the caller may actually mark and submit. */
 const editableLessons = computed(() =>

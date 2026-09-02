@@ -1,5 +1,8 @@
 <template>
-  <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+  <div
+    ref="root"
+    class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+  >
     <!-- One offering's header: the subject is the heading, the class the badge. -->
     <div class="flex flex-wrap items-start justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
       <div class="min-w-0">
@@ -56,27 +59,37 @@
 
     <!-- The gradebook: students down, assignments across in academic-date order. -->
     <div v-else class="max-w-full overflow-x-auto custom-scrollbar">
-      <table class="w-full border-collapse">
+      <table class="w-full table-fixed border-collapse" :style="{ minWidth: tableMinWidth }">
+        <colgroup>
+          <col :style="nameColumnStyle" />
+          <col v-for="index in displayColumnCount" :key="index" :style="gradeColumnStyle" />
+          <col :style="averageColumnStyle" />
+          <col />
+        </colgroup>
         <thead>
           <tr>
             <th
               scope="col"
-              class="sticky left-0 z-10 border-b border-gray-200 bg-white px-5 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400"
+              class="sticky left-0 z-10 border-b border-r border-gray-200 bg-white px-5 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400"
             >
-              {{ t('statistics.student') }}
+              <!-- The inner width is the column's, less its padding: a table
+                   cell can still be pushed past a `<col>` width by content that
+                   refuses to shrink, and truncating at a fixed width is what
+                   holds every gradebook to the same name column. -->
+              <span class="block w-[160px] truncate">{{ t('statistics.student') }}</span>
             </th>
             <th
               v-for="column in columns"
               :key="column.assignment.id"
               scope="col"
-              class="border-b border-gray-200 p-0 text-center align-bottom dark:border-gray-800"
+              class="border-b border-l border-gray-200 p-0 text-center align-bottom dark:border-gray-800"
             >
               <!-- The whole header is the row-actions target: grading, editing
                    and deleting an assignment all hang off its column now that
                    there is no per-assignment row to carry a kebab. -->
               <button
                 type="button"
-                class="block w-full min-w-[68px] px-2 py-2.5 transition"
+                class="block w-full overflow-hidden px-2 py-2.5 transition"
                 :class="menuTarget(column.assignment.id)
                   ? 'hover:bg-gray-50 dark:hover:bg-white/5'
                   : 'cursor-default'"
@@ -86,10 +99,10 @@
                 @click.stop="openMenu(column.assignment.id, $event)"
               >
                 <span class="mx-auto mb-1 block h-1 w-6 rounded-full" :class="CATEGORY_DOTS[column.assignment.category]"></span>
-                <span class="block whitespace-nowrap text-[11px] font-medium text-gray-700 dark:text-gray-300">
+                <span class="block truncate text-[11px] font-medium text-gray-700 dark:text-gray-300">
                   {{ formatAcademicDay(column.assignment.date) }}
                 </span>
-                <span class="mx-auto block max-w-[110px] truncate text-[11px] font-normal text-gray-500 dark:text-gray-400">
+                <span class="block truncate text-[11px] font-normal text-gray-500 dark:text-gray-400">
                   {{ column.assignment.title }}
                 </span>
                 <span class="block text-[10px] font-normal text-gray-400 dark:text-gray-500">
@@ -97,12 +110,21 @@
                 </span>
               </button>
             </th>
+            <!-- Blank slots that hold the grid's shape; see MIN_COLUMNS. -->
+            <th
+              v-for="index in fillerColumns"
+              :key="`filler-${index}`"
+              aria-hidden="true"
+              class="border-b border-l border-gray-200 dark:border-gray-800"
+            ></th>
             <th
               scope="col"
               class="border-b border-l border-gray-200 px-3 py-2.5 text-center text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:text-gray-400"
             >
               {{ t('assignments.averageShort') }}
             </th>
+            <!-- Takes the card's leftover width so the columns keep theirs. -->
+            <th aria-hidden="true" class="border-b border-gray-200 dark:border-gray-800"></th>
           </tr>
         </thead>
         <tbody>
@@ -115,20 +137,26 @@
                  has to be repeated on it or it reads as a gap in the row. -->
             <th
               scope="row"
-              class="sticky left-0 z-10 whitespace-nowrap border-b border-gray-100 bg-white px-5 py-2.5 text-left text-sm font-normal text-gray-800 group-hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:group-hover:bg-gray-800"
+              class="sticky left-0 z-10 border-b border-r border-gray-100 bg-white px-5 py-2.5 text-left text-sm font-normal text-gray-800 group-hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-white/90 dark:group-hover:bg-gray-800"
               :title="student.full_name"
             >
-              {{ student.full_name }}
+              <span class="block w-[160px] truncate">{{ student.full_name }}</span>
             </th>
             <td
               v-for="column in columns"
               :key="column.assignment.id"
-              class="border-b border-gray-100 px-2 py-2.5 text-center text-sm font-medium tabular-nums dark:border-gray-800"
+              class="border-b border-l border-gray-100 px-2 py-2.5 text-center text-sm font-medium tabular-nums dark:border-gray-800"
               :class="cellClass(rowIndex, column)"
               :title="cellTitle(rowIndex, column)"
             >
               {{ cellLabel(rowIndex, column) }}
             </td>
+            <td
+              v-for="index in fillerColumns"
+              :key="`filler-${index}`"
+              aria-hidden="true"
+              class="border-b border-l border-gray-100 dark:border-gray-800"
+            ></td>
             <td
               class="border-b border-l border-gray-100 px-3 py-2.5 text-center text-sm font-semibold tabular-nums dark:border-gray-800"
               :class="hasAnyGrade(rowIndex)
@@ -138,24 +166,33 @@
             >
               {{ hasAnyGrade(rowIndex) ? `${Math.round(rowMeans[rowIndex] ?? 0)}%` : '—' }}
             </td>
+            <td aria-hidden="true" class="border-b border-gray-100 dark:border-gray-800"></td>
           </tr>
         </tbody>
         <tfoot>
           <tr>
             <th
               scope="row"
-              class="sticky left-0 z-10 whitespace-nowrap bg-gray-50 px-5 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:bg-white/5 dark:text-gray-400"
+              class="sticky left-0 z-10 border-r border-gray-100 bg-gray-50 px-5 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:bg-white/5 dark:text-gray-400"
+              :title="t('assignments.classAverage')"
             >
-              {{ t('assignments.classAverage') }}
+              <span class="block w-[160px] truncate">{{ t('assignments.classAverage') }}</span>
             </th>
             <td
               v-for="column in columns"
               :key="column.assignment.id"
-              class="bg-gray-50 px-2 py-2.5 text-center text-xs font-semibold tabular-nums text-gray-700 dark:bg-white/5 dark:text-gray-300"
+              class="border-l border-gray-100 bg-gray-50 px-2 py-2.5 text-center text-xs font-semibold tabular-nums text-gray-700 dark:border-gray-800 dark:bg-white/5 dark:text-gray-300"
             >
               {{ column.assignment.graded_count ? `${Math.round(columnMeans[column.index] ?? 0)}%` : '—' }}
             </td>
-            <td class="bg-gray-50 px-3 py-2.5 dark:bg-white/5"></td>
+            <td
+              v-for="index in fillerColumns"
+              :key="`filler-${index}`"
+              aria-hidden="true"
+              class="border-l border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-white/5"
+            ></td>
+            <td class="border-l border-gray-100 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-white/5"></td>
+            <td aria-hidden="true" class="bg-gray-50 dark:bg-white/5"></td>
           </tr>
         </tfoot>
       </table>
@@ -174,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CircleAlert, ClipboardList, TriangleAlert, Users } from 'lucide-vue-next'
 import {
@@ -263,6 +300,83 @@ const columns = computed<Column[]>(() =>
       (a, b) =>
         a.assignment.date.localeCompare(b.assignment.date) || a.assignment.id - b.assignment.id,
     ),
+)
+
+/**
+ * Column widths are fixed rather than content-driven. The page stacks one table
+ * per offering, and widths that each table works out for itself — a name column
+ * sized to its own longest name, grade columns sharing out whatever is left —
+ * leave the grids visibly out of step down the page. Pinning them means every
+ * gradebook rules its columns in the same places.
+ */
+const NAME_COLUMN_WIDTH = 200
+const AVERAGE_COLUMN_WIDTH = 72
+/** The narrowest a grade column is allowed to get; see `gradeColumnWidth`. */
+const MIN_GRADE_COLUMN_WIDTH = 80
+/** Held to on a card too narrow to fit that many columns, which then scrolls. */
+const MIN_GRADE_COLUMNS = 10
+
+/** The card's own width, watched so the grid can be cut to fit it. */
+const cardWidth = ref(0)
+const root = ref<HTMLElement | null>(null)
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  resizeObserver = new ResizeObserver(entries => {
+    cardWidth.value = entries[0]?.contentRect.width ?? 0
+  })
+  if (root.value) resizeObserver.observe(root.value)
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+})
+
+/** What the grade columns have to share, once the fixed two have taken theirs. */
+const gradeSpace = computed(() =>
+  Math.max(0, cardWidth.value - NAME_COLUMN_WIDTH - AVERAGE_COLUMN_WIDTH),
+)
+
+/**
+ * A gradebook holding one or two assignments would stretch those columns across
+ * the whole table and read as a pair of banners rather than a register, so the
+ * grid is padded out with blank columns. It is padded to however many the card
+ * can hold rather than to a set number, because the surplus has to go somewhere
+ * and a single wide column at the end is exactly what the padding is avoiding.
+ */
+const gradeColumnCount = computed(() =>
+  Math.max(MIN_GRADE_COLUMNS, Math.floor(gradeSpace.value / MIN_GRADE_COLUMN_WIDTH)),
+)
+
+/**
+ * Divided from the count the *card* holds, not from the count this table shows,
+ * so a gradebook with more assignments than fit keeps the same column width as
+ * the padded ones above and below it — it simply runs off the edge and scrolls.
+ */
+const gradeColumnWidth = computed(() =>
+  Math.max(MIN_GRADE_COLUMN_WIDTH, Math.floor(gradeSpace.value / gradeColumnCount.value)),
+)
+
+const displayColumnCount = computed(() =>
+  Math.max(columns.value.length, gradeColumnCount.value),
+)
+const fillerColumns = computed(() => displayColumnCount.value - columns.value.length)
+
+const nameColumnStyle = { width: `${NAME_COLUMN_WIDTH}px` }
+const averageColumnStyle = { width: `${AVERAGE_COLUMN_WIDTH}px` }
+const gradeColumnStyle = computed(() => ({ width: `${gradeColumnWidth.value}px` }))
+
+/**
+ * `table-layout: fixed` is what makes the widths above stick — under the
+ * default algorithm a `<col>` width is only a minimum, and a long assignment
+ * title or student name still widens its column. Fixed layout in turn needs a
+ * floor, or the columns would be squeezed below their widths on a narrow card
+ * instead of scrolling.
+ */
+const tableMinWidth = computed(
+  () =>
+    `${NAME_COLUMN_WIDTH + displayColumnCount.value * gradeColumnWidth.value + AVERAGE_COLUMN_WIDTH}px`,
 )
 
 const assignmentById = computed(
