@@ -405,7 +405,9 @@ const menuGroups = computed<MenuGroup[]>(() => {
           },
         ]
       : []),
-    ...(isAdmin.value
+    // Homeroom teachers get in too — the free entries on their class's week
+    // (breaks, clubs) are theirs to place.
+    ...(isAdmin.value || roles.value?.includes('homeroom_teacher')
       ? [
           {
             icon: CalendarCog,

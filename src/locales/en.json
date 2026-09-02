@@ -80,7 +80,8 @@
     "scheduleBuilder": {
         "title": "Schedule Builder",
         "subtitle": "Pick a class and a quarter, then drag across a day to place a lesson, a club or a break.",
-        "adminsOnly": "This page is only available for administrators.",
+        "subtitleHomeroom": "Pick a quarter, then drag across a day to place a break, a club or another entry on your class's week.",
+        "noAccess": "This page is only available for administrators and homeroom teachers.",
         "classGroup": "Class",
         "quarter": "Quarter",
         "quarterN": "Quarter {n}",

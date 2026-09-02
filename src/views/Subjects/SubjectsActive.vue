@@ -100,7 +100,7 @@
                   {{ $t('subjects.language') }}
                 </dt>
                 <dd class="mt-1 text-sm text-gray-700 dark:text-gray-300">
-                  {{ $t('subjects.languages.' + subject.language_group.toLowerCase()) }}
+                  {{ formatLanguageGroup(subject.language_group, t) }}
                 </dd>
               </div>
               <div class="min-w-0">
@@ -108,10 +108,7 @@
                   {{ $t('subjects.addedBy') }}
                 </dt>
                 <dd class="mt-1 truncate text-sm text-gray-700 dark:text-gray-300">
-                  <template v-if="subject.added_by.first_name && subject.added_by.last_name">
-                    {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
-                  </template>
-                  <template v-else>{{ subject.added_by.username }}</template>
+                  {{ formatUserName(subject.added_by) }}
                 </dd>
               </div>
             </dl>
@@ -215,7 +212,7 @@
                   </td>
                   <td class="px-5 py-4">
                     <span class="text-sm text-gray-700 dark:text-gray-300">
-                      {{ $t('subjects.languages.' + subject.language_group.toLowerCase()) }}
+                      {{ formatLanguageGroup(subject.language_group, t) }}
                     </span>
                   </td>
                   <td class="px-5 py-4">
@@ -227,15 +224,7 @@
                   </td>
                   <td class="px-5 py-4">
                     <span class="text-sm text-gray-700 dark:text-gray-300">
-                      <div
-                        v-if="subject.added_by.first_name && subject.added_by.last_name"
-                        class="flex items-center gap-2"
-                      >
-                        {{ subject.added_by.first_name }} {{ subject.added_by.last_name }}
-                      </div>
-                      <div v-else class="flex items-center gap-2">
-                        {{ subject.added_by.username }}
-                      </div>
+                      {{ formatUserName(subject.added_by) }}
                     </span>
                   </td>
                   <td class="px-5 py-4 text-right">
@@ -446,6 +435,8 @@ import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
 import type { Subject, LanguageGroup, SubjectStatus } from '@/types/subject'
 import type { AcademicYear, ClassGroup } from '@/types/academic'
 import { useAuth } from '@/composables/useAuth'
+import { formatUserName } from '@/utils/userName'
+import { formatLanguageGroup } from '@/utils/subjectLanguage'
 
 const { t } = useI18n()
 const { user: authUser } = useAuth()
