@@ -494,6 +494,7 @@ const loadingTeachers = ref(false)
 const loadingOfferings = ref(false)
 const savingLesson = ref(false)
 const teacherOfferings = ref<SubjectOffering[]>([])
+type SubjectWithOfferings = { offerings?: SubjectOffering[] }
 const lessonForm = ref({
   offering: null as number | null,
   title: '',
@@ -512,8 +513,9 @@ watch(showAddModal, async (val) => {
       const { data } = await getMySubjectsApi({ status: 'active' })
       const offerings: SubjectOffering[] = []
       for (const subj of data) {
-        if ('offerings' in subj && Array.isArray((subj as any).offerings)) {
-          for (const o of (subj as any).offerings) {
+        const subjectWithOfferings = subj as typeof subj & SubjectWithOfferings
+        if (Array.isArray(subjectWithOfferings.offerings)) {
+          for (const o of subjectWithOfferings.offerings) {
             offerings.push(o)
           }
         }

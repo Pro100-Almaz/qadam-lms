@@ -33,11 +33,11 @@ export interface ForeignScheduleSession extends ScheduleSession {
 export interface ScheduleOffering {
   id: number
   subject: string
-  subject_name?: string
+  subject_name: string
   class_group: string
-  class_group_name?: string
+  class_group_name: string
   academic_year: string
-  academic_year_label?: string
+  academic_year_label: string
 }
 
 export interface ScheduleClassGroup {
@@ -80,6 +80,7 @@ export interface SubjectScheduleFilters {
 /** `offering` and `description` are alternatives — one of the two is required. */
 export interface SubjectSchedulePayload {
   offering?: number
+  class_group?: number
   description?: string
   quarter: number
 }

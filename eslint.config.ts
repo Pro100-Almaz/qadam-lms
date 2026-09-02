@@ -20,5 +20,17 @@ export default defineConfigWithVueTs(
 
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
+  {
+    name: 'app/project-rule-overrides',
+    rules: {
+      '@typescript-eslint/no-empty-object-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'vue/block-lang': 'off',
+      'vue/multi-word-component-names': 'off',
+      'vue/no-deprecated-v-on-native-modifier': 'off',
+    },
+  },
   skipFormatting,
 )
