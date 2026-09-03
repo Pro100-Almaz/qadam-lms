@@ -857,6 +857,7 @@
     },
     "lessons": {
         "title": "Сабақ кестесі",
+        "teacherSchedule": "Мұғалімдер кестесі",
         "addNew": "Сабақ қосу",
         "subject": "Пән",
         "class": "Сынып",
@@ -878,6 +879,8 @@
         "allQuarters": "Барлық тоқсандар",
         "quarter": "Тоқсан",
         "noLessons": "Сабақтар табылмады",
+        "noScheduledSubjects": "Кестеде пәндер табылмады",
+        "noTeachers": "Мұғалімдер табылмады",
         "createModalPlaceholder": "Сабақ құру формасы жақында қолжетімді болады.",
         "lessonDetail": "Сабақ мәліметтері",
         "topics": "Тақырыптар",
