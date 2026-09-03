@@ -18,9 +18,32 @@
           {{ t('assignments.gradebookMeta', { students: studentCount, assignments: columns.length }) }}
         </p>
       </div>
-      <p v-if="columns.length" class="text-xs text-gray-400 dark:text-gray-500">
-        {{ t('assignments.gradebookHint') }}
-      </p>
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <p v-if="columns.length && !dirtyChanges.length" class="text-xs text-gray-400 dark:text-gray-500">
+          {{ t('assignments.gradebookHint') }}
+        </p>
+        <template v-if="dirtyChanges.length">
+          <span class="text-xs font-medium text-brand-600 dark:text-brand-400">
+            {{ t('assignments.inlinePendingCount', { count: dirtyChanges.length }) }}
+          </span>
+          <button
+            type="button"
+            :disabled="saving"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+            @click="resetDrafts"
+          >
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            type="button"
+            :disabled="saving || hasValidationErrors"
+            class="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-600 disabled:opacity-50"
+            @click="confirmOpen = true"
+          >
+            {{ saving ? t('common.loading') : t('common.save') }}
+          </button>
+        </template>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -145,11 +168,56 @@
             <td
               v-for="column in columns"
               :key="column.assignment.id"
-              class="border-b border-l border-gray-100 px-2 py-2.5 text-center text-sm font-medium tabular-nums dark:border-gray-800"
-              :class="cellClass(rowIndex, column)"
+              class="relative border-b border-l border-gray-100 px-2 py-2.5 text-center text-sm font-medium tabular-nums dark:border-gray-800"
+              :class="editableCell(column)
+                ? 'text-gray-700 dark:text-gray-200'
+                : cellClass(rowIndex, column)"
               :title="cellTitle(rowIndex, column)"
+              @click.stop
             >
-              {{ cellLabel(rowIndex, column) }}
+              <template v-if="editableCell(column)">
+                <input
+                  :value="draftValue(student.id, column.assignment.id)"
+                  type="number"
+                  min="0"
+                  :max="column.assignment.max_grade"
+                  inputmode="numeric"
+                  class="mx-auto h-8 w-14 rounded-md border px-2 text-center text-sm font-medium tabular-nums outline-none transition dark:bg-gray-900"
+                  :class="cellError(student.id, column.assignment.id)
+                    ? 'border-error-300 text-error-600 focus:border-error-400 dark:border-error-500/50 dark:text-error-400'
+                    : isDirtyCell(student.id, column.assignment.id)
+                      ? 'border-brand-300 bg-brand-50 text-brand-700 focus:border-brand-500 dark:border-brand-500/50 dark:bg-brand-500/10 dark:text-brand-300'
+                      : 'border-transparent bg-transparent hover:border-gray-200 focus:border-brand-500 dark:hover:border-gray-700'"
+                  :aria-label="cellInputLabel(student.full_name, column.assignment.title)"
+                  @input="setDraftValue(student.id, column.assignment.id, ($event.target as HTMLInputElement).value)"
+                  @focus="activeCellKey = cellKey(column.assignment.id, student.id)"
+                />
+                <p
+                  v-if="cellError(student.id, column.assignment.id)"
+                  class="mt-1 text-[10px] font-medium text-error-500"
+                >
+                  {{ cellError(student.id, column.assignment.id) }}
+                </p>
+                <div
+                  v-if="activeCellKey === cellKey(column.assignment.id, student.id) && isDirtyCell(student.id, column.assignment.id)"
+                  class="absolute left-1/2 top-[calc(100%-2px)] z-30 w-56 -translate-x-1/2 rounded-lg border border-gray-200 bg-white p-3 text-left shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+                  @click.stop
+                >
+                  <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-300">
+                    {{ t('assignments.commentFor', { name: student.full_name }) }}
+                  </label>
+                  <textarea
+                    :value="draftComment(student.id, column.assignment.id)"
+                    rows="2"
+                    class="w-full resize-none rounded-md border border-gray-300 px-2.5 py-2 text-xs text-gray-700 outline-none transition focus:border-brand-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
+                    :placeholder="t('assignments.commentPlaceholder')"
+                    @input="setDraftComment(student.id, column.assignment.id, ($event.target as HTMLTextAreaElement).value)"
+                  ></textarea>
+                </div>
+              </template>
+              <template v-else>
+                {{ cellLabel(rowIndex, column) }}
+              </template>
             </td>
             <td
               v-for="index in fillerColumns"
@@ -207,6 +275,65 @@
       <TriangleAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <span>{{ t('statistics.truncatedAssignments') }}</span>
     </p>
+
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="confirmOpen"
+          class="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
+              {{ t('assignments.inlineConfirmTitle') }}
+            </h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {{ t('assignments.inlineConfirmSubtitle', { count: dirtyChanges.length }) }}
+            </p>
+            <div class="mt-4 max-h-80 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-800">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                  <tr>
+                    <th class="px-3 py-2 font-medium">{{ t('statistics.student') }}</th>
+                    <th class="px-3 py-2 font-medium">{{ t('assignments.assignment') }}</th>
+                    <th class="px-3 py-2 font-medium">{{ t('assignments.inlineOldValue') }}</th>
+                    <th class="px-3 py-2 font-medium">{{ t('assignments.inlineNewValue') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                  <tr v-for="change in dirtyChanges" :key="change.key">
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ change.studentName }}</td>
+                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ change.assignmentTitle }}</td>
+                    <td class="px-3 py-2 text-gray-500 dark:text-gray-400">{{ change.oldDisplay }}</td>
+                    <td class="px-3 py-2 text-gray-800 dark:text-white/90">{{ change.newDisplay }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p v-if="submitError" class="mt-3 text-sm text-error-600 dark:text-error-400">{{ submitError }}</p>
+            <div class="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                :disabled="saving"
+                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+                @click="confirmOpen = false"
+              >
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                type="button"
+                :disabled="saving"
+                class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-600 disabled:opacity-50"
+                @click="saveInlineGrades"
+              >
+                {{ saving ? t('common.loading') : t('common.confirm') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -220,7 +347,15 @@ import {
   type AssignmentHeatmapResponse,
   type HeatmapAssignment,
 } from '@/api/analytics'
-import type { SubjectAssignment, SubjectAssignmentCategory } from '@/api/subjectAssignments'
+import {
+  createAssignmentGradeApi,
+  deleteSubjectGradeApi,
+  getAssignmentGradesApi,
+  updateSubjectGradeApi,
+  type SubjectAssignment,
+  type SubjectAssignmentCategory,
+} from '@/api/subjectAssignments'
+import { useToast } from '@/composables/useToast'
 import { formatAcademicDay } from '@/utils/gradeDates'
 
 /**
@@ -253,6 +388,7 @@ const props = defineProps<{
   category?: SubjectAssignmentCategory | null
   dateFrom?: string
   dateTo?: string
+  writableAssignmentIds?: number[]
   /**
    * Bumped by the parent when this offering's marks changed under it. Reloading
    * on every save school-wide would refetch every visible table instead.
@@ -262,9 +398,32 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'assignment-menu', assignment: SubjectAssignment, event: MouseEvent): void
+  (e: 'saved'): void
 }>()
 
 const { t } = useI18n()
+const { success } = useToast()
+
+interface GradeCellRecord {
+  gradeId: number | null
+  value: string
+  comments: string
+}
+
+interface DirtyChange {
+  key: string
+  assignmentId: number
+  studentId: number
+  gradeId: number | null
+  studentName: string
+  assignmentTitle: string
+  oldValue: string
+  newValue: string
+  oldComments: string
+  newComments: string
+  oldDisplay: string
+  newDisplay: string
+}
 
 /** A column, paired with its index into the server's matrices. */
 interface Column {
@@ -282,6 +441,13 @@ const CATEGORY_DOTS: Record<AssignmentCategory, string> = {
 const data = ref<AssignmentHeatmapResponse | null>(null)
 const loading = ref(true)
 const loadError = ref(false)
+const gradeRecords = ref<Record<string, GradeCellRecord>>({})
+const draftValues = ref<Record<string, string>>({})
+const draftComments = ref<Record<string, string>>({})
+const activeCellKey = ref<string | null>(null)
+const confirmOpen = ref(false)
+const saving = ref(false)
+const submitError = ref('')
 
 const students = computed(() => data.value?.students ?? [])
 const rowMeans = computed(() => data.value?.row_means ?? [])
@@ -326,11 +492,13 @@ onMounted(() => {
     cardWidth.value = entries[0]?.contentRect.width ?? 0
   })
   if (root.value) resizeObserver.observe(root.value)
+  document.addEventListener('click', closeActiveCell)
 })
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   resizeObserver = null
+  document.removeEventListener('click', closeActiveCell)
 })
 
 /** What the grade columns have to share, once the fixed two have taken theirs. */
@@ -383,6 +551,56 @@ const assignmentById = computed(
   () => new Map(props.assignments.map(assignment => [assignment.id, assignment])),
 )
 
+const writableIds = computed(() => new Set(props.writableAssignmentIds ?? []))
+
+const dirtyChanges = computed<DirtyChange[]>(() => {
+  const changes: DirtyChange[] = []
+  columns.value.forEach(column => {
+    const assignment = assignmentById.value.get(column.assignment.id)
+    if (!assignment || !writableIds.value.has(assignment.id)) return
+    students.value.forEach(student => {
+      const key = cellKey(assignment.id, student.id)
+      const original = gradeRecords.value[key] ?? { gradeId: null, value: '', comments: '' }
+      const nextValue = (draftValues.value[key] ?? '').trim()
+      const nextComments = (draftComments.value[key] ?? '').trim()
+      if (nextValue === original.value && nextComments === original.comments) return
+      changes.push({
+        key,
+        assignmentId: assignment.id,
+        studentId: student.id,
+        gradeId: original.gradeId,
+        studentName: student.full_name,
+        assignmentTitle: assignment.title,
+        oldValue: original.value,
+        newValue: nextValue,
+        oldComments: original.comments,
+        newComments: nextComments,
+        oldDisplay: displayChange(original.value, original.comments, assignment.max_grade),
+        newDisplay: displayChange(nextValue, nextComments, assignment.max_grade),
+      })
+    })
+  })
+  return changes
+})
+
+const validationErrors = computed<Record<string, string>>(() => {
+  const errors: Record<string, string> = {}
+  columns.value.forEach(column => {
+    students.value.forEach(student => {
+      const key = cellKey(column.assignment.id, student.id)
+      const raw = (draftValues.value[key] ?? '').trim()
+      if (raw === '') return
+      const parsed = Number(raw)
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > column.assignment.max_grade) {
+        errors[key] = t('assignments.gradeRange', { max: column.assignment.max_grade })
+      }
+    })
+  })
+  return errors
+})
+
+const hasValidationErrors = computed(() => Object.keys(validationErrors.value).length > 0)
+
 /** The full record behind a column, or null when the list did not carry it. */
 function menuTarget(assignmentId: number): SubjectAssignment | null {
   return assignmentById.value.get(assignmentId) ?? null
@@ -391,6 +609,71 @@ function menuTarget(assignmentId: number): SubjectAssignment | null {
 function openMenu(assignmentId: number, event: MouseEvent) {
   const assignment = menuTarget(assignmentId)
   if (assignment) emit('assignment-menu', assignment, event)
+}
+
+function cellKey(assignmentId: number, studentId: number): string {
+  return `${assignmentId}:${studentId}`
+}
+
+function editableCell(column: Column): boolean {
+  return writableIds.value.has(column.assignment.id)
+}
+
+function draftValue(studentId: number, assignmentId: number): string {
+  return draftValues.value[cellKey(assignmentId, studentId)] ?? ''
+}
+
+function draftComment(studentId: number, assignmentId: number): string {
+  return draftComments.value[cellKey(assignmentId, studentId)] ?? ''
+}
+
+function setDraftValue(studentId: number, assignmentId: number, value: string) {
+  const key = cellKey(assignmentId, studentId)
+  draftValues.value = { ...draftValues.value, [key]: value }
+  activeCellKey.value = key
+}
+
+function setDraftComment(studentId: number, assignmentId: number, value: string) {
+  const key = cellKey(assignmentId, studentId)
+  draftComments.value = { ...draftComments.value, [key]: value }
+}
+
+function closeActiveCell() {
+  activeCellKey.value = null
+}
+
+function isDirtyCell(studentId: number, assignmentId: number): boolean {
+  const key = cellKey(assignmentId, studentId)
+  const original = gradeRecords.value[key] ?? { value: '', comments: '' }
+  return (draftValues.value[key] ?? '').trim() !== original.value
+    || (draftComments.value[key] ?? '').trim() !== original.comments
+}
+
+function cellError(studentId: number, assignmentId: number): string {
+  return validationErrors.value[cellKey(assignmentId, studentId)] ?? ''
+}
+
+function cellInputLabel(studentName: string, assignmentTitle: string): string {
+  return `${studentName}: ${assignmentTitle}`
+}
+
+function displayChange(value: string, comments: string, maxGrade: number): string {
+  const grade = value ? `${value} / ${maxGrade}` : '—'
+  return comments ? `${grade} · ${comments}` : grade
+}
+
+function resetDrafts() {
+  const nextValues: Record<string, string> = {}
+  const nextComments: Record<string, string> = {}
+  Object.entries(gradeRecords.value).forEach(([key, record]) => {
+    nextValues[key] = record.value
+    nextComments[key] = record.comments
+  })
+  draftValues.value = nextValues
+  draftComments.value = nextComments
+  activeCellKey.value = null
+  submitError.value = ''
+  confirmOpen.value = false
 }
 
 function isGraded(rowIndex: number, column: Column): boolean {
@@ -461,6 +744,7 @@ function rowMeanTitle(rowIndex: number): string {
 async function load() {
   loading.value = true
   loadError.value = false
+  submitError.value = ''
   try {
     const { data: response } = await getAssignmentHeatmapApi(props.offeringId, {
       category: props.category || undefined,
@@ -468,12 +752,108 @@ async function load() {
       date_to: props.dateTo || undefined,
     })
     data.value = response
+    await loadGradeRecords(response)
+    resetDrafts()
   } catch {
     data.value = null
+    gradeRecords.value = {}
+    resetDrafts()
     loadError.value = true
   } finally {
     loading.value = false
   }
+}
+
+async function loadGradeRecords(response: AssignmentHeatmapResponse) {
+  const records: Record<string, GradeCellRecord> = {}
+  response.assignments.forEach((assignment, columnIndex) => {
+    response.students.forEach((student, rowIndex) => {
+      const raw = response.raw_grades[rowIndex]?.[columnIndex]
+      records[cellKey(assignment.id, student.id)] = {
+        gradeId: null,
+        value: raw === null || raw === undefined ? '' : String(raw),
+        comments: '',
+      }
+    })
+  })
+
+  const editableAssignments = response.assignments.filter(assignment => writableIds.value.has(assignment.id))
+  const details = await Promise.allSettled(
+    editableAssignments.map(assignment =>
+      getAssignmentGradesApi(assignment.id, { page_size: Math.max(200, response.students.length) }),
+    ),
+  )
+
+  details.forEach(result => {
+    if (result.status === 'rejected') return
+    result.value.data.results.forEach(grade => {
+      records[cellKey(grade.assignment.id, grade.student)] = {
+        gradeId: grade.id,
+        value: grade.grade === null || grade.grade === undefined ? '' : String(grade.grade),
+        comments: grade.comments ?? '',
+      }
+    })
+  })
+  gradeRecords.value = records
+}
+
+async function saveInlineGrades() {
+  if (hasValidationErrors.value || !dirtyChanges.value.length) return
+
+  saving.value = true
+  submitError.value = ''
+  const changes = dirtyChanges.value
+  const results = await Promise.allSettled(
+    changes.map(change => {
+      if (change.newValue === '' && change.newComments === '') {
+        return change.gradeId === null ? Promise.resolve() : deleteSubjectGradeApi(change.gradeId)
+      }
+      const grade = change.newValue === '' ? null : Number(change.newValue)
+      return change.gradeId === null
+        ? createAssignmentGradeApi(change.assignmentId, {
+            student: change.studentId,
+            grade,
+            comments: change.newComments,
+          })
+        : updateSubjectGradeApi(change.gradeId, {
+            grade,
+            comments: change.newComments,
+          })
+    }),
+  )
+
+  let failed = 0
+  const nextRecords = { ...gradeRecords.value }
+  results.forEach((result, index) => {
+    const change = changes[index]
+    if (result.status === 'rejected') {
+      failed += 1
+      return
+    }
+    if (change.newValue === '' && change.newComments === '') {
+      nextRecords[change.key] = { gradeId: null, value: '', comments: '' }
+      return
+    }
+    const created = (result.value as { data?: { id?: number } } | undefined)?.data
+    nextRecords[change.key] = {
+      gradeId: change.gradeId ?? created?.id ?? null,
+      value: change.newValue,
+      comments: change.newComments,
+    }
+  })
+
+  gradeRecords.value = nextRecords
+  saving.value = false
+
+  if (failed) {
+    submitError.value = t('assignments.gradesPartialError', { count: failed })
+    confirmOpen.value = true
+    return
+  }
+
+  resetDrafts()
+  success(t('assignments.gradesSaved'))
+  emit('saved')
 }
 
 watch(

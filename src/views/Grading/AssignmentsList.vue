@@ -140,7 +140,9 @@
           :date-from="filters.dateFrom"
           :date-to="filters.dateTo"
           :reload-token="reloadTokens[group.offeringId] ?? 0"
+          :writable-assignment-ids="writableAssignmentIds(group)"
           @assignment-menu="toggleMenu"
+          @saved="reloadOffering(group.offeringId)"
         />
       </div>
 
@@ -302,18 +304,21 @@ import DatePicker from '@/components/ui/DatePicker.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
 import {
+  getAssignmentOfferingsApi,
+  type AssignmentOfferingPickerItem,
+} from '@/api/analytics'
+import {
   SUBJECT_ASSIGNMENT_CATEGORIES,
   deleteSubjectAssignmentApi,
   getSubjectAssignmentsApi,
   type SubjectAssignment,
   type SubjectAssignmentCategory,
 } from '@/api/subjectAssignments'
-import { getMySubjectsApi } from '@/api/subjects'
 import { useAssignmentPermissions } from '@/composables/useAssignmentPermissions'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { matchSubjectNames } from '@/composables/useSubjectNameLookup'
 import { useToast } from '@/composables/useToast'
-import type { Subject } from '@/types/subject'
+import type { LanguageGroup, Subject } from '@/types/subject'
 
 const { t } = useI18n()
 const { success } = useToast()
@@ -324,7 +329,6 @@ const {
   loadOfferings,
   offeringsLoading,
   subjectGroups,
-  classOptions: teacherClassOptions,
   teacherClasses,
 } = useAssignmentPermissions()
 
@@ -338,10 +342,9 @@ interface OfferingGroup {
 
 /** Every assignment matching the filters, across every page of the list. */
 const assignments = ref<SubjectAssignment[]>([])
+const assignmentOfferings = ref<AssignmentOfferingPickerItem[]>([])
 const loading = ref(true)
 const loadError = ref(false)
-
-const subjects = ref<Subject[]>([])
 
 const filters = ref({
   subject: null as number | string | null,
@@ -365,6 +368,7 @@ const pageSize = ref(5)
 const groups = computed<OfferingGroup[]>(() => {
   const grouped = new Map<number, OfferingGroup>()
   assignments.value.forEach(assignment => {
+    if (!heatmapOfferingIds.value.has(assignment.offering_id)) return
     const existing = grouped.get(assignment.offering_id)
     if (existing) {
       existing.assignments.push(assignment)
@@ -400,6 +404,12 @@ const categoryFilter = computed<SubjectAssignmentCategory | null>(
 const pagedGroups = computed(() =>
   groups.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value),
 )
+
+function writableAssignmentIds(group: OfferingGroup): number[] {
+  return group.assignments
+    .filter(assignment => canManage(assignment))
+    .map(assignment => assignment.id)
+}
 
 /**
  * Per-offering reload counters. A table holds its own grid, so a save has to
@@ -532,13 +542,46 @@ async function confirmDelete() {
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
 
-const subjectOptions = computed<SelectOption[]>(() =>
-  subjects.value.map(subject => ({ value: subject.id, label: subject.name })),
+const heatmapOfferings = computed(() =>
+  assignmentOfferings.value.filter(offering => offering.can_heatmap),
 )
 
-/** A teacher filters within the classes they are assigned to. */
+const heatmapOfferingIds = computed(() =>
+  new Set(heatmapOfferings.value.map(offering => offering.id)),
+)
+
+const subjectOptions = computed<SelectOption[]>(() =>
+  [...new Map(
+    heatmapOfferings.value.map(offering => [
+      offering.subject_id,
+      { value: offering.subject_id, label: offering.subject },
+    ]),
+  ).values()].sort((a, b) => a.label.localeCompare(b.label)),
+)
+
+/** A teacher filters within heatmap-readable classes. */
 const classOptions = computed<SelectOption[]>(() =>
-  teacherClassOptions.value.map(option => ({ value: option.classGroupId, label: option.displayName })),
+  [...new Map(
+    heatmapOfferings.value.map(offering => [
+      offering.class_group_id,
+      { value: offering.class_group_id, label: offering.class_group },
+    ]),
+  ).values()].sort((a, b) => a.label.localeCompare(b.label)),
+)
+
+const subjects = computed<Subject[]>(() =>
+  [...new Map(
+    heatmapOfferings.value.map(offering => [
+      offering.subject_id,
+      {
+        id: offering.subject_id,
+        name: offering.subject,
+        language_group: offering.subject_language_group as LanguageGroup,
+        status: 'active' as const,
+        added_by: null,
+      },
+    ]),
+  ).values()],
 )
 
 /**
@@ -568,13 +611,11 @@ const reportClasses = computed<GradeReportClassOption[]>(() =>
  * list is the boundary, not just a convenience.
  */
 const statisticsOfferings = computed<StatisticsOfferingOption[]>(() =>
-  subjectGroups.value.flatMap(group =>
-    group.offerings.map(offering => ({
-      offeringId: offering.offeringId,
-      label: group.subjectName,
-      sublabel: offering.displayName,
-    })),
-  ),
+  heatmapOfferings.value.map(offering => ({
+    offeringId: offering.id,
+    label: offering.subject,
+    sublabel: offering.class_group,
+  })),
 )
 
 const categoryOptions = computed<SelectOption[]>(() =>
@@ -666,12 +707,19 @@ watch(
   },
 )
 
-onMounted(() => {
-  fetchAssignments()
-  loadFilterOptions()
+onMounted(async () => {
   document.addEventListener('click', closeMenu)
   window.addEventListener('scroll', closeMenu, true)
   window.addEventListener('resize', closeMenu)
+
+  try {
+    await loadFilterOptions()
+    await fetchAssignments()
+  } catch {
+    assignments.value = []
+    loadError.value = true
+    loading.value = false
+  }
 })
 
 onBeforeUnmount(() => {
@@ -680,17 +728,15 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', closeMenu)
 })
 
-/** Both option lists come from the teacher's own offerings. */
-function loadFilterOptions() {
-  getMySubjectsApi({ status: 'active' })
-    .then(({ data }) => {
-      subjects.value = data
-    })
-    .catch(() => {
-      subjects.value = []
-    })
-
-  // Also decides which rows may be edited, graded and deleted.
-  loadOfferings()
+/**
+ * The analytics picker says which offerings can safely mount a heatmap table.
+ * The teacher-offering helper still owns create/edit/delete permission checks.
+ */
+async function loadFilterOptions() {
+  const [pickerResult] = await Promise.all([
+    getAssignmentOfferingsApi(),
+    loadOfferings(),
+  ])
+  assignmentOfferings.value = pickerResult.data.offerings
 }
 </script>
