@@ -212,11 +212,9 @@ import {
   LayoutDashboard,
   Briefcase,
   Puzzle,
-  ClipboardCheck,
   CalendarCog,
   CalendarClock,
   NotebookPen,
-  SquareCheckBig,
 } from "lucide-vue-next";
 
 import {
@@ -389,19 +387,13 @@ const menuGroups = computed<MenuGroup[]>(() => {
     ...(isTeacher.value
       ? [
           {
-            icon: ClipboardCheck,
-            name: t("nav.attendance"),
-            path: "/attendance",
-          },
-          {
-            icon: NotebookPen,
-            name: t("nav.homeworks"),
-            path: "/homeworks",
-          },
-          {
-            icon: SquareCheckBig,
-            name: t("nav.grading"),
-            path: "/grading",
+            icon: ClipboardList,
+            name: t("nav.lessonItems"),
+            subItems: [
+              { name: t("nav.attendance"), path: "/attendance" },
+              { name: t("nav.grading"), path: "/grading" },
+              { name: t("nav.homeworks"), path: "/homeworks" },
+            ],
           },
         ]
       : []),
@@ -470,7 +462,8 @@ const menuGroups = computed<MenuGroup[]>(() => {
 const isActive = (path?: string) =>
   route.path === path
   || (path === '/clubs' && route.path.startsWith('/clubs/'))
-  || (path === '/homeworks' && route.path.startsWith('/homeworks/'));
+  || (path === '/homeworks' && route.path.startsWith('/homeworks/'))
+  || (path === '/grading' && route.path.startsWith('/grading/'));
 
 const toggleSubmenu = (groupIndex: number, itemIndex: number) => {
   const key = `${groupIndex}-${itemIndex}`;
