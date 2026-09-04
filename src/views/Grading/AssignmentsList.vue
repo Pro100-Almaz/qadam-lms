@@ -173,6 +173,7 @@
       :offerings-loading="offeringsLoading"
       @close="formOpen = false"
       @saved="onSaved"
+      @delete="onFormDelete"
     />
 
     <AssignmentGradingModal
@@ -489,6 +490,11 @@ function onSaved(saved: SubjectAssignment) {
   // The grid holds its own copy of the columns; a new or retitled assignment
   // only reaches it on a refetch.
   reloadOffering(saved.offering_id)
+}
+
+function onFormDelete(assignment: SubjectAssignment) {
+  formOpen.value = false
+  askDelete(assignment)
 }
 
 // ─── Grading ─────────────────────────────────────────────────────────────────
