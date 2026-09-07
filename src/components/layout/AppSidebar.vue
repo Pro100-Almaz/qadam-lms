@@ -206,7 +206,6 @@ import {
   GraduationCap,
   Users,
   CalendarDays,
-  School,
   ClipboardList,
   UserPlus,
   LayoutDashboard,
@@ -357,14 +356,6 @@ const menuGroups = computed<MenuGroup[]>(() => {
       icon: ClipboardList,
       name: t("nav.myLessons"),
       path: "/my-lessons",
-    });
-  }
-
-  if (roles.value?.includes('homeroom_teacher')) {
-    personalItems.splice(-1, 0, {
-      icon: School,
-      name: t("nav.myClass"),
-      path: "/my-class",
     });
   }
 

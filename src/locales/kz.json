@@ -493,7 +493,8 @@
         "notOfferingTeacher": "Бұл тапсырманы тек осы пән мен сыныптың мұғалімдері өзгерте алады.",
         "classHomeworksTitle": "Сыныптың үй жұмыстары",
         "classHomeworksSubtitle": "Сыныбыңызға барлық пәндер бойынша берілген тапсырмалар.",
-        "noClassHomeworks": "Бұл сыныпқа әзірге ештеңе берілмеген."
+        "noClassHomeworks": "Бұл сыныпқа әзірге ештеңе берілмеген.",
+        "gradebookMeta": "Оқушы: {students} · Үй жұмысы: {homeworks}"
     },
     "homeworkAttachments": {
         "title": "Файлдар",
@@ -595,6 +596,7 @@
         "classSectionSubtitle": "Сыныбыңызға барлық пәндер бойынша қойылған бағаланатын жұмыстар",
         "tabAssignments": "Жұмыстар",
         "tabGrades": "Бағалар",
+        "noClassSubjects": "Бұл сыныпқа әзірге пәндер бекітілмеген.",
         "noClassAssignments": "Бұл сынып үшін әзірге жұмыстар жоқ.",
         "noClassGrades": "Бұл сынып үшін әзірге бағалар жоқ.",
         "averagePercent": "Орташа {percent}%",
@@ -1200,6 +1202,9 @@
         "openInNewTab": "Жаңа қойындыда ашу",
         "close": "Алдын ала қарауды жабу",
         "ariaDialog": "Файлды қарау"
+    },
+    "myClass": {
+        "subjectsAndGrades": "Пәндер мен бағалар"
     },
     "parentChildSubject": {
         "cumulative": "Жиынтық",

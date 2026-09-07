@@ -59,8 +59,24 @@
         </div>
       </div>
 
+      <div class="flex w-full overflow-hidden rounded-xl border border-gray-200 bg-white p-1 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900 sm:w-fit">
+        <button
+          v-for="tab in classViewTabs"
+          :key="tab.key"
+          type="button"
+          class="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition sm:flex-none sm:px-4"
+          :class="activeClassView === tab.key
+            ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'
+            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-300'"
+          @click="activeClassView = tab.key"
+        >
+          <component :is="tab.icon" class="h-4 w-4 shrink-0" />
+          <span class="truncate">{{ tab.label }}</span>
+        </button>
+      </div>
+
       <!-- Students Table -->
-      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
+      <div v-if="activeClassView === 'students'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
         <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
           <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('students.title') }}</h2>
         </div>
@@ -152,11 +168,11 @@
         </div>
       </div>
 
-      <!-- Homework across every subject taught to this class. -->
-      <ClassHomeworksSection v-if="myClass" :class-group-id="myClass.class_group_id" />
-
-      <!-- Graded assignments set for this class, and the marks students earned. -->
-      <ClassGradingSection v-if="myClass" :class-group-id="myClass.class_group_id" />
+      <!-- Subject homework and assignment grades for this class. -->
+      <ClassGradingSection
+        v-if="myClass && activeClassView === 'subjects'"
+        :class-group-id="myClass.class_group_id"
+      />
     </div>
 
     <StudentStatisticsModal
@@ -177,9 +193,9 @@ import {
   Users,
   Eye,
   ChartColumnBig,
+  ClipboardList,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
-import ClassHomeworksSection from '@/components/homeworks/ClassHomeworksSection.vue'
 import ClassGradingSection from '@/components/grading/ClassGradingSection.vue'
 import StudentStatisticsModal, {
   type StatisticsStudentTarget,
@@ -205,6 +221,15 @@ const students = ref<Student[]>([])
 const myClass = ref<HomeroomTeacherDashboard | null>(null)
 
 const isHomeroomTeacher = computed(() => authUser.value?.roles.includes('homeroom_teacher'))
+
+type ClassView = 'students' | 'subjects'
+
+const activeClassView = ref<ClassView>('students')
+
+const classViewTabs = computed(() => [
+  { key: 'students' as const, label: t('students.title'), icon: Users },
+  { key: 'subjects' as const, label: t('myClass.subjectsAndGrades'), icon: ClipboardList },
+])
 
 // ─── Grade report ───────────────────────────────────────────────────────────
 

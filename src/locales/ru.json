@@ -493,7 +493,8 @@
         "notOfferingTeacher": "Изменять это задание могут только учителя этого предмета и класса.",
         "classHomeworksTitle": "Домашние задания класса",
         "classHomeworksSubtitle": "Всё, что задано вашему классу, по всем предметам.",
-        "noClassHomeworks": "Этому классу пока ничего не задано."
+        "noClassHomeworks": "Этому классу пока ничего не задано.",
+        "gradebookMeta": "Учеников: {students} · Заданий: {homeworks}"
     },
     "homeworkAttachments": {
         "title": "Файлы",
@@ -595,6 +596,7 @@
         "classSectionSubtitle": "Все оцениваемые работы вашего класса по всем предметам",
         "tabAssignments": "Работы",
         "tabGrades": "Оценки",
+        "noClassSubjects": "К этому классу пока не привязаны предметы.",
         "noClassAssignments": "Для этого класса пока нет работ.",
         "noClassGrades": "Для этого класса пока нет оценок.",
         "averagePercent": "Средний балл {percent}%",
@@ -1200,6 +1202,9 @@
         "openInNewTab": "Открыть в новой вкладке",
         "close": "Закрыть предпросмотр",
         "ariaDialog": "Просмотр файла"
+    },
+    "myClass": {
+        "subjectsAndGrades": "Предметы и оценки"
     },
     "parentChildSubject": {
         "cumulative": "Итоговая",
