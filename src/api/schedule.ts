@@ -1,5 +1,6 @@
 import api from './client'
 import { type ListResponse, unwrapList } from './client'
+import type { ClassGroupCategory } from '@/types/academic'
 
 export type ApiWeekday = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
@@ -43,6 +44,9 @@ export interface ScheduleOffering {
 export interface ScheduleClassGroup {
   id: number
   name: string
+  /** `minor` — a subgroup's own lesson, borrowed onto its class's week. */
+  category?: ClassGroupCategory
+  /** `null` on a minor group. */
   grade_level: number | null
   letter: string
   academic_year_label: string | null
@@ -69,6 +73,19 @@ export interface SubjectScheduleFilters {
   offering?: number
   quarter?: number
   class_group?: number
+  /**
+   * Adds the class group's minor groups' schedules to its own — a class's week
+   * is only whole with the lessons its subgroups are taught. Composes with every
+   * other filter; does nothing without `class_group`.
+   */
+  include_minor_groups?: boolean
+  /**
+   * Narrows the list to the schedules the caller may actually manage. Without
+   * it the class group's whole timetable comes back, other teachers' lessons
+   * included — which is what a register needs to *show*, while this is what
+   * says which of it may be *marked*.
+   */
+  only_mine?: boolean
   subject?: number
   teacher?: number
   academic_year?: number

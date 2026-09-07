@@ -254,10 +254,13 @@ async function loadSchedules(): Promise<void> {
   loadError.value = null
   try {
     // Free entries belong to a class group, so the class filter keeps them —
-    // the one request is the whole week, breaks and clubs included.
+    // the one request is the whole week, breaks and clubs included. Picking a
+    // class also pulls in its subgroups' lessons; each block names its own
+    // group, so a subgroup's hour is not mistaken for the whole class's.
     const { data } = await getSubjectSchedulesApi({
       quarter: quarter.value,
       class_group: classGroupId.value ?? undefined,
+      include_minor_groups: classGroupId.value !== null ? true : undefined,
       academic_year: academicYearId.value ?? undefined,
       page_size: PAGE_SIZE,
     })

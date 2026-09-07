@@ -179,21 +179,50 @@
                 </button>
               </div>
 
-              <div v-if="editor.kind === 'subject'">
-                <label class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  {{ t('scheduleBuilder.addSubject') }}
-                </label>
-                <SelectMenu
-                  :model-value="editor.offeringId"
-                  :options="assignmentOptions"
-                  :disabled="!assignmentOptions.length"
-                  :placeholder="t('scheduleBuilder.pickSubject')"
-                  :aria-label="t('scheduleBuilder.addSubject')"
-                  @update:model-value="editor.offeringId = $event === null ? null : Number($event)"
-                />
-                <p v-if="!assignmentOptions.length" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  {{ t('scheduleBuilder.noAssignments') }}
-                </p>
+              <div v-if="editor.kind === 'subject'" class="space-y-4">
+                <!-- Subjects taught to a subgroup rather than to the whole class.
+                     The lesson still sits on this class's week, but it belongs to
+                     the subgroup, so it is that class group the schedule is
+                     created under. -->
+                <div
+                  v-if="canPlaceSubjects && minorGroups.length"
+                  class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-2.5 dark:border-gray-700"
+                >
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t('scheduleBuilder.subgroupSubjects') }}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    :aria-checked="editor.subgroup"
+                    :aria-label="t('scheduleBuilder.subgroupSubjects')"
+                    class="relative h-6 w-11 shrink-0 rounded-full transition focus:outline-hidden focus:ring-3 focus:ring-brand-500/20"
+                    :class="editor.subgroup ? 'bg-brand-500' : 'bg-gray-300 dark:bg-gray-700'"
+                    @click="toggleSubgroup"
+                  >
+                    <span
+                      class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all"
+                      :class="editor.subgroup ? 'left-[22px]' : 'left-0.5'"
+                    ></span>
+                  </button>
+                </div>
+
+                <div>
+                  <label class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    {{ t('scheduleBuilder.addSubject') }}
+                  </label>
+                  <SelectMenu
+                    :model-value="editor.offeringId"
+                    :options="subjectOptions"
+                    :disabled="!subjectOptions.length"
+                    :placeholder="t('scheduleBuilder.pickSubject')"
+                    :aria-label="t('scheduleBuilder.addSubject')"
+                    @update:model-value="editor.offeringId = $event === null ? null : Number($event)"
+                  />
+                  <p v-if="!subjectOptions.length" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ editor.subgroup ? t('scheduleBuilder.noSubgroupAssignments') : t('scheduleBuilder.noAssignments') }}
+                  </p>
+                </div>
               </div>
 
               <div v-else>
@@ -314,7 +343,11 @@ import WeekScheduleGrid, {
 } from '@/components/schedule/WeekScheduleGrid.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
-import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
+import {
+  getAcademicYearsApi,
+  getClassGroupMinorGroupsApi,
+  getClassGroupsApi,
+} from '@/api/academic'
 import { getTeacherMyClassesApi } from '@/api/teacherDashboard'
 import { getTeachingAssignmentsApi } from '@/api/teachingAssignments'
 import {
@@ -333,6 +366,7 @@ import {
   type SubjectSchedule,
 } from '@/api/schedule'
 import type { UserRole } from '@/types/auth'
+import type { ClassGroup } from '@/types/academic'
 import type { TeachingAssignment } from '@/types/teachingAssignment'
 
 const { t } = useI18n()
@@ -382,6 +416,21 @@ interface BuilderClassGroup {
 const classGroups = ref<BuilderClassGroup[]>([])
 /** Subject + teacher pairs the selected class group is actually taught. */
 const assignments = ref<TeachingAssignment[]>([])
+/** The selected class group's subgroups — its `minor` class groups. */
+const minorGroups = ref<ClassGroup[]>([])
+
+/**
+ * A subject taught to one of the subgroups. The assignment itself does not name
+ * its class group, so the group it was fetched for travels with it — that is
+ * what the schedule ends up being created under.
+ */
+interface SubgroupAssignment {
+  assignment: TeachingAssignment
+  classGroupId: number
+  classGroupName: string
+}
+
+const subgroupAssignments = ref<SubgroupAssignment[]>([])
 const academicYearId = ref<number | null>(null)
 const classGroupId = ref<number | null>(null)
 const quarter = ref(1)
@@ -422,6 +471,39 @@ const assignmentOptions = computed<SelectOption[]>(() =>
       sublabel: assignment.teacher_name,
     })),
 )
+/** The same, for the subgroups — the group is what tells the two levels apart. */
+const subgroupAssignmentOptions = computed<SelectOption[]>(() =>
+  [...subgroupAssignments.value]
+    .sort(
+      (a, b) =>
+        a.classGroupName.localeCompare(b.classGroupName) ||
+        a.assignment.subject_name.localeCompare(b.assignment.subject_name) ||
+        a.assignment.teacher_name.localeCompare(b.assignment.teacher_name),
+    )
+    .map(entry => ({
+      value: entry.assignment.id,
+      label: entry.assignment.subject_name,
+      sublabel: `${entry.classGroupName} · ${entry.assignment.teacher_name}`,
+    })),
+)
+/** Whichever list the switch in the editor is pointing at. */
+const subjectOptions = computed<SelectOption[]>(() =>
+  editor.value?.subgroup ? subgroupAssignmentOptions.value : assignmentOptions.value,
+)
+
+/**
+ * A subgroup's lesson, borrowed onto its class's week. It is one of the class's
+ * hours like any other and is drawn as one; the flag only decides how it is
+ * saved — through the subgroup switch in the editor, which keeps the schedule on
+ * the subgroup instead of moving it to the class on screen.
+ */
+function isSubgroupSchedule(schedule: SubjectSchedule): boolean {
+  return (
+    schedule.class_group_id != null &&
+    classGroupId.value !== null &&
+    schedule.class_group_id !== classGroupId.value
+  )
+}
 
 /** session id → the session and the schedule it hangs off, for the editor. */
 const sessionIndex = computed(() => {
@@ -460,9 +542,27 @@ const dayWindow = computed(() => {
   return { start, end }
 })
 
+/** Looks through the subgroups' assignments too, so their blocks read like the rest. */
 function teacherNameOf(offeringId: number | null): string | undefined {
   if (offeringId === null) return undefined
-  return assignments.value.find(assignment => assignment.id === offeringId)?.teacher_name
+  return (
+    assignments.value.find(assignment => assignment.id === offeringId)?.teacher_name ??
+    subgroupOfOffering(offeringId)?.assignment.teacher_name
+  )
+}
+
+/** The subgroup an offering is taught to, if it is one of theirs. */
+function subgroupOfOffering(offeringId: number | null): SubgroupAssignment | null {
+  if (offeringId === null) return null
+  return subgroupAssignments.value.find(entry => entry.assignment.id === offeringId) ?? null
+}
+
+/**
+ * The class group a subject entry is placed under: the subgroup's own when the
+ * offering is taught to one, the class on screen otherwise.
+ */
+function classGroupOfOffering(offeringId: number): number | null {
+  return subgroupOfOffering(offeringId)?.classGroupId ?? classGroupId.value
 }
 
 // ─── Loading ──────────────────────────────────────────────────────────────────
@@ -509,15 +609,53 @@ async function loadAssignments(): Promise<void> {
   }
 }
 
+/**
+ * The subgroups of the selected class and what each of them is taught — one
+ * request per subgroup, since an assignment is only ever listed for one class
+ * group at a time and it is the group, not the assignment, that the schedule
+ * needs.
+ */
+async function loadSubgroupAssignments(): Promise<void> {
+  if (!canPlaceSubjects.value || classGroupId.value === null) {
+    minorGroups.value = []
+    subgroupAssignments.value = []
+    return
+  }
+  try {
+    const { data: groups } = await getClassGroupMinorGroupsApi(classGroupId.value)
+    minorGroups.value = groups
+    const perGroup = await Promise.all(
+      groups.map(async group => {
+        const { data } = await getTeachingAssignmentsApi({
+          academic_year: academicYearId.value ?? undefined,
+          class_group: group.id,
+        })
+        return data.map(assignment => ({
+          assignment,
+          classGroupId: group.id,
+          classGroupName: group.display_name,
+        }))
+      }),
+    )
+    subgroupAssignments.value = perGroup.flat()
+  } catch {
+    minorGroups.value = []
+    subgroupAssignments.value = []
+  }
+}
+
 async function loadGrid(): Promise<void> {
   if (classGroupId.value === null) return
   gridLoading.value = true
   gridError.value = null
   try {
     // One request is the whole week: the class filter is the schedule's own
-    // class group now, so free entries come back with the subjects.
+    // class group now, so free entries come back with the subjects — and the
+    // flag adds the subgroups' lessons, which occupy the class's hours just as
+    // much even though they are edited on their own week.
     const { data } = await getSubjectSchedulesApi({
       class_group: classGroupId.value,
+      include_minor_groups: true,
       quarter: quarter.value,
       academic_year: academicYearId.value ?? undefined,
       page_size: PAGE_SIZE,
@@ -541,6 +679,8 @@ interface EditorState {
   /** The schedule the session currently hangs off — `null` while creating. */
   scheduleId: number | null
   kind: 'subject' | 'other'
+  /** Whether the subject is picked from the subgroups' offerings. */
+  subgroup: boolean
   offeringId: number | null
   description: string
   weekday: number
@@ -572,6 +712,7 @@ function openCreate(range: ScheduleRange): void {
     sessionId: null,
     scheduleId: null,
     kind: canPlaceSubjects.value ? 'subject' : 'other',
+    subgroup: false,
     offeringId: assignmentOptions.value.length ? Number(assignmentOptions.value[0].value) : null,
     description: '',
     weekday: range.weekday,
@@ -584,6 +725,12 @@ function openEdit(event: ScheduleEvent): void {
   const found = sessionIndex.value.get(Number(event.id))
   if (!found) return
   const { schedule, session } = found
+  const borrowed = isSubgroupSchedule(schedule)
+  // A subgroup's lesson belongs to another class group, so it is only editable
+  // here while we can name that group — which the offering is what tells us.
+  // Anything else (a subgroup's own break, an offering that never loaded) would
+  // be saved onto the class on screen instead.
+  if (borrowed && !subgroupOfOffering(schedule.offering_id)) return
   // A homeroom teacher sees the taught subjects on the week but cannot move
   // them — opening the editor over one would only earn a 403 on save.
   if (!canPlaceSubjects.value && schedule.type !== 'other') return
@@ -593,12 +740,25 @@ function openEdit(event: ScheduleEvent): void {
     sessionId: session.id,
     scheduleId: schedule.id,
     kind: schedule.type === 'other' ? 'other' : 'subject',
+    subgroup: borrowed,
     offeringId: schedule.offering_id,
     description: schedule.description ?? '',
     weekday: fromApiWeekday(session.weekday),
     start: minutesToTime(timeToMinutes(session.time_start)),
     end: minutesToTime(timeToMinutes(session.time_end)),
   }
+}
+
+/**
+ * The two subject lists share no offering, so the picked one moves with the
+ * switch rather than lingering as a value its dropdown cannot show.
+ */
+function toggleSubgroup(): void {
+  const state = editor.value
+  if (!state) return
+  state.subgroup = !state.subgroup
+  const options = state.subgroup ? subgroupAssignmentOptions.value : assignmentOptions.value
+  state.offeringId = options.length ? Number(options[0].value) : null
 }
 
 /** `"16:17"` → `"16:15"`. Leaves an empty field alone for the save to reject. */
@@ -654,11 +814,11 @@ async function ensureSubjectSchedule(offeringId: number): Promise<number> {
   if (known) return known.id
   try {
     // The class group travels with the offering even though the API derives one
-    // — it rejects a create without it. The assignments are loaded per class
-    // group, so the offering is always taught to the one on screen.
+    // — it rejects a create without it. A subject taught to a subgroup is placed
+    // under that subgroup, not under the class whose week it is being drawn on.
     const { data } = await createSubjectScheduleApi({
       offering: offeringId,
-      class_group: classGroupId.value as number,
+      class_group: classGroupOfOffering(offeringId) as number,
       quarter: quarter.value,
     })
     return data.id
@@ -792,13 +952,13 @@ onMounted(async () => {
     return
   }
   await loadFilters()
-  await loadAssignments()
+  await Promise.all([loadAssignments(), loadSubgroupAssignments()])
   await loadGrid()
 })
 
 watch(classGroupId, async (next, previous) => {
   if (initialLoading.value || next === previous) return
-  await loadAssignments()
+  await Promise.all([loadAssignments(), loadSubgroupAssignments()])
   await loadGrid()
 })
 
