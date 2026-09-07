@@ -34,10 +34,11 @@
         "clubs": "Кружки",
         "attendance": "Посещаемость",
         "scheduleBuilder": "Конструктор расписания",
+        "lessonItems": "Уроки",
         "homeworks": "Домашние задания",
         "grading": "Оценки",
-        "timetable": "Общее расписание",
-        "lessonCalendar": "Расписания учителей"
+        "timetable": "Общее",
+        "lessonCalendar": "Учителей"
     },
     "attendance": {
         "title": "Посещаемость",
@@ -565,6 +566,7 @@
         "dateHint": "День, когда прошёл урок или контрольная.",
         "dateFrom": "С",
         "dateTo": "По",
+        "assignment": "Работа",
         "grade": "Оценить",
         "viewGrades": "Смотреть оценки",
         "saveChanges": "Сохранить изменения",
@@ -591,6 +593,11 @@
         "gradeSaveFailed": "Не сохранено",
         "gradesPartialError": "Не удалось сохранить оценок: {count}. Остальные сохранены.",
         "gradesSaved": "Оценки сохранены",
+        "inlinePendingCount": "Изменений: {count}",
+        "inlineConfirmTitle": "Сохранить изменения?",
+        "inlineConfirmSubtitle": "Проверьте {count} изменений перед сохранением.",
+        "inlineOldValue": "Было",
+        "inlineNewValue": "Станет",
         "classSectionTitle": "Работы и оценки",
         "classSectionSubtitle": "Все оцениваемые работы вашего класса по всем предметам",
         "tabAssignments": "Работы",

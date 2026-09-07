@@ -547,8 +547,10 @@ export interface AssignmentHeatmapResponse {
 /**
  * The whole class against the assignments they were set.
  *
- * Teachers of the offering, its homeroom teacher, psychologists and admin only —
- * the grid names every classmate, so a student or parent asking is a 403.
+ * The grading page must check `/analytics/assignment-offerings/` first and
+ * call this only for offerings with `can_heatmap: true`; homeroom-visible
+ * offerings may still be rejected here when the caller is not the assigned
+ * teacher.
  */
 export function getAssignmentHeatmapApi(offeringId: number, params?: AssignmentHeatmapParams) {
   return api.get<AssignmentHeatmapResponse>(
@@ -630,6 +632,64 @@ export function getAssignmentSummaryApi(studentId: number, params?: AssignmentSu
     `/analytics/students/${studentId}/assignment-summary/`,
     { params },
   )
+}
+
+// ─── Assignment offering picker ───────────────────────────────────────────────
+
+export type AssignmentOfferingAccess = 'teaching' | 'homeroom' | 'teaching_and_homeroom'
+
+export interface AssignmentOfferingPickerTeacher {
+  id: number
+  user_id: number
+  full_name: string
+  username: string
+}
+
+export interface AssignmentOfferingPickerYear {
+  id: number
+  year: string
+}
+
+export interface AssignmentOfferingClassGroupDetail {
+  id: number
+  name: string
+  grade_level: number
+  letter: string
+  academic_year: string
+}
+
+export interface AssignmentOfferingPickerItem {
+  id: number
+  subject: string
+  subject_id: number
+  subject_language_group: string
+  class_group: string
+  class_group_id: number
+  class_group_detail: AssignmentOfferingClassGroupDetail
+  academic_year: string
+  academic_year_id: number
+  max_points: number
+  grading_strategy: string
+  access: AssignmentOfferingAccess
+  teaching_role: string | null
+  is_homeroom_class: boolean
+  can_heatmap: boolean
+}
+
+export interface AssignmentOfferingsResponse {
+  teacher: AssignmentOfferingPickerTeacher
+  academic_year: AssignmentOfferingPickerYear
+  offerings: AssignmentOfferingPickerItem[]
+  count: number
+}
+
+export interface AssignmentOfferingsParams {
+  teacher?: number
+  academic_year?: number
+}
+
+export function getAssignmentOfferingsApi(params?: AssignmentOfferingsParams) {
+  return api.get<AssignmentOfferingsResponse>('/analytics/assignment-offerings/', { params })
 }
 
 // ═══ Attendance ═══════════════════════════════════════════════════════════════
