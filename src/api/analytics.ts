@@ -559,6 +559,18 @@ export function getAssignmentHeatmapApi(offeringId: number, params?: AssignmentH
   )
 }
 
+/**
+ * Homeroom/teacher analytics view for assignment gradebooks. This route allows
+ * the teacher-facing "My class" screen to read offerings in that class even
+ * when the caller is not the subject teacher of the selected offering.
+ */
+export function getTeacherAssignmentHeatmapApi(offeringId: number, params?: AssignmentHeatmapParams) {
+  return api.get<AssignmentHeatmapResponse>(
+    `/analytics/teacher/offerings/${offeringId}/assignment-heatmap/`,
+    { params },
+  )
+}
+
 // ─── 6. Assignment summary ────────────────────────────────────────────────────
 
 export interface AssignmentSummaryParams {

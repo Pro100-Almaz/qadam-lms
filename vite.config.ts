@@ -10,9 +10,7 @@ export default defineConfig({
   plugins: [
     vue(),
     vueJsx(),
-    vueDevTools({
-      launchEditor: 'code',
-    }),
+    vueDevTools(),
   ],
   resolve: {
     alias: {

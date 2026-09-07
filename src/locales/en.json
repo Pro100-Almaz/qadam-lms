@@ -497,7 +497,8 @@
         "notOfferingTeacher": "Only the teachers of this subject and class can change this homework.",
         "classHomeworksTitle": "Class homework",
         "classHomeworksSubtitle": "Everything assigned to your class, across all subjects.",
-        "noClassHomeworks": "No homework has been assigned to this class yet."
+        "noClassHomeworks": "No homework has been assigned to this class yet.",
+        "gradebookMeta": "{students} student(s) · {homeworks} homework(s)"
     },
     "homeworkAttachments": {
         "title": "Files",
@@ -605,6 +606,7 @@
         "classSectionSubtitle": "Every graded assignment set for your class, across all subjects",
         "tabAssignments": "Assignments",
         "tabGrades": "Grades",
+        "noClassSubjects": "No subjects are connected to this class yet.",
         "noClassAssignments": "No assignments have been set for this class yet.",
         "noClassGrades": "No grades have been recorded for this class yet.",
         "averagePercent": "Average {percent}%",
@@ -1210,6 +1212,9 @@
         "openInNewTab": "Open in new tab",
         "close": "Close preview",
         "ariaDialog": "File preview"
+    },
+    "myClass": {
+        "subjectsAndGrades": "Subjects & grades"
     },
     "parentChildSubject": {
         "cumulative": "Cumulative",

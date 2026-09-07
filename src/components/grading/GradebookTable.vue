@@ -1,50 +1,9 @@
 <template>
   <div
     ref="root"
-    class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+    class="overflow-hidden bg-white dark:bg-gray-900"
+    :class="embedded ? '' : 'rounded-xl border border-gray-200 dark:border-gray-800'"
   >
-    <!-- One offering's header: the subject is the heading, the class the badge. -->
-    <div class="flex flex-wrap items-start justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-      <div class="min-w-0">
-        <div class="flex flex-wrap items-center gap-2">
-          <h2 class="truncate text-base font-semibold text-gray-800 dark:text-white/90">
-            {{ subjectName || '—' }}
-          </h2>
-          <span class="inline-flex items-center rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-            {{ classGroupName }}
-          </span>
-        </div>
-        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {{ t('assignments.gradebookMeta', { students: studentCount, assignments: columns.length }) }}
-        </p>
-      </div>
-      <div class="flex flex-wrap items-center justify-end gap-2">
-        <p v-if="columns.length && !dirtyChanges.length" class="text-xs text-gray-400 dark:text-gray-500">
-          {{ t('assignments.gradebookHint') }}
-        </p>
-        <template v-if="dirtyChanges.length">
-          <span class="text-xs font-medium text-brand-600 dark:text-brand-400">
-            {{ t('assignments.inlinePendingCount', { count: dirtyChanges.length }) }}
-          </span>
-          <button
-            type="button"
-            :disabled="saving"
-            class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
-            @click="resetDrafts"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            type="button"
-            :disabled="saving || hasValidationErrors"
-            class="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-600 disabled:opacity-50"
-            @click="confirmOpen = true"
-          >
-            {{ saving ? t('common.loading') : t('common.save') }}
-          </button>
-        </template>
-      </div>
-    </div>
 
     <!-- Loading -->
     <div v-if="loading" class="space-y-3 p-5">
@@ -95,11 +54,19 @@
               scope="col"
               class="sticky left-0 z-10 border-b border-r border-gray-200 bg-white px-5 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400"
             >
-              <!-- The inner width is the column's, less its padding: a table
-                   cell can still be pushed past a `<col>` width by content that
-                   refuses to shrink, and truncating at a fixed width is what
-                   holds every gradebook to the same name column. -->
-              <span class="block w-[160px] truncate">{{ t('statistics.student') }}</span>
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h2 class="truncate text-base font-semibold normal-case tracking-normal text-gray-800 dark:text-white/90">
+                    {{ subjectName || '—' }}
+                  </h2>
+                  <span class="inline-flex items-center rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-normal normal-case tracking-normal text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                    {{ classGroupName }}
+                  </span>
+                </div>
+                <p class="mt-1 text-xs font-normal normal-case tracking-normal text-gray-500 dark:text-gray-400">
+                  {{ t('assignments.gradebookMeta', { students: studentCount, assignments: columns.length }) }}
+                </p>
+              </div>
             </th>
             <th
               v-for="column in columns"
@@ -343,6 +310,7 @@ import { useI18n } from 'vue-i18n'
 import { CircleAlert, ClipboardList, TriangleAlert, Users } from 'lucide-vue-next'
 import {
   getAssignmentHeatmapApi,
+  getTeacherAssignmentHeatmapApi,
   type AssignmentCategory,
   type AssignmentHeatmapResponse,
   type HeatmapAssignment,
@@ -381,7 +349,13 @@ const props = defineProps<{
    * The columns come from the heatmap, but its assignment shape is not the one
    * the form and grading modals take, so the full record is looked up here.
    */
-  assignments: SubjectAssignment[]
+  assignments?: SubjectAssignment[]
+  /** Suppresses column actions when the table is used as a read-only register. */
+  readOnly?: boolean
+  /** Removes the outer card frame when the table already lives inside a panel. */
+  embedded?: boolean
+  /** Uses the teacher-scoped analytics endpoint for homeroom class read access. */
+  teacherScoped?: boolean
   /** Whose column menu the page currently has open, for the header's state. */
   openAssignmentId?: number | null
   /** The page's filters, passed through so the grid matches what was asked for. */
@@ -548,7 +522,7 @@ const tableMinWidth = computed(
 )
 
 const assignmentById = computed(
-  () => new Map(props.assignments.map(assignment => [assignment.id, assignment])),
+  () => new Map((props.assignments ?? []).map(assignment => [assignment.id, assignment])),
 )
 
 const writableIds = computed(() => new Set(props.writableAssignmentIds ?? []))
@@ -603,6 +577,7 @@ const hasValidationErrors = computed(() => Object.keys(validationErrors.value).l
 
 /** The full record behind a column, or null when the list did not carry it. */
 function menuTarget(assignmentId: number): SubjectAssignment | null {
+  if (props.readOnly) return null
   return assignmentById.value.get(assignmentId) ?? null
 }
 
@@ -746,7 +721,10 @@ async function load() {
   loadError.value = false
   submitError.value = ''
   try {
-    const { data: response } = await getAssignmentHeatmapApi(props.offeringId, {
+    const fetchHeatmap = props.teacherScoped
+      ? getTeacherAssignmentHeatmapApi
+      : getAssignmentHeatmapApi
+    const { data: response } = await fetchHeatmap(props.offeringId, {
       category: props.category || undefined,
       date_from: props.dateFrom || undefined,
       date_to: props.dateTo || undefined,
@@ -857,7 +835,14 @@ async function saveInlineGrades() {
 }
 
 watch(
-  () => [props.offeringId, props.category, props.dateFrom, props.dateTo, props.reloadToken],
+  () => [
+    props.offeringId,
+    props.category,
+    props.dateFrom,
+    props.dateTo,
+    props.reloadToken,
+    props.teacherScoped,
+  ],
   load,
   { immediate: true },
 )
