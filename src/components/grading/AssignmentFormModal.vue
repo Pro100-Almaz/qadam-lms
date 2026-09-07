@@ -156,24 +156,39 @@
           </form>
 
           <!-- Footer -->
-          <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-800">
+          <div
+            class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-800 sm:flex-row sm:items-center"
+            :class="isEditing ? 'sm:justify-between' : 'sm:justify-end'"
+          >
             <button
+              v-if="isEditing"
               type="button"
               :disabled="saving"
-              class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
-              @click="emit('close')"
+              class="inline-flex items-center justify-center gap-2 rounded-lg border border-error-200 px-4 py-2 text-sm font-medium text-error-500 transition hover:bg-error-50 disabled:opacity-50 dark:border-error-500/30 dark:hover:bg-error-500/10"
+              @click="requestDelete"
             >
-              {{ t('common.cancel') }}
+              <Trash2 class="h-4 w-4" />
+              {{ t('common.delete') }}
             </button>
-            <button
-              type="button"
-              :disabled="saving"
-              class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
-              @click="submit"
-            >
-              <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
-              {{ isEditing ? t('assignments.saveChanges') : t('assignments.create') }}
-            </button>
+            <div class="flex justify-end gap-3">
+              <button
+                type="button"
+                :disabled="saving"
+                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+                @click="emit('close')"
+              >
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                type="button"
+                :disabled="saving"
+                class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                @click="submit"
+              >
+                <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+                {{ isEditing ? t('assignments.saveChanges') : t('assignments.create') }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -185,7 +200,7 @@
 import axios from 'axios'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CircleAlert, Loader2, X } from 'lucide-vue-next'
+import { CircleAlert, Loader2, Trash2, X } from 'lucide-vue-next'
 import DatePicker from '@/components/ui/DatePicker.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
 import { useBackdropClose } from '@/composables/useBackdropClose'
@@ -212,6 +227,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'saved', assignment: SubjectAssignment): void
+  (e: 'delete', assignment: SubjectAssignment): void
 }>()
 
 const { t } = useI18n()
@@ -371,6 +387,11 @@ async function submit() {
   } finally {
     saving.value = false
   }
+}
+
+function requestDelete() {
+  if (!props.assignment || saving.value) return
+  emit('delete', props.assignment)
 }
 
 function firstErrorMessage(value: unknown): string {

@@ -218,15 +218,14 @@
                     v-for="lesson in dayLessons"
                     :key="lesson.sessionId"
                     :class="[
-                      'min-w-[100px] border-l border-gray-100 px-2 py-2 text-center text-[11px] font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400',
+                      'min-w-[112px] border-l border-gray-100 px-2 py-2 text-center text-[11px] font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400',
                       lesson.editable ? 'bg-gray-50 dark:bg-gray-800/60' : 'bg-gray-100/70 dark:bg-gray-800/30',
                     ]"
                   >
                     <span
-                      class="block whitespace-nowrap text-sm font-semibold tabular-nums text-gray-600 dark:text-gray-300"
-                      :title="formatTimeRange(lesson.timeStart, lesson.timeEnd)"
+                      class="block whitespace-nowrap text-xs font-semibold tabular-nums text-gray-600 dark:text-gray-300"
                     >
-                      {{ formatTimeLabel(lesson.timeStart) }}
+                      {{ formatTimeRange(lesson.timeStart, lesson.timeEnd) }}
                     </span>
                     <span
                       class="mt-0.5 block truncate text-[11px] font-normal text-gray-500 dark:text-gray-400"
@@ -234,13 +233,22 @@
                     >
                       {{ lesson.subjectName || '—' }}
                     </span>
+                    <!-- Only part of the class sits in this one; the column says whose. -->
+                    <span
+                      v-if="lesson.groupName"
+                      class="mt-0.5 block truncate text-[10px] font-medium text-brand-600 dark:text-brand-400"
+                      :title="lesson.groupName"
+                    >
+                      {{ lesson.groupName }}
+                    </span>
+                    <!-- Marking "all" of a single student is just marking them. -->
                     <input
-                      v-if="lesson.editable"
+                      v-if="lesson.editable && lessonStudents(lesson).length > 1"
                       type="checkbox"
                       class="mt-1.5 h-3.5 w-3.5 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900"
-                      :checked="isColumnFull(lesson.sessionId)"
+                      :checked="isColumnFull(lesson)"
                       :aria-label="`${t('attendance.markColumn')} ${lesson.subjectName}`"
-                      @change="toggleColumn(lesson.sessionId, ($event.target as HTMLInputElement).checked)"
+                      @change="toggleColumn(lesson, ($event.target as HTMLInputElement).checked)"
                     />
                     <!-- Keeps every header the same height with or without a checkbox. -->
                     <span v-else class="mt-1.5 block h-3.5" aria-hidden="true"></span>
@@ -267,7 +275,9 @@
                 >
                   <td class="sticky left-0 z-10 border-r border-gray-100 bg-white px-5 py-2.5 dark:border-gray-800 dark:bg-gray-900">
                     <div class="flex items-center gap-3">
+                      <!-- One markable lesson is not a row to mark; the cell itself is. -->
                       <input
+                        v-if="editableLessonsOf(student.student_id).length > 1"
                         type="checkbox"
                         class="h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900"
                         :checked="isRowFull(student.student_id)"
@@ -275,6 +285,8 @@
                         :title="t('attendance.markRow')"
                         @change="toggleRow(student.student_id, ($event.target as HTMLInputElement).checked)"
                       />
+                      <!-- Keeps the names in one line with or without a checkbox. -->
+                      <span v-else class="h-4 w-4 shrink-0" aria-hidden="true"></span>
                       <img
                         v-if="student.avatar"
                         :src="student.avatar"
@@ -297,12 +309,13 @@
                     :key="lesson.sessionId"
                     :class="[
                       'border-l border-gray-100 px-2 py-2.5 text-center dark:border-gray-800',
-                      isPresent(lesson.sessionId, student.student_id)
+                      attends(lesson, student.student_id) && isPresent(lesson.sessionId, student.student_id)
                         ? 'bg-success-50/60 dark:bg-success-500/5'
                         : '',
                     ]"
                   >
                     <input
+                      v-if="attends(lesson, student.student_id)"
                       type="checkbox"
                       :class="[
                         'h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900',
@@ -314,6 +327,13 @@
                       :aria-label="`${student.full_name} — ${lesson.subjectName}`"
                       @change="setPresent(lesson.sessionId, student.student_id, ($event.target as HTMLInputElement).checked)"
                     />
+                    <!-- Not in this subgroup: there is no lesson of theirs to mark. -->
+                    <span
+                      v-else
+                      class="block text-xs text-gray-300 dark:text-gray-600"
+                      :title="t('attendance.notEnrolled')"
+                      >—</span
+                    >
                   </td>
                   <td
                     v-for="index in fillerColumns"
@@ -323,7 +343,7 @@
                   ></td>
                   <td class="border-l border-gray-100 px-3 py-2.5 text-center dark:border-gray-800">
                     <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      {{ rowCount(student.student_id) }}/{{ scheduledLessons.length }}
+                      {{ rowCount(student.student_id) }}/{{ rowTotal(student.student_id) }}
                     </span>
                   </td>
                 </tr>
@@ -338,7 +358,7 @@
                     :key="lesson.sessionId"
                     class="border-l border-gray-100 px-2 py-3 text-center text-sm font-semibold text-gray-700 dark:border-gray-800 dark:text-gray-300"
                   >
-                    {{ columnCount(lesson.sessionId) }}
+                    {{ columnCount(lesson) }}
                   </td>
                   <td
                     v-for="index in fillerColumns"
@@ -372,7 +392,6 @@ import { useAuth } from '@/composables/useAuth'
 import { getTeacherMyClassesApi, getClassStudentsApi } from '@/api/teacherDashboard'
 import { getAcademicYearsApi } from '@/api/academic'
 import {
-  formatTimeLabel,
   formatTimeRange,
   getSubjectSchedulesApi,
   timeToMinutes,
@@ -429,6 +448,14 @@ const classrooms = ref<TeacherClassGroup[]>([])
 const classroomId = ref<number | null>(null)
 const students = ref<ClassStudent[]>([])
 const schedules = ref<SubjectSchedule[]>([])
+/** Subgroup class group id → the student ids enrolled in it. */
+const subgroupStudents = ref<Record<number, Set<number>>>({})
+/**
+ * The sessions the caller may mark, from the same list asked for with
+ * `only_mine`. `null` means that request failed, and the sheet falls back to
+ * reading ownership off the response's own `sessions` / `other_sessions` split.
+ */
+const manageableSessions = ref<Set<number> | null>(null)
 
 const period = ref(currentPeriod())
 const weeks = computed(() => weeksOfMonth(period.value))
@@ -507,6 +534,14 @@ const statisticsOfferings = computed<StatisticsOfferingOption[]>(() => {
   for (const schedule of schedules.value) {
     // A free entry — a break, a club — has no offering to run analytics over.
     if (schedule.offering_id === null || !schedule.offering) continue
+    // The list holds the whole class group's timetable now; another teacher's
+    // subject is readable on the sheet but would 403 in the analytics endpoint.
+    if (
+      manageableSessions.value !== null &&
+      !(schedule.sessions ?? []).some(session => manageableSessions.value?.has(session.id))
+    ) {
+      continue
+    }
     if (seen.has(schedule.offering_id)) continue
     seen.set(schedule.offering_id, {
       offeringId: schedule.offering_id,
@@ -536,11 +571,69 @@ interface DayLesson {
   timeEnd: string
   subjectName: string
   editable: boolean
+  /** The subgroup this lesson is taught to, named on the column; `null` for the class's own. */
+  groupName: string | null
+  /**
+   * Who attends it: `null` when the whole class does — the ordinary case, and
+   * also a subgroup whose roster could not be read.
+   */
+  studentIds: Set<number> | null
 }
 
 /** Backend weekday of an ISO date: 0 = Monday … 6 = Sunday. */
 function apiWeekdayOf(iso: string): number {
   return (parseIsoDate(iso).getDay() + 6) % 7
+}
+
+/**
+ * Whether the caller may mark a session, as opposed to only read it back. The
+ * whole class group's timetable is on the sheet, so this is what separates the
+ * caller's own lessons from the columns that are there to be seen.
+ *
+ * `ownBucket` is the older signal — the session arrived under a schedule's own
+ * `sessions` rather than under `other_sessions` — and stands in when the
+ * `only_mine` request did not come back.
+ */
+function isManageable(schedule: SubjectSchedule, sessionId: number, ownBucket: boolean): boolean {
+  // A free entry belongs to the class group, and its homeroom teacher owns it
+  // whatever the subject teachers may do.
+  if (schedule.type === 'other') return isHomeroomOfSelected.value
+  if (manageableSessions.value === null) return ownBucket
+  return manageableSessions.value.has(sessionId)
+}
+
+/**
+ * Whose lesson a schedule's column is: the class's own, or one of its subgroups'
+ * — in which case only that subgroup's students belong in the column.
+ */
+function audienceOf(schedule: SubjectSchedule): Pick<DayLesson, 'groupName' | 'studentIds'> {
+  const group = schedule.class_group_id
+  if (group == null || group === classroomId.value) return { groupName: null, studentIds: null }
+  return {
+    groupName: schedule.class_group?.name ?? null,
+    studentIds: subgroupStudents.value[group] ?? null,
+  }
+}
+
+/** Whether a student sits in the lesson at all — everyone does, unless it is a subgroup's. */
+function attends(lesson: DayLesson, studentId: number): boolean {
+  return lesson.studentIds === null || lesson.studentIds.has(studentId)
+}
+
+/** The students a lesson's column is actually about. */
+function lessonStudents(lesson: DayLesson): ClassStudent[] {
+  if (lesson.studentIds === null) return students.value
+  return students.value.filter(student => attends(lesson, student.student_id))
+}
+
+/** The lessons of the day one student is marked for. */
+function lessonsOf(studentId: number): DayLesson[] {
+  return scheduledLessons.value.filter(lesson => attends(lesson, studentId))
+}
+
+/** The same, narrowed to the ones the caller may mark — what the row checkbox drives. */
+function editableLessonsOf(studentId: number): DayLesson[] {
+  return editableLessons.value.filter(lesson => attends(lesson, studentId))
 }
 
 /**
@@ -565,7 +658,8 @@ const dayLessons = computed<DayLesson[]>(() => {
         timeStart: session.time_start,
         timeEnd: session.time_end,
         subjectName: session.subject_name,
-        editable: false,
+        editable: isManageable(schedule, session.id, false),
+        ...audienceOf(schedule),
       })
     }
   }
@@ -579,7 +673,8 @@ const dayLessons = computed<DayLesson[]>(() => {
         timeStart: session.time_start,
         timeEnd: session.time_end,
         subjectName: schedule.title || schedule.description || '',
-        editable: schedule.type === 'other' ? isHomeroomOfSelected.value : true,
+        editable: isManageable(schedule, session.id, true),
+        ...audienceOf(schedule),
       })
     }
   }
@@ -690,20 +785,77 @@ async function loadSchedules(): Promise<void> {
   }
   sheetLoading.value = true
   sheetError.value = null
+  const filters = {
+    class_group: classGroup,
+    // A subgroup's lesson is one of this class's hours too — the subject is
+    // just taught to part of it, which is what the roster below narrows.
+    include_minor_groups: true,
+    quarter: selectedQuarter.value,
+    academic_year: academicYearId.value ?? undefined,
+    page_size: PAGE_SIZE,
+  }
   try {
-    const { data } = await getSubjectSchedulesApi({
-      class_group: classGroup,
-      quarter: selectedQuarter.value,
-      academic_year: academicYearId.value ?? undefined,
-      page_size: PAGE_SIZE,
-    })
-    schedules.value = data
+    // Twice over the same filters: the whole timetable, so every subject's
+    // register can be read, and the caller's own slice of it, which is the only
+    // part they may mark. The second is allowed to fail on its own — see below.
+    const [all, mine] = await Promise.allSettled([
+      getSubjectSchedulesApi(filters),
+      getSubjectSchedulesApi({ ...filters, only_mine: true }),
+    ])
+    if (all.status === 'rejected') throw all.reason
+    schedules.value = all.value.data
+    manageableSessions.value =
+      mine.status === 'fulfilled'
+        ? new Set(
+            mine.value.data.flatMap(schedule =>
+              (schedule.sessions ?? []).map(session => session.id),
+            ),
+          )
+        : null
+    await loadSubgroupStudents()
   } catch {
     schedules.value = []
+    manageableSessions.value = null
+    subgroupStudents.value = {}
     sheetError.value = t('attendance.loadFailed')
   } finally {
     sheetLoading.value = false
   }
+}
+
+/**
+ * Who actually sits in each subgroup whose lessons made it onto the sheet. Only
+ * part of the class attends one, so its column is theirs alone — the rest of the
+ * register would otherwise invite marks for students who were never there.
+ *
+ * A subgroup whose roster we may not read is left out of the map, and its column
+ * then covers the whole class rather than silently emptying.
+ */
+async function loadSubgroupStudents(): Promise<void> {
+  const own = classroomId.value
+  const ids = [
+    ...new Set(
+      schedules.value
+        .map(schedule => schedule.class_group_id)
+        .filter((id): id is number => id != null && id !== own),
+    ),
+  ]
+  if (!ids.length) {
+    subgroupStudents.value = {}
+    return
+  }
+  const rosters: Record<number, Set<number>> = {}
+  await Promise.all(
+    ids.map(async id => {
+      try {
+        const { data } = await getClassStudentsApi(id)
+        rosters[id] = new Set((data.students ?? []).map(student => student.student_id))
+      } catch {
+        // Left unknown on purpose — see above.
+      }
+    }),
+  )
+  subgroupStudents.value = rosters
 }
 
 /**
@@ -813,9 +965,11 @@ function setPresent(sessionId: number, studentId: number, value: boolean): void 
   markDirty()
 }
 
-function toggleColumn(sessionId: number, value: boolean): void {
+function toggleColumn(lesson: DayLesson, value: boolean): void {
   const next = { ...marks.value }
-  for (const student of students.value) next[cellKey(sessionId, student.student_id)] = value
+  for (const student of lessonStudents(lesson)) {
+    next[cellKey(lesson.sessionId, student.student_id)] = value
+  }
   marks.value = next
   markDirty()
 }
@@ -823,15 +977,17 @@ function toggleColumn(sessionId: number, value: boolean): void {
 /** Marks every markable lesson of the selected day for one student. */
 function toggleRow(studentId: number, value: boolean): void {
   const next = { ...marks.value }
-  for (const lesson of editableLessons.value) next[cellKey(lesson.sessionId, studentId)] = value
+  for (const lesson of editableLessonsOf(studentId)) {
+    next[cellKey(lesson.sessionId, studentId)] = value
+  }
   marks.value = next
   markDirty()
 }
 
 function setAllForDay(value: boolean): void {
   const next = { ...marks.value }
-  for (const student of students.value) {
-    for (const lesson of editableLessons.value) {
+  for (const lesson of editableLessons.value) {
+    for (const student of lessonStudents(lesson)) {
       next[cellKey(lesson.sessionId, student.student_id)] = value
     }
   }
@@ -882,7 +1038,9 @@ async function submitDay(): Promise<void> {
 
   const tasks: Array<() => Promise<unknown>> = []
   for (const lesson of editableLessons.value) {
-    for (const student of students.value) {
+    // A subgroup's lesson is submitted for its own students only — a row for
+    // anyone else would be an absence the class never owed.
+    for (const student of lessonStudents(lesson)) {
       const key = cellKey(lesson.sessionId, student.student_id, date)
       const status: AttendanceStatus = marks.value[key] ? 'present' : 'absent'
       const existing = saved.value[key]
@@ -913,28 +1071,33 @@ async function submitDay(): Promise<void> {
   else toast.success(t('attendance.submitted'), formatDayMonth(date))
 }
 
-function isColumnFull(sessionId: number): boolean {
+function isColumnFull(lesson: DayLesson): boolean {
+  const attendees = lessonStudents(lesson)
   return (
-    students.value.length > 0 &&
-    students.value.every(student => isPresent(sessionId, student.student_id))
+    attendees.length > 0 &&
+    attendees.every(student => isPresent(lesson.sessionId, student.student_id))
   )
 }
 
-function columnCount(sessionId: number): number {
-  return students.value.filter(student => isPresent(sessionId, student.student_id)).length
+function columnCount(lesson: DayLesson): number {
+  return lessonStudents(lesson).filter(student => isPresent(lesson.sessionId, student.student_id))
+    .length
 }
 
 /** Counts every lesson on screen, including other teachers' — it's what's shown. */
 function rowCount(studentId: number): number {
-  return scheduledLessons.value.filter(lesson => isPresent(lesson.sessionId, studentId)).length
+  return lessonsOf(studentId).filter(lesson => isPresent(lesson.sessionId, studentId)).length
+}
+
+/** The denominator beside it: a subgroup's lessons only count for its own students. */
+function rowTotal(studentId: number): number {
+  return lessonsOf(studentId).length
 }
 
 /** Drives the row checkbox, so it tracks only the lessons that toggle. */
 function isRowFull(studentId: number): boolean {
-  return (
-    editableLessons.value.length > 0 &&
-    editableLessons.value.every(lesson => isPresent(lesson.sessionId, studentId))
-  )
+  const lessons = editableLessonsOf(studentId)
+  return lessons.length > 0 && lessons.every(lesson => isPresent(lesson.sessionId, studentId))
 }
 
 const dayPresentCount = computed(() =>
@@ -942,7 +1105,12 @@ const dayPresentCount = computed(() =>
 )
 
 const dayRate = computed(() => {
-  const cells = students.value.length * scheduledLessons.value.length
+  // Not students × lessons any more: a subgroup's column only has cells for the
+  // students who sit in it.
+  const cells = scheduledLessons.value.reduce(
+    (total, lesson) => total + lessonStudents(lesson).length,
+    0,
+  )
   return cells === 0 ? 0 : Math.round((dayPresentCount.value / cells) * 100)
 })
 
