@@ -505,13 +505,20 @@
               <div class="p-4">
                 <div class="flex items-start justify-between gap-2">
                   <h3 class="text-sm font-semibold text-gray-800 dark:text-white/90 line-clamp-2">{{ entry.title }}</h3>
-                  <button
-                    v-if="isAdmin"
-                    @click="removeReadingEntry(entry.id)"
-                    class="shrink-0 rounded-lg p-1 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 transition-all"
-                  >
-                    <Trash2 class="h-3.5 w-3.5" />
-                  </button>
+                  <div v-if="isAdmin" class="flex shrink-0 items-center gap-1">
+                    <button
+                      @click="openEditReadingModal(entry)"
+                      class="rounded-lg p-1 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-brand-50 hover:text-brand-500 dark:hover:bg-brand-500/10 transition-all"
+                    >
+                      <Pencil class="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      @click="removeReadingEntry(entry.id)"
+                      class="rounded-lg p-1 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 transition-all"
+                    >
+                      <Trash2 class="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ monthNames[entry.month - 1] }} · {{ entry.academic_year }}</p>
                 <div class="mt-3 flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
@@ -822,7 +829,7 @@
       <template #body>
         <div class="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-md dark:border-gray-800 dark:bg-gray-900">
           <div class="mb-5 flex items-center justify-between">
-            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('students.addReadingEntry') }}</h3>
+            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ editingReadingId ? t('students.editReadingEntry') : t('students.addReadingEntry') }}</h3>
             <button @click="showAddReadingModal = false" class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"><X class="h-5 w-5" /></button>
           </div>
           <div class="space-y-4">
@@ -858,7 +865,7 @@
               <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.cover') }}</label>
               <div v-if="readingCoverPreview" class="relative inline-block">
                 <img :src="readingCoverPreview" alt="cover" class="h-28 w-20 rounded-lg border border-gray-200 object-cover dark:border-gray-700" />
-                <button type="button" @click="clearReadingCover" class="absolute -right-2 -top-2 rounded-full bg-gray-800 p-1 text-white hover:bg-gray-700">
+                <button type="button" @click="removeReadingCover" class="absolute -right-2 -top-2 rounded-full bg-gray-800 p-1 text-white hover:bg-gray-700">
                   <X class="h-3 w-3" />
                 </button>
               </div>
@@ -1146,6 +1153,7 @@ import {
   downloadAchievementCertificateApi,
   getReadingEntriesApi,
   createReadingEntryApi,
+  updateReadingEntryApi,
   deleteReadingEntryApi,
   uploadAttachmentsApi,
   deleteAttachmentApi,
@@ -1250,6 +1258,8 @@ const newAchievement = ref({
   description: '',
 })
 
+const editingReadingId = ref<number | null>(null)
+
 const newReading = ref({
   academic_year: null as number | null,
   title: '',
@@ -1264,6 +1274,7 @@ const achievementFileInput = ref<HTMLInputElement | null>(null)
 const readingCover = ref<File | null>(null)
 const readingCoverPreview = ref<string | null>(null)
 const readingCoverInput = ref<HTMLInputElement | null>(null)
+const readingCoverCleared = ref(false)
 
 const previewAttachment = ref<Attachment | null>(null)
 
@@ -1288,7 +1299,17 @@ function clearReadingCover() {
   if (readingCoverPreview.value) URL.revokeObjectURL(readingCoverPreview.value)
   readingCover.value = null
   readingCoverPreview.value = null
+  readingCoverCleared.value = false
   if (readingCoverInput.value) readingCoverInput.value.value = ''
+}
+
+// The X on the preview. Dropping a cover that is already stored on the entry has
+// to be sent to the server as an empty `cover`; dropping a file the user just
+// picked only needs to reset the input.
+function removeReadingCover() {
+  const wasStored = !readingCover.value && !!readingCoverPreview.value
+  clearReadingCover()
+  readingCoverCleared.value = wasStored
 }
 
 async function removeAttachment(attachmentId: number) {
@@ -1708,8 +1729,26 @@ async function fetchReadingEntries() {
 async function openAddReadingModal() {
   await fetchAcademicYears()
   const activeYear = (academicYears.value || []).find(y => y.is_active)
+  editingReadingId.value = null
   newReading.value = { academic_year: activeYear?.id ?? null, title: '', month: new Date().getMonth() + 1, pages_read: 0, test_score: null }
   clearReadingCover()
+  showAddReadingModal.value = true
+}
+
+async function openEditReadingModal(entry: ReadingEntry) {
+  await fetchAcademicYears()
+  // The entry serializes its year as a label ("2020/2021"); the select needs the pk.
+  const year = (academicYears.value || []).find(y => y.year === entry.academic_year)
+  editingReadingId.value = entry.id
+  newReading.value = {
+    academic_year: year?.id ?? null,
+    title: entry.title,
+    month: entry.month,
+    pages_read: entry.pages_read,
+    test_score: entry.test_score,
+  }
+  clearReadingCover()
+  readingCoverPreview.value = entry.cover
   showAddReadingModal.value = true
 }
 
@@ -1724,21 +1763,28 @@ async function submitReadingEntry() {
       pages_read: newReading.value.pages_read,
       test_score: newReading.value.test_score,
     }
-    if (readingCover.value) {
+    if (readingCover.value || readingCoverCleared.value) {
       const fd = new FormData()
       fd.append('academic_year', String(newReading.value.academic_year))
       fd.append('title', newReading.value.title)
       fd.append('month', String(newReading.value.month))
       fd.append('pages_read', String(newReading.value.pages_read ?? 0))
       if (newReading.value.test_score != null) fd.append('test_score', String(newReading.value.test_score))
-      fd.append('cover', readingCover.value)
+      // An empty string is how a multipart request nulls out a FileField.
+      fd.append('cover', readingCover.value ?? '')
       payload = fd
     }
-    const res = await createReadingEntryApi(studentPk.value, payload)
-    readingEntries.value.unshift(res.data)
+    if (editingReadingId.value) {
+      const res = await updateReadingEntryApi(editingReadingId.value, payload)
+      readingEntries.value = readingEntries.value.map(r => (r.id === res.data.id ? res.data : r))
+    } else {
+      const res = await createReadingEntryApi(studentPk.value, payload)
+      readingEntries.value.unshift(res.data)
+    }
     clearReadingCover()
+    editingReadingId.value = null
     showAddReadingModal.value = false
-  } catch (e) { console.error('Failed to create reading entry:', e) }
+  } catch (e) { console.error('Failed to save reading entry:', e) }
   finally { savingReading.value = false }
 }
 
