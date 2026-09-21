@@ -74,19 +74,18 @@
               scope="col"
               class="border-b border-l border-gray-200 p-0 text-center align-bottom dark:border-gray-800"
             >
-              <!-- The whole header is the row-actions target: grading, editing
-                   and deleting an assignment all hang off its column now that
-                   there is no per-assignment row to carry a kebab. -->
+              <!-- The header is the assignment itself: clicking it opens the
+                   edit modal, which is also where deleting lives. Marks are
+                   typed straight into the cells below, so there is nothing left
+                   for an actions menu to hold. -->
               <button
                 type="button"
                 class="block w-full overflow-hidden px-2 py-2.5 transition"
-                :class="menuTarget(column.assignment.id)
+                :class="editTarget(column.assignment.id)
                   ? 'hover:bg-gray-50 dark:hover:bg-white/5'
                   : 'cursor-default'"
                 :title="columnTitle(column)"
-                :aria-haspopup="menuTarget(column.assignment.id) ? 'menu' : undefined"
-                :aria-expanded="openAssignmentId === column.assignment.id"
-                @click.stop="openMenu(column.assignment.id, $event)"
+                @click.stop="requestEdit(column.assignment.id)"
               >
                 <span class="mx-auto mb-1 block h-1 w-6 rounded-full" :class="CATEGORY_DOTS[column.assignment.category]"></span>
                 <span class="block truncate text-[11px] font-medium text-gray-700 dark:text-gray-300">
@@ -141,32 +140,47 @@
                 : cellClass(rowIndex, column)"
               :title="cellTitle(rowIndex, column)"
               @click.stop
+              @focusout="onCellFocusOut(student.id, column.assignment.id, $event)"
             >
               <template v-if="editableCell(column)">
-                <input
-                  :value="draftValue(student.id, column.assignment.id)"
-                  type="number"
-                  min="0"
-                  :max="column.assignment.max_grade"
-                  inputmode="numeric"
-                  class="mx-auto h-8 w-14 rounded-md border px-2 text-center text-sm font-medium tabular-nums outline-none transition dark:bg-gray-900"
-                  :class="cellError(student.id, column.assignment.id)
-                    ? 'border-error-300 text-error-600 focus:border-error-400 dark:border-error-500/50 dark:text-error-400'
-                    : isDirtyCell(student.id, column.assignment.id)
-                      ? 'border-brand-300 bg-brand-50 text-brand-700 focus:border-brand-500 dark:border-brand-500/50 dark:bg-brand-500/10 dark:text-brand-300'
-                      : 'border-transparent bg-transparent hover:border-gray-200 focus:border-brand-500 dark:hover:border-gray-700'"
-                  :aria-label="cellInputLabel(student.full_name, column.assignment.title)"
-                  @input="setDraftValue(student.id, column.assignment.id, ($event.target as HTMLInputElement).value)"
-                  @focus="activeCellKey = cellKey(column.assignment.id, student.id)"
-                />
+                <div class="relative mx-auto w-14">
+                  <input
+                    :value="draftValue(student.id, column.assignment.id)"
+                    type="number"
+                    min="0"
+                    :max="column.assignment.max_grade"
+                    inputmode="numeric"
+                    class="h-8 w-14 rounded-md border px-2 text-center text-sm font-medium tabular-nums outline-none transition dark:bg-gray-900"
+                    :class="cellMessage(student.id, column.assignment.id)
+                      ? 'border-error-300 text-error-600 focus:border-error-400 dark:border-error-500/50 dark:text-error-400'
+                      : isDirtyCell(student.id, column.assignment.id)
+                        ? 'border-brand-300 bg-brand-50 text-brand-700 focus:border-brand-500 dark:border-brand-500/50 dark:bg-brand-500/10 dark:text-brand-300'
+                        : 'border-transparent bg-transparent hover:border-gray-200 focus:border-brand-500 dark:hover:border-gray-700'"
+                    :aria-label="cellInputLabel(student.full_name, column.assignment.title)"
+                    @input="setDraftValue(student.id, column.assignment.id, ($event.target as HTMLInputElement).value)"
+                    @focus="activeCellKey = cellKey(column.assignment.id, student.id)"
+                    @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
+                    @keydown.esc.prevent="revertCell(student.id, column.assignment.id, $event)"
+                  />
+                  <!-- The mark leaves for the server the moment the cell does,
+                       so the cell has to say for itself where it got to. -->
+                  <Loader2
+                    v-if="isSavingCell(student.id, column.assignment.id)"
+                    class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 animate-spin text-brand-500"
+                  />
+                  <Check
+                    v-else-if="isSavedCell(student.id, column.assignment.id)"
+                    class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-success-500"
+                  />
+                </div>
                 <p
-                  v-if="cellError(student.id, column.assignment.id)"
+                  v-if="cellMessage(student.id, column.assignment.id)"
                   class="mt-1 text-[10px] font-medium text-error-500"
                 >
-                  {{ cellError(student.id, column.assignment.id) }}
+                  {{ cellMessage(student.id, column.assignment.id) }}
                 </p>
                 <div
-                  v-if="activeCellKey === cellKey(column.assignment.id, student.id) && isDirtyCell(student.id, column.assignment.id)"
+                  v-if="showsCommentBox(student.id, column.assignment.id)"
                   class="absolute left-1/2 top-[calc(100%-2px)] z-30 w-56 -translate-x-1/2 rounded-lg border border-gray-200 bg-white p-3 text-left shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
                   @click.stop
                 >
@@ -242,72 +256,13 @@
       <TriangleAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <span>{{ t('statistics.truncatedAssignments') }}</span>
     </p>
-
-    <Teleport to="body">
-      <Transition name="fade">
-        <div
-          v-if="confirmOpen"
-          class="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-              {{ t('assignments.inlineConfirmTitle') }}
-            </h3>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {{ t('assignments.inlineConfirmSubtitle', { count: dirtyChanges.length }) }}
-            </p>
-            <div class="mt-4 max-h-80 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-800">
-              <table class="w-full text-left text-sm">
-                <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/5 dark:text-gray-400">
-                  <tr>
-                    <th class="px-3 py-2 font-medium">{{ t('statistics.student') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ t('assignments.assignment') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ t('assignments.inlineOldValue') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ t('assignments.inlineNewValue') }}</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                  <tr v-for="change in dirtyChanges" :key="change.key">
-                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ change.studentName }}</td>
-                    <td class="px-3 py-2 text-gray-700 dark:text-gray-300">{{ change.assignmentTitle }}</td>
-                    <td class="px-3 py-2 text-gray-500 dark:text-gray-400">{{ change.oldDisplay }}</td>
-                    <td class="px-3 py-2 text-gray-800 dark:text-white/90">{{ change.newDisplay }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p v-if="submitError" class="mt-3 text-sm text-error-600 dark:text-error-400">{{ submitError }}</p>
-            <div class="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                :disabled="saving"
-                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
-                @click="confirmOpen = false"
-              >
-                {{ t('common.cancel') }}
-              </button>
-              <button
-                type="button"
-                :disabled="saving"
-                class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-600 disabled:opacity-50"
-                @click="saveInlineGrades"
-              >
-                {{ saving ? t('common.loading') : t('common.confirm') }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CircleAlert, ClipboardList, TriangleAlert, Users } from 'lucide-vue-next'
+import { Check, CircleAlert, ClipboardList, Loader2, TriangleAlert, Users } from 'lucide-vue-next'
 import {
   getAssignmentHeatmapApi,
   getTeacherAssignmentHeatmapApi,
@@ -323,7 +278,6 @@ import {
   type SubjectAssignment,
   type SubjectAssignmentCategory,
 } from '@/api/subjectAssignments'
-import { useToast } from '@/composables/useToast'
 import { formatAcademicDay } from '@/utils/gradeDates'
 
 /**
@@ -339,6 +293,11 @@ import { formatAcademicDay } from '@/utils/gradeDates'
  * Cells show the mark in the assignment's own points, not the percentage the
  * heatmap chart paints: this is a register to check a student's mark in, and
  * the points are what was written down.
+ *
+ * It is also where marks are *entered*. A cell the caller says is writable is
+ * an input, saved on its own the moment the teacher leaves it — see "Saving one
+ * cell" below. Nothing is staged: there is no save button anywhere on the page,
+ * so a mark that is not sent as the cell is left is a mark that is lost.
  */
 const props = defineProps<{
   offeringId: number
@@ -356,8 +315,6 @@ const props = defineProps<{
   embedded?: boolean
   /** Uses the teacher-scoped analytics endpoint for homeroom class read access. */
   teacherScoped?: boolean
-  /** Whose column menu the page currently has open, for the header's state. */
-  openAssignmentId?: number | null
   /** The page's filters, passed through so the grid matches what was asked for. */
   category?: SubjectAssignmentCategory | null
   dateFrom?: string
@@ -371,32 +328,15 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'assignment-menu', assignment: SubjectAssignment, event: MouseEvent): void
-  (e: 'saved'): void
+  (e: 'edit-assignment', assignment: SubjectAssignment): void
 }>()
 
 const { t } = useI18n()
-const { success } = useToast()
 
 interface GradeCellRecord {
   gradeId: number | null
   value: string
   comments: string
-}
-
-interface DirtyChange {
-  key: string
-  assignmentId: number
-  studentId: number
-  gradeId: number | null
-  studentName: string
-  assignmentTitle: string
-  oldValue: string
-  newValue: string
-  oldComments: string
-  newComments: string
-  oldDisplay: string
-  newDisplay: string
 }
 
 /** A column, paired with its index into the server's matrices. */
@@ -419,9 +359,12 @@ const gradeRecords = ref<Record<string, GradeCellRecord>>({})
 const draftValues = ref<Record<string, string>>({})
 const draftComments = ref<Record<string, string>>({})
 const activeCellKey = ref<string | null>(null)
-const confirmOpen = ref(false)
-const saving = ref(false)
-const submitError = ref('')
+/** Cells with a request in flight, and cells whose last request failed. */
+const savingKeys = ref<Record<string, true>>({})
+const saveErrors = ref<Record<string, string>>({})
+/** Cells showing the "it landed" tick; see `flashSaved`. */
+const savedKeys = ref<Record<string, true>>({})
+const savedTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const students = computed(() => data.value?.students ?? [])
 const rowMeans = computed(() => data.value?.row_means ?? [])
@@ -473,6 +416,8 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   resizeObserver = null
   document.removeEventListener('click', closeActiveCell)
+  savedTimers.forEach(timer => clearTimeout(timer))
+  savedTimers.clear()
 })
 
 /** What the grade columns have to share, once the fixed two have taken theirs. */
@@ -527,35 +472,14 @@ const assignmentById = computed(
 
 const writableIds = computed(() => new Set(props.writableAssignmentIds ?? []))
 
-const dirtyChanges = computed<DirtyChange[]>(() => {
-  const changes: DirtyChange[] = []
-  columns.value.forEach(column => {
-    const assignment = assignmentById.value.get(column.assignment.id)
-    if (!assignment || !writableIds.value.has(assignment.id)) return
-    students.value.forEach(student => {
-      const key = cellKey(assignment.id, student.id)
-      const original = gradeRecords.value[key] ?? { gradeId: null, value: '', comments: '' }
-      const nextValue = (draftValues.value[key] ?? '').trim()
-      const nextComments = (draftComments.value[key] ?? '').trim()
-      if (nextValue === original.value && nextComments === original.comments) return
-      changes.push({
-        key,
-        assignmentId: assignment.id,
-        studentId: student.id,
-        gradeId: original.gradeId,
-        studentName: student.full_name,
-        assignmentTitle: assignment.title,
-        oldValue: original.value,
-        newValue: nextValue,
-        oldComments: original.comments,
-        newComments: nextComments,
-        oldDisplay: displayChange(original.value, original.comments, assignment.max_grade),
-        newDisplay: displayChange(nextValue, nextComments, assignment.max_grade),
-      })
-    })
-  })
-  return changes
-})
+/** Where each student and assignment sits in the response's matrices. */
+const rowIndexByStudent = computed(
+  () => new Map(students.value.map((student, index) => [student.id, index])),
+)
+
+const columnIndexByAssignment = computed(
+  () => new Map((data.value?.assignments ?? []).map((assignment, index) => [assignment.id, index])),
+)
 
 const validationErrors = computed<Record<string, string>>(() => {
   const errors: Record<string, string> = {}
@@ -573,17 +497,15 @@ const validationErrors = computed<Record<string, string>>(() => {
   return errors
 })
 
-const hasValidationErrors = computed(() => Object.keys(validationErrors.value).length > 0)
-
 /** The full record behind a column, or null when the list did not carry it. */
-function menuTarget(assignmentId: number): SubjectAssignment | null {
+function editTarget(assignmentId: number): SubjectAssignment | null {
   if (props.readOnly) return null
   return assignmentById.value.get(assignmentId) ?? null
 }
 
-function openMenu(assignmentId: number, event: MouseEvent) {
-  const assignment = menuTarget(assignmentId)
-  if (assignment) emit('assignment-menu', assignment, event)
+function requestEdit(assignmentId: number) {
+  const assignment = editTarget(assignmentId)
+  if (assignment) emit('edit-assignment', assignment)
 }
 
 function cellKey(assignmentId: number, studentId: number): string {
@@ -617,6 +539,17 @@ function closeActiveCell() {
   activeCellKey.value = null
 }
 
+/**
+ * The comment box hangs under the cell being edited. It is not shown on every
+ * focus — a teacher tabbing down a column would get a panel opening and closing
+ * over the row below on every step — only once the cell has something to say:
+ * an edit in progress, or a comment already on the mark.
+ */
+function showsCommentBox(studentId: number, assignmentId: number): boolean {
+  if (activeCellKey.value !== cellKey(assignmentId, studentId)) return false
+  return isDirtyCell(studentId, assignmentId) || draftComment(studentId, assignmentId) !== ''
+}
+
 function isDirtyCell(studentId: number, assignmentId: number): boolean {
   const key = cellKey(assignmentId, studentId)
   const original = gradeRecords.value[key] ?? { value: '', comments: '' }
@@ -624,17 +557,22 @@ function isDirtyCell(studentId: number, assignmentId: number): boolean {
     || (draftComments.value[key] ?? '').trim() !== original.comments
 }
 
-function cellError(studentId: number, assignmentId: number): string {
-  return validationErrors.value[cellKey(assignmentId, studentId)] ?? ''
+/** What is wrong with the cell: an out-of-range mark, or a save that failed. */
+function cellMessage(studentId: number, assignmentId: number): string {
+  const key = cellKey(assignmentId, studentId)
+  return validationErrors.value[key] ?? saveErrors.value[key] ?? ''
+}
+
+function isSavingCell(studentId: number, assignmentId: number): boolean {
+  return cellKey(assignmentId, studentId) in savingKeys.value
+}
+
+function isSavedCell(studentId: number, assignmentId: number): boolean {
+  return cellKey(assignmentId, studentId) in savedKeys.value
 }
 
 function cellInputLabel(studentName: string, assignmentTitle: string): string {
   return `${studentName}: ${assignmentTitle}`
-}
-
-function displayChange(value: string, comments: string, maxGrade: number): string {
-  const grade = value ? `${value} / ${maxGrade}` : '—'
-  return comments ? `${grade} · ${comments}` : grade
 }
 
 function resetDrafts() {
@@ -647,8 +585,10 @@ function resetDrafts() {
   draftValues.value = nextValues
   draftComments.value = nextComments
   activeCellKey.value = null
-  submitError.value = ''
-  confirmOpen.value = false
+  saveErrors.value = {}
+  savedKeys.value = {}
+  savedTimers.forEach(timer => clearTimeout(timer))
+  savedTimers.clear()
 }
 
 function isGraded(rowIndex: number, column: Column): boolean {
@@ -719,7 +659,6 @@ function rowMeanTitle(rowIndex: number): string {
 async function load() {
   loading.value = true
   loadError.value = false
-  submitError.value = ''
   try {
     const fetchHeatmap = props.teacherScoped
       ? getTeacherAssignmentHeatmapApi
@@ -775,63 +714,172 @@ async function loadGradeRecords(response: AssignmentHeatmapResponse) {
   gradeRecords.value = records
 }
 
-async function saveInlineGrades() {
-  if (hasValidationErrors.value || !dirtyChanges.value.length) return
+// ─── Saving one cell ─────────────────────────────────────────────────────────
+//
+// A mark is saved the moment the teacher leaves the cell — one request per
+// cell, rather than one batch for the whole grid. It is more requests, but it
+// is the only shape that matches how the table is actually used: a teacher
+// types down a column and looks away, and anything that waits for a separate
+// "save" press is a mark that quietly never left the browser.
 
-  saving.value = true
-  submitError.value = ''
-  const changes = dirtyChanges.value
-  const results = await Promise.allSettled(
-    changes.map(change => {
-      if (change.newValue === '' && change.newComments === '') {
-        return change.gradeId === null ? Promise.resolve() : deleteSubjectGradeApi(change.gradeId)
-      }
-      const grade = change.newValue === '' ? null : Number(change.newValue)
-      return change.gradeId === null
-        ? createAssignmentGradeApi(change.assignmentId, {
-            student: change.studentId,
-            grade,
-            comments: change.newComments,
-          })
-        : updateSubjectGradeApi(change.gradeId, {
-            grade,
-            comments: change.newComments,
-          })
-    }),
+/** How long the tick stays up after a mark lands. */
+const SAVED_FLASH_MS = 1500
+
+function flashSaved(key: string) {
+  savedKeys.value = { ...savedKeys.value, [key]: true }
+  clearTimeout(savedTimers.get(key))
+  savedTimers.set(
+    key,
+    setTimeout(() => {
+      const { [key]: _removed, ...rest } = savedKeys.value
+      savedKeys.value = rest
+      savedTimers.delete(key)
+    }, SAVED_FLASH_MS),
   )
+}
 
-  let failed = 0
-  const nextRecords = { ...gradeRecords.value }
-  results.forEach((result, index) => {
-    const change = changes[index]
-    if (result.status === 'rejected') {
-      failed += 1
-      return
-    }
-    if (change.newValue === '' && change.newComments === '') {
-      nextRecords[change.key] = { gradeId: null, value: '', comments: '' }
-      return
-    }
-    const created = (result.value as { data?: { id?: number } } | undefined)?.data
-    nextRecords[change.key] = {
-      gradeId: change.gradeId ?? created?.id ?? null,
-      value: change.newValue,
-      comments: change.newComments,
-    }
-  })
+/**
+ * Leaving the cell commits it — but focus moving from the mark into the cell's
+ * own comment box is not leaving, or a teacher could never write a comment.
+ */
+function onCellFocusOut(studentId: number, assignmentId: number, event: FocusEvent) {
+  const cell = event.currentTarget as HTMLElement
+  const next = event.relatedTarget as Node | null
+  if (next && cell.contains(next)) return
+  if (activeCellKey.value === cellKey(assignmentId, studentId)) activeCellKey.value = null
+  void commitCell(studentId, assignmentId)
+}
 
-  gradeRecords.value = nextRecords
-  saving.value = false
+/** Escape puts the cell back to what the server holds. */
+function revertCell(studentId: number, assignmentId: number, event: KeyboardEvent) {
+  const key = cellKey(assignmentId, studentId)
+  const original = gradeRecords.value[key] ?? { gradeId: null, value: '', comments: '' }
+  draftValues.value = { ...draftValues.value, [key]: original.value }
+  draftComments.value = { ...draftComments.value, [key]: original.comments }
+  const { [key]: _removed, ...rest } = saveErrors.value
+  saveErrors.value = rest
+  ;(event.target as HTMLInputElement).blur()
+}
 
-  if (failed) {
-    submitError.value = t('assignments.gradesPartialError', { count: failed })
-    confirmOpen.value = true
-    return
+async function commitCell(studentId: number, assignmentId: number) {
+  const key = cellKey(assignmentId, studentId)
+  if (key in savingKeys.value || validationErrors.value[key]) return
+
+  const original = gradeRecords.value[key] ?? { gradeId: null, value: '', comments: '' }
+  const value = (draftValues.value[key] ?? '').trim()
+  const comments = (draftComments.value[key] ?? '').trim()
+  if (value === original.value && comments === original.comments) return
+
+  savingKeys.value = { ...savingKeys.value, [key]: true }
+  const { [key]: _cleared, ...remainingErrors } = saveErrors.value
+  saveErrors.value = remainingErrors
+
+  try {
+    // An emptied cell is a mark withdrawn, not a mark of nothing — the row goes.
+    // A comment with no mark is still a row, so only both being empty deletes.
+    if (value === '' && comments === '') {
+      if (original.gradeId !== null) await deleteSubjectGradeApi(original.gradeId)
+      setGradeRecord(key, { gradeId: null, value: '', comments: '' })
+    } else if (original.gradeId === null) {
+      const { data: created } = await createAssignmentGradeApi(assignmentId, {
+        student: studentId,
+        grade: value === '' ? null : Number(value),
+        comments,
+      })
+      setGradeRecord(key, { gradeId: created.id, value, comments })
+    } else {
+      await updateSubjectGradeApi(original.gradeId, {
+        grade: value === '' ? null : Number(value),
+        comments,
+      })
+      setGradeRecord(key, { gradeId: original.gradeId, value, comments })
+    }
+    applyGradeToGrid(assignmentId, studentId, value)
+    flashSaved(key)
+  } catch {
+    // The draft keeps what was typed, so the teacher can fix it and leave the
+    // cell again rather than retyping a mark the server rejected.
+    saveErrors.value = { ...saveErrors.value, [key]: t('assignments.gradeSaveFailed') }
+  } finally {
+    const { [key]: _done, ...rest } = savingKeys.value
+    savingKeys.value = rest
+  }
+}
+
+/**
+ * Records what the server now holds, and normalises the draft to match it — but
+ * only where the draft is still the one that was sent. A teacher who typed
+ * again while the request was in flight keeps their newer mark, which the next
+ * commit then saves over this one.
+ */
+function setGradeRecord(key: string, record: GradeCellRecord) {
+  gradeRecords.value = { ...gradeRecords.value, [key]: record }
+  if ((draftValues.value[key] ?? '').trim() === record.value) {
+    draftValues.value = { ...draftValues.value, [key]: record.value }
+  }
+  if ((draftComments.value[key] ?? '').trim() === record.comments) {
+    draftComments.value = { ...draftComments.value, [key]: record.comments }
+  }
+}
+
+/**
+ * The grid came from the heatmap endpoint, so a saved mark has to be written
+ * back into it by hand — refetching the whole table after every cell would
+ * throw away the teacher's place in it.
+ */
+function applyGradeToGrid(assignmentId: number, studentId: number, value: string) {
+  const grid = data.value
+  const row = rowIndexByStudent.value.get(studentId)
+  const column = columnIndexByAssignment.value.get(assignmentId)
+  if (!grid || row === undefined || column === undefined) return
+
+  const assignment = grid.assignments[column]
+  const wasGraded = grid.graded[row]?.[column] === true
+  const graded = value !== ''
+  const raw = graded ? Number(value) : null
+
+  if (grid.raw_grades[row]) grid.raw_grades[row][column] = raw
+  if (grid.graded[row]) grid.graded[row][column] = graded
+  if (grid.matrix[row]) {
+    grid.matrix[row][column] = graded && assignment?.max_grade
+      ? (Number(value) / assignment.max_grade) * 100
+      : 0
+  }
+  if (assignment && wasGraded !== graded) {
+    assignment.graded_count = Math.max(0, assignment.graded_count + (graded ? 1 : -1))
   }
 
-  resetDrafts()
-  success(t('assignments.gradesSaved'))
-  emit('saved')
+  recomputeMeans()
+}
+
+/**
+ * Both means are over the marks entered, not over the columns — the divisor the
+ * endpoint uses under `missing=exclude`, kept so a locally saved mark moves the
+ * averages the same way a refetch would.
+ */
+function recomputeMeans() {
+  const grid = data.value
+  if (!grid) return
+
+  grid.row_means = grid.students.map((_, row) =>
+    mean(grid.assignments.map((_unused, column) => cellPercent(row, column))),
+  )
+  grid.column_means = grid.assignments.map((_, column) =>
+    mean(grid.students.map((_unused, row) => cellPercent(row, column))),
+  )
+}
+
+/** The cell's percent of its assignment's maximum, or null when unmarked. */
+function cellPercent(row: number, column: number): number | null {
+  const grid = data.value
+  if (!grid || grid.graded[row]?.[column] !== true) return null
+  return grid.matrix[row]?.[column] ?? null
+}
+
+function mean(values: (number | null)[]): number {
+  const marked = values.filter((value): value is number => value !== null)
+  if (!marked.length) return 0
+  return marked.reduce((total, value) => total + value, 0) / marked.length
 }
 
 watch(

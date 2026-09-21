@@ -85,12 +85,12 @@ const router = createRouter({
       meta: { title: 'Subject Detail', roles: staffRoles },
     },
 
-    // Lessons / Calendar (all authenticated users)
+    // Lessons / Calendar (staff only — students and parents get /timetable)
     {
       path: '/lessons',
       name: 'Lessons',
       component: () => import('../views/Lessons/LessonsList.vue'),
-      meta: { title: 'Lessons' },
+      meta: { title: 'Lessons', roles: [...staffRoles, 'clubmanager'] },
     },
     {
       path: '/lessons/:id',

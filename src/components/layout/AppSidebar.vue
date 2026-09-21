@@ -259,6 +259,39 @@ const isPsychologist = computed(() => roles.value?.includes('psychologist'));
 const isAdmin = computed(() => (['admin', 'supervisor', 'principal'] as UserRole[]).some(role => roles.value?.includes(role)));
 const isTeacher = computed(() => (['teacher', 'homeroom_teacher'] as UserRole[]).some(role => roles.value?.includes(role)));
 
+// The teachers' lesson calendar is staff-only; students and parents have no
+// business in it.
+const isStaff = computed(() => ([
+  'admin',
+  'supervisor',
+  'principal',
+  'teacher',
+  'homeroom_teacher',
+  'clubmanager',
+  'psychologist',
+] as UserRole[]).some(role => roles.value?.includes(role)));
+
+// With the teachers' calendar gone only the common timetable is left, so it
+// stands on its own instead of as a lone sub-item.
+const ownScheduleItem = computed<MenuItem>(() => ({
+  icon: CalendarClock,
+  name: t("nav.schedule"),
+  path: "/timetable",
+}));
+
+const scheduleItem = computed<MenuItem>(() =>
+  isStaff.value
+    ? {
+        icon: CalendarDays,
+        name: t("nav.lessons"),
+        subItems: [
+          { name: t("nav.timetable"), path: "/timetable" },
+          { name: t("nav.lessonCalendar"), path: "/lessons" },
+        ],
+      }
+    : ownScheduleItem.value
+);
+
 const menuGroups = computed<MenuGroup[]>(() => {
   if (isStudent.value) {
     return [
@@ -275,16 +308,7 @@ const menuGroups = computed<MenuGroup[]>(() => {
             name: t("nav.myHomeworks"),
             path: "/my-homeworks",
           },
-          {
-            icon: CalendarClock,
-            name: t("nav.timetable"),
-            path: "/timetable",
-          },
-          {
-            icon: CalendarDays,
-            name: t("nav.calendar"),
-            path: "/lessons",
-          },
+          ownScheduleItem.value,
           {
             icon: Users,
             name: t("nav.myTeachers"),
@@ -310,16 +334,7 @@ const menuGroups = computed<MenuGroup[]>(() => {
             name: t("nav.myChildren"),
             path: "/my-children",
           },
-          {
-            icon: CalendarClock,
-            name: t("nav.timetable"),
-            path: "/timetable",
-          },
-          {
-            icon: CalendarDays,
-            name: t("nav.calendar"),
-            path: "/lessons",
-          },
+          ownScheduleItem.value,
           {
             icon: Users,
             name: t("nav.myTeachers"),
@@ -367,14 +382,7 @@ const menuGroups = computed<MenuGroup[]>(() => {
         { name: t("nav.subjectsArchived"), path: "/subjects/archived" },
       ],
     },
-    {
-      icon: CalendarDays,
-      name: t("nav.lessons"),
-      subItems: [
-        { name: t("nav.timetable"), path: "/timetable" },
-        { name: t("nav.lessonCalendar"), path: "/lessons" },
-      ],
-    },
+    scheduleItem.value,
     ...(isTeacher.value
       ? [
           {
