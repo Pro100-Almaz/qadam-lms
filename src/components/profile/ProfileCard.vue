@@ -8,10 +8,17 @@
             @click="triggerFileInput"
           >
             <img
-              :src="user?.avatar || '/images/user/owner.jpg'"
+              v-if="user?.avatar"
+              :src="user.avatar"
               :alt="fullName"
               class="w-full h-full object-cover"
             />
+            <div
+              v-else
+              class="flex h-full w-full items-center justify-center bg-brand-50 text-xl font-semibold text-brand-600 dark:bg-brand-500/10 dark:text-brand-400"
+            >
+              {{ initials }}
+            </div>
             <div
               class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
             >
@@ -101,6 +108,14 @@ const fullName = computed(() => {
   if (!user.value) return ''
   return `${user.value.last_name} ${user.value.first_name}`.trim()
 })
+
+const initials = computed(() =>
+  fullName.value
+    .split(' ')
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join(''),
+)
 
 function triggerFileInput() {
   fileInput.value?.click()
