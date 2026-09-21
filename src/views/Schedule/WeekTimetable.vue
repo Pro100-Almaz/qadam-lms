@@ -18,8 +18,23 @@
 
       <!-- Toolbar -->
       <div
+        v-if="isParent || showQuarterFilter"
         class="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-end dark:border-gray-800 dark:bg-gray-900"
       >
+        <div v-if="isParent" class="block w-full sm:w-64">
+          <span class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            {{ t('timetable.child') }}
+          </span>
+          <SelectMenu
+            :model-value="childId"
+            :options="childOptions"
+            :disabled="!children.length"
+            :placeholder="t('common.noData')"
+            :aria-label="t('timetable.child')"
+            @update:model-value="childId = $event === null ? null : Number($event)"
+          />
+        </div>
+
         <div v-if="showClassFilter" class="block w-full sm:w-56">
           <span class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
             {{ t('scheduleBuilder.classGroup') }}
@@ -36,7 +51,7 @@
           />
         </div>
 
-        <div class="block w-full sm:w-40">
+        <div v-if="showQuarterFilter" class="block w-full sm:w-40">
           <span class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
             {{ t('scheduleBuilder.quarter') }}
           </span>
@@ -147,6 +162,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
 import WeekScheduleGrid, { type ScheduleEvent } from '@/components/schedule/WeekScheduleGrid.vue'
 import { useAuth } from '@/composables/useAuth'
+import { quarterFromDate } from '@/composables/useCurrentQuarter'
 import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
 import {
   formatTimeRange,
@@ -156,8 +172,10 @@ import {
   type ScheduleSession,
   type SubjectSchedule,
 } from '@/api/schedule'
+import { getMyChildrenApi } from '@/api/parentSelf'
 import type { UserRole } from '@/types/auth'
 import type { ClassGroup } from '@/types/academic'
+import type { ParentChild } from '@/types/parentSelf'
 
 const { t } = useI18n()
 const { user } = useAuth()
@@ -168,6 +186,14 @@ const isAdmin = computed(() =>
 )
 const isTeacher = computed(() =>
   (['teacher', 'homeroom_teacher'] as UserRole[]).some(role => roles.value?.includes(role)),
+)
+const isParent = computed(() => roles.value?.includes('parent') ?? false)
+/**
+ * A pure student or parent account gets no filters at all — its own week, in the
+ * quarter that is running. Any staff role on the account brings them back.
+ */
+const showQuarterFilter = computed(() =>
+  (roles.value ?? []).some(role => role !== 'student' && role !== 'parent'),
 )
 /** Students and parents see their own week; only staff choose whose to look at. */
 const showClassFilter = computed(() => isAdmin.value || isTeacher.value)
@@ -184,12 +210,22 @@ const loadError = ref<string | null>(null)
 const classGroups = ref<ClassGroup[]>([])
 const academicYearId = ref<number | null>(null)
 const classGroupId = ref<number | null>(null)
-const quarter = ref(1)
+const children = ref<ParentChild[]>([])
+const childId = ref<number | null>(null)
+// Without the picker the quarter has to land on its own; staff still overwrite
+// this from the active academic year below.
+const quarter = ref(quarterFromDate())
 const schedules = ref<SubjectSchedule[]>([])
 const selected = ref<ScheduleEvent | null>(null)
 
 const classGroupOptions = computed<SelectOption[]>(() =>
   classGroups.value.map(group => ({ value: group.id, label: group.display_name })),
+)
+const childOptions = computed<SelectOption[]>(() =>
+  children.value.map(child => ({
+    value: child.id,
+    label: child.class_group_name ? `${child.full_name} · ${child.class_group_name}` : child.full_name,
+  })),
 )
 const quarterOptions = computed<SelectOption[]>(() =>
   QUARTERS.map(value => ({ value, label: t('scheduleBuilder.quarterN', { n: value }) })),
@@ -234,8 +270,21 @@ const dayWindow = computed(() => {
   return { start, end }
 })
 
+/** A parent looks at one child's week at a time, so the list opens on the first. */
+async function loadChildren(): Promise<void> {
+  try {
+    const { data } = await getMyChildrenApi()
+    children.value = data
+    childId.value = data[0]?.id ?? null
+  } catch {
+    children.value = []
+    childId.value = null
+  }
+}
+
 /** Optional: without a year the class filter simply lists nothing. */
 async function loadFilters(): Promise<void> {
+  if (isParent.value) await loadChildren()
   if (!showClassFilter.value) return
   try {
     const { data: years } = await getAcademicYearsApi()
@@ -259,6 +308,8 @@ async function loadSchedules(): Promise<void> {
     // group, so a subgroup's hour is not mistaken for the whole class's.
     const { data } = await getSubjectSchedulesApi({
       quarter: quarter.value,
+      // A parent's week is one child's, so the chosen child scopes the request.
+      student: childId.value ?? undefined,
       class_group: classGroupId.value ?? undefined,
       include_minor_groups: classGroupId.value !== null ? true : undefined,
       academic_year: academicYearId.value ?? undefined,
@@ -282,7 +333,7 @@ onMounted(async () => {
   ready.value = true
 })
 
-watch([classGroupId, quarter], () => {
+watch([classGroupId, quarter, childId], () => {
   if (!ready.value) return
   loadSchedules()
 })

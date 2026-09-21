@@ -88,6 +88,11 @@ export interface SubjectScheduleFilters {
   only_mine?: boolean
   subject?: number
   teacher?: number
+  /**
+   * One student's week — the class group's schedule narrowed to that student.
+   * A parent with several children picks which of them the week belongs to.
+   */
+  student?: number
   academic_year?: number
   type?: ScheduleType
   page?: number

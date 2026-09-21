@@ -135,14 +135,12 @@
           :subject-name="group.subjectName"
           :class-group-name="group.classGroupName"
           :assignments="group.assignments"
-          :open-assignment-id="menuTarget?.id ?? null"
           :category="categoryFilter"
           :date-from="filters.dateFrom"
           :date-to="filters.dateTo"
           :reload-token="reloadTokens[group.offeringId] ?? 0"
           :writable-assignment-ids="writableAssignmentIds(group)"
-          @assignment-menu="toggleMenu"
-          @saved="reloadOffering(group.offeringId)"
+          @edit-assignment="openEdit"
         />
       </div>
 
@@ -175,56 +173,6 @@
       @saved="onSaved"
       @delete="onFormDelete"
     />
-
-    <AssignmentGradingModal
-      :open="gradingOpen"
-      :assignment="gradingTarget"
-      :can-grade="canManage(gradingTarget)"
-      @close="gradingOpen = false"
-      @saved="onGradesSaved"
-    />
-
-    <!-- One column's actions. Teleported and fixed-positioned because the
-         gradebook scrolls horizontally, and that scroll container clips an
-         absolute dropdown. -->
-    <Teleport to="body">
-      <div
-        v-if="menuTarget"
-        class="fixed z-[9998] w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
-        :style="{ top: `${menuPosition.top}px`, left: `${menuPosition.left}px` }"
-        role="menu"
-        @click.stop
-      >
-        <button
-          type="button"
-          role="menuitem"
-          class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-          @click="runMenuAction(openGrading)"
-        >
-          <ClipboardCheck class="h-3.5 w-3.5" />
-          {{ canManage(menuTarget) ? t('assignments.grade') : t('assignments.viewGrades') }}
-        </button>
-        <!-- Any teacher of the offering may edit or delete, author or not. -->
-        <template v-if="canManage(menuTarget)">
-          <button
-            type="button"
-            role="menuitem"
-            class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-            @click="runMenuAction(openEdit)"
-          >
-            <Pencil class="h-3.5 w-3.5" /> {{ t('common.edit') }}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            class="flex w-full items-center gap-2 px-4 py-2 text-sm text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10"
-            @click="runMenuAction(askDelete)"
-          >
-            <Trash2 class="h-3.5 w-3.5" /> {{ t('common.delete') }}
-          </button>
-        </template>
-      </div>
-    </Teleport>
 
     <!-- Delete confirmation -->
     <Teleport to="body">
@@ -280,22 +228,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  AlertTriangle,
-  CircleAlert,
-  ClipboardCheck,
-  Loader2,
-  Pencil,
-  Plus,
-  SearchX,
-  Trash2,
-  X,
-} from 'lucide-vue-next'
+import { AlertTriangle, CircleAlert, Loader2, Plus, SearchX, X } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import AssignmentFormModal from '@/components/grading/AssignmentFormModal.vue'
-import AssignmentGradingModal from '@/components/grading/AssignmentGradingModal.vue'
 import GradebookTable from '@/components/grading/GradebookTable.vue'
 import StatisticsButton from '@/components/analytics/StatisticsButton.vue'
 import type { StatisticsOfferingOption } from '@/components/analytics/ClassStatisticsModal.vue'
@@ -425,45 +362,6 @@ function reloadOffering(offeringId: number) {
   }
 }
 
-// ─── Column actions menu ─────────────────────────────────────────────────────
-
-const MENU_WIDTH = 176 // w-44
-const MENU_ITEM_HEIGHT = 36
-const MENU_PADDING = 8 // py-1, top and bottom
-
-const menuTarget = ref<SubjectAssignment | null>(null)
-const menuPosition = ref({ top: 0, left: 0 })
-
-function toggleMenu(assignment: SubjectAssignment, event: MouseEvent) {
-  if (menuTarget.value?.id === assignment.id) {
-    menuTarget.value = null
-    return
-  }
-
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  // A read-only column only gets the grading entry; the rest also edit and delete.
-  const height = (canManage(assignment) ? 3 : 1) * MENU_ITEM_HEIGHT + MENU_PADDING
-  const below = rect.bottom + 4
-
-  menuPosition.value = {
-    top: below + height > window.innerHeight ? Math.max(8, rect.top - 4 - height) : below,
-    left: Math.max(8, Math.min(rect.right - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8)),
-  }
-  menuTarget.value = assignment
-}
-
-function runMenuAction(action: (assignment: SubjectAssignment) => void) {
-  const target = menuTarget.value
-  if (!target) return
-  menuTarget.value = null
-  action(target)
-}
-
-/** Anywhere outside the menu closes it; scrolling would leave it detached. */
-function closeMenu() {
-  menuTarget.value = null
-}
-
 // ─── Create / edit ───────────────────────────────────────────────────────────
 
 const formOpen = ref(false)
@@ -475,6 +373,7 @@ function openCreate() {
   formOpen.value = true
 }
 
+/** The gradebook's column header is the only way in: a click opens this. */
 function openEdit(assignment: SubjectAssignment) {
   formTarget.value = assignment
   formOpen.value = true
@@ -495,21 +394,6 @@ function onSaved(saved: SubjectAssignment) {
 function onFormDelete(assignment: SubjectAssignment) {
   formOpen.value = false
   askDelete(assignment)
-}
-
-// ─── Grading ─────────────────────────────────────────────────────────────────
-
-const gradingOpen = ref(false)
-const gradingTarget = ref<SubjectAssignment | null>(null)
-
-function openGrading(assignment: SubjectAssignment) {
-  gradingTarget.value = assignment
-  gradingOpen.value = true
-}
-
-/** Only the graded offering's table is stale; the others were not touched. */
-function onGradesSaved() {
-  if (gradingTarget.value) reloadOffering(gradingTarget.value.offering_id)
 }
 
 // ─── Delete ──────────────────────────────────────────────────────────────────
@@ -652,7 +536,6 @@ const MAX_LIST_PAGES = 10
 async function fetchAssignments() {
   loading.value = true
   loadError.value = false
-  closeMenu()
 
   try {
     // Every page, not just the first: an offering's assignments are spread
@@ -714,10 +597,6 @@ watch(
 )
 
 onMounted(async () => {
-  document.addEventListener('click', closeMenu)
-  window.addEventListener('scroll', closeMenu, true)
-  window.addEventListener('resize', closeMenu)
-
   try {
     await loadFilterOptions()
     await fetchAssignments()
@@ -726,12 +605,6 @@ onMounted(async () => {
     loadError.value = true
     loading.value = false
   }
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', closeMenu)
-  window.removeEventListener('scroll', closeMenu, true)
-  window.removeEventListener('resize', closeMenu)
 })
 
 /**
