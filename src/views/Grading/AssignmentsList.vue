@@ -27,7 +27,7 @@
           <button
             v-if="canCreate"
             type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-700"
             @click="openCreate"
           >
             <Plus class="h-4 w-4" /> {{ t('assignments.create') }}
@@ -93,7 +93,7 @@
         <button
           v-if="hasActiveFilters"
           type="button"
-          class="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400"
+          class="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-gray-500 transition hover:text-brand-700 dark:text-gray-400"
           @click="resetFilters"
         >
           <X class="h-4 w-4" /> {{ t('common.reset') }}

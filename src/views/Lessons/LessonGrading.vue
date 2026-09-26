@@ -121,7 +121,7 @@
                     <div class="flex items-center justify-end gap-1.5">
                       <button
                         @click="openGradingModal(student)"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-600 transition"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition"
                       >
                         <Pencil class="h-3.5 w-3.5" />
                         {{ hasGrade(student.user_id) ? t('common.edit') : t('grading.setGrade') }}
@@ -185,13 +185,13 @@
                   <div class="flex rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
                       @click="commentMode = 'selected'"
-                      :class="['px-3 py-1.5 text-xs font-medium transition rounded-l-lg', commentMode === 'selected' ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5']"
+                      :class="['px-3 py-1.5 text-xs font-medium transition rounded-l-lg', commentMode === 'selected' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5']"
                     >
                       {{ t('grading.selectedComment') }}
                     </button>
                     <button
                       @click="commentMode = 'merged'"
-                      :class="['px-3 py-1.5 text-xs font-medium transition rounded-r-lg', commentMode === 'merged' ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5']"
+                      :class="['px-3 py-1.5 text-xs font-medium transition rounded-r-lg', commentMode === 'merged' ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5']"
                     >
                       {{ t('grading.mergedComment') }}
                     </button>
@@ -351,7 +351,7 @@
                 <button
                   @click="submitGrading"
                   :disabled="saving"
-                  class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 transition"
+                  class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition"
                 >
                   <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
                   {{ t('common.save') }}

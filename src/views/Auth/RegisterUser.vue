@@ -228,7 +228,7 @@
                   :class="[
                     'flex h-10 w-10 items-center justify-center rounded-lg',
                     form.role === role.value
-                      ? 'bg-brand-500 text-white'
+                      ? 'bg-brand-600 text-white'
                       : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
                   ]"
                 >
@@ -517,7 +517,7 @@
             <button
               type="submit"
               :disabled="isLoading"
-              class="flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-500 px-8 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+              class="flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-8 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Loader2 v-if="isLoading" class="h-4 w-4 animate-spin" />
               <UserPlus v-else class="h-4 w-4" />

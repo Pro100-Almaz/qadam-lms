@@ -13,7 +13,7 @@
       <div class="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-500/10">
         <ShieldAlert class="h-8 w-8 text-orange-500" />
       </div>
-      <p class="text-base font-medium text-gray-800 dark:text-white/90">This page is only available for homeroom teachers.</p>
+      <p class="text-base font-medium text-gray-800 dark:text-white/90">{{ t('common.homeroomTeachersOnly') }}</p>
     </div>
 
     <!-- Error -->

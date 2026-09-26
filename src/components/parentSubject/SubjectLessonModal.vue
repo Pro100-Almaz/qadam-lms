@@ -99,6 +99,7 @@ import { CalendarDays, X, Hourglass, MessageSquare } from 'lucide-vue-next'
 import Modal from '@/components/ui/Modal.vue'
 import type { ParentChildLessonGrade, LessonStatus } from '@/types/parentSelf'
 import { useGradeHelpers } from '@/composables/useGradeHelpers'
+import { currentIntlLocale } from '@/i18n'
 
 const props = defineProps<{
   lesson: ParentChildLessonGrade
@@ -119,7 +120,7 @@ const percent = computed(() => {
 function formatDate(dateStr: string): string {
   if (!dateStr) return '—'
   try {
-    return new Intl.DateTimeFormat('en', { dateStyle: 'long' }).format(new Date(dateStr))
+    return new Intl.DateTimeFormat(currentIntlLocale(), { dateStyle: 'long' }).format(new Date(dateStr))
   } catch {
     return dateStr
   }

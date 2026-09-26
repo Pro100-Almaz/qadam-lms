@@ -97,7 +97,7 @@
             :class="[
               'flex min-w-[104px] flex-1 flex-col items-center rounded-lg px-3 py-2 text-sm transition',
               day === selectedDay
-                ? 'bg-brand-500 text-white shadow-theme-xs'
+                ? 'bg-brand-600 text-white shadow-theme-xs'
                 : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800',
             ]"
             @click="selectedDay = day"
@@ -144,7 +144,7 @@
               <button
                 type="button"
                 :disabled="!canSubmit"
-                class="flex h-9 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                class="flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
                 @click="submitDay"
               >
                 <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />

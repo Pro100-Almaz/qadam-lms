@@ -365,6 +365,7 @@ import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import { getTeacherDetailApi } from '@/api/teachers'
 import type { TeacherDetail } from '@/types/teacher'
 import type { LanguageGroup, SubjectStatus } from '@/types/subject'
+import { currentIntlLocale } from '@/i18n'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -447,7 +448,7 @@ const formattedDob = computed(() => {
   const dob = teacher.value?.user.date_of_birth
   if (!dob) return null
   try {
-    return new Date(dob).toLocaleDateString(undefined, {
+    return new Date(dob).toLocaleDateString(currentIntlLocale(), {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

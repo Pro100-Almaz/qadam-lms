@@ -62,7 +62,7 @@
         <div class="flex items-center gap-2 sm:ml-auto sm:pb-0.5">
           <button
             type="button"
-            class="flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition hover:bg-brand-600"
+            class="flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition hover:bg-brand-700"
             @click="openCreate({ weekday: 1, start: 9 * 60, end: 9 * 60 + 45 })"
           >
             <Plus class="h-4 w-4" />
@@ -170,7 +170,7 @@
                   class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition"
                   :class="
                     editor.kind === kind
-                      ? 'bg-brand-500 text-white'
+                      ? 'bg-brand-600 text-white'
                       : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5'
                   "
                   @click="editor.kind = kind"
@@ -306,7 +306,7 @@
               <button
                 type="button"
                 :disabled="saving || Boolean(rangeError)"
-                class="flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                class="flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
                 @click="saveEntry"
               >
                 <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />

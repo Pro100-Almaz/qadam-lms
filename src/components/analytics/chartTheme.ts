@@ -204,7 +204,7 @@ export function useChartTheme() {
 /** Chart defaults every analytics chart shares, so they read as one family. */
 export function baseChartOptions() {
   return {
-    fontFamily: 'Outfit, sans-serif',
+    fontFamily: 'Manrope, sans-serif',
     toolbar: { show: false },
     zoom: { enabled: false },
     background: 'transparent',

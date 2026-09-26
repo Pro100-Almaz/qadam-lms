@@ -1,4 +1,5 @@
 import { parseIsoDate } from './attendanceWeeks'
+import { currentIntlLocale } from '@/i18n'
 
 /**
  * Date formatting shared by every grading surface, so an assignment's academic
@@ -8,7 +9,7 @@ import { parseIsoDate } from './attendanceWeeks'
 
 /** Matches the language the app is rendered in; `ru` is the school's default. */
 function localeTag(): string {
-  return document.documentElement.lang || 'ru'
+  return currentIntlLocale()
 }
 
 /**

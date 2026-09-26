@@ -20,7 +20,7 @@
         :key="loc.code"
         @click="switchLocale(loc.code)"
         class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-        :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10 dark:text-brand-400': locale === loc.code }"
+        :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': locale === loc.code }"
       >
         {{ loc.label }}
       </button>

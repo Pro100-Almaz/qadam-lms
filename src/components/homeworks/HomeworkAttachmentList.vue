@@ -33,7 +33,7 @@
         rel="noopener"
         :download="attachment.name"
         :title="attachment.name"
-        class="inline-flex max-w-[220px] items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 transition hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300"
+        class="inline-flex max-w-[220px] items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 transition hover:border-brand-300 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300"
         :class="size === 'sm' ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1.5 text-xs'"
       >
         <component :is="iconFor(attachment)" class="h-3.5 w-3.5 shrink-0 text-gray-400" />

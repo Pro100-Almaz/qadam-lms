@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap')
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap')
 layer(base);
 
 @import 'tailwindcss';
@@ -7,7 +7,7 @@ layer(base);
 
 @theme {
   --font-*: initial;
-  --font-outfit: Outfit, sans-serif;
+  --font-manrope: Manrope, ui-sans-serif, system-ui, sans-serif;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;
@@ -48,7 +48,7 @@ layer(base);
   --color-brand-300: #f5a46e;
   --color-brand-400: #e87c43;
   --color-brand-500: #d96a2f;
-  --color-brand-600: #c45a22;
+  --color-brand-600: #b5511e;
   --color-brand-700: #a3471a;
   --color-brand-800: #843a16;
   --color-brand-900: #6b3015;
@@ -184,7 +184,7 @@ layer(base);
     cursor: pointer;
   }
   body {
-    @apply relative font-normal font-outfit z-1 bg-gray-50;
+    @apply relative font-normal font-manrope z-1 bg-gray-50;
   }
 }
 
@@ -193,7 +193,7 @@ layer(base);
 }
 
 @utility menu-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+  @apply bg-brand-50 text-brand-600 dark:bg-brand-500/[0.12] dark:text-brand-400;
 }
 
 @utility menu-item-inactive {
@@ -229,7 +229,7 @@ layer(base);
 }
 
 @utility menu-dropdown-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+  @apply bg-brand-50 text-brand-600 dark:bg-brand-500/[0.12] dark:text-brand-400;
 }
 
 @utility menu-dropdown-item-inactive {
@@ -237,7 +237,7 @@ layer(base);
 }
 
 @utility menu-dropdown-badge {
-  @apply block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase text-brand-500 dark:text-brand-400;
+  @apply block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase text-brand-600 dark:text-brand-400;
 }
 
 @utility menu-dropdown-badge-active {
@@ -502,13 +502,13 @@ span.flatpickr-weekday,
 .flatpickr-day.selected.nextMonthDay,
 .flatpickr-day.startRange.nextMonthDay,
 .flatpickr-day.endRange.nextMonthDay {
-  background: #d96a2f;
-  @apply !border-brand-500 !bg-brand-500 hover:!border-brand-500 hover:!bg-brand-500;
+  background: #b5511e;
+  @apply !border-brand-600 !bg-brand-600 hover:!border-brand-600 hover:!bg-brand-600;
 }
 .flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n + 1)) {
-  box-shadow: -10px 0 0 #d96a2f;
+  box-shadow: -10px 0 0 #b5511e;
 }
 
 .flatpickr-months .flatpickr-prev-month svg,
@@ -551,8 +551,8 @@ span.flatpickr-weekday,
   background: rgb(255 255 255 / 0.05) !important;
 }
 .flatpickr-monthSelect-month.selected {
-  border-color: var(--color-brand-500) !important;
-  background: var(--color-brand-500) !important;
+  border-color: var(--color-brand-600) !important;
+  background: var(--color-brand-600) !important;
   color: white !important;
 }
 .flatpickr-monthSelect-month.flatpickr-disabled {
@@ -624,7 +624,7 @@ span.flatpickr-weekday,
   @apply hidden;
 }
 .fc-addEventButton-button {
-  @apply !rounded-lg !border-0 !bg-brand-500 !px-4 !py-2.5 !text-sm !font-medium hover:!bg-brand-600 focus:!shadow-none;
+  @apply !rounded-lg !border-0 !bg-brand-600 !px-4 !py-2.5 !text-sm !font-medium hover:!bg-brand-700 focus:!shadow-none;
 }
 .fc-toolbar-title {
   @apply !text-lg !font-medium text-gray-800 dark:text-white/90;

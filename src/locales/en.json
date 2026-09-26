@@ -1,7 +1,8 @@
 {
     "app": {
         "name": "Qadam LMS",
-        "school": "Qadam School"
+        "school": "Qadam School",
+        "tagline": "Learning Management System"
     },
     "nav": {
         "dashboard": "Dashboard",
@@ -174,7 +175,10 @@
         "details": "Details",
         "reset": "Reset",
         "selectOption": "Select option",
-        "noComment": "No comments"
+        "noComment": "No comments",
+        "parentOnly": "This page is only available for parent users.",
+        "homeroomTeachersOnly": "This page is only available for homeroom teachers.",
+        "commandSearchPlaceholder": "Search or type command..."
     },
     "validation": {
         "required": "This field is required",
@@ -920,7 +924,13 @@
             "friday": "Friday",
             "saturday": "Saturday",
             "sunday": "Sunday"
-        }
+        },
+        "topicWeightTitle": "Current topic's total weight",
+        "topicWeightComplete": "The topic's total weight is 100%.",
+        "topicWeightExceeded": "The topic's total weight is {percent}%. Consider adjusting the subtopic weights.",
+        "topicWeightRemaining": "The topic's total weight is {percent}%. Distribute the remaining weight among the subtopics.",
+        "loadFailed": "Failed to load lessons.",
+        "lessonsCount": "{count} lessons"
     },
     "teachers": {
         "title": "Teachers",
@@ -1048,7 +1058,14 @@
         "quarterGrade": "Quarter Grade",
         "scorePercent": "Score (%)",
         "noHistory": "No history available",
-        "belowAvg": "Below avg"
+        "belowAvg": "Below avg",
+        "stateNamePlaceholder": "e.g. Anxious, Motivated...",
+        "stateCommentPlaceholder": "Optional notes about the student's state...",
+        "awardTypePlaceholder": "e.g. Gold Medal",
+        "placePlaceholder": "e.g. National, Regional",
+        "rolePlaceholder": "e.g. Club President",
+        "durationPlaceholder": "e.g. Sep 2025 – May 2026",
+        "achievementDescriptionPlaceholder": "Describe the achievement..."
     },
     "profile": {
         "title": "Profile",
@@ -1088,8 +1105,7 @@
     },
     "pagination": {
         "show": "Show",
-        "of": "of",
-        "entries": "entries"
+        "ofTotal": "of {total} entries"
     },
     "teacherDashboard": {
         "welcome": "Welcome, {name}",
@@ -1154,6 +1170,7 @@
         "allSubjects": "Show all subjects"
     },
     "reports": {
+        "aiGenerated": "AI generated",
         "generate": "Generate AI Report",
         "generating": "Generating report...",
         "estimatedTime": "Report generation usually takes 5-10 seconds",
@@ -1223,5 +1240,19 @@
         "notLinked": "This child is not linked to your account.",
         "notEnrolled": "This child is not enrolled in this subject.",
         "loadFailed": "Failed to load subject details."
+    },
+    "pageTitles": {
+        "notFound": "Page Not Found",
+        "subjectsActive": "Subjects — Active",
+        "subjectsProcessing": "Subjects — Processing",
+        "subjectsArchived": "Subjects — Archived",
+        "subjectDetail": "Subject Detail",
+        "teacherDetail": "Teacher Detail",
+        "studentDetail": "Student Detail",
+        "studentClubDetail": "Student Club Detail",
+        "clubDetail": "Club Detail",
+        "childDetail": "Child Detail",
+        "childSubjectDetail": "Child Subject Detail",
+        "psychStudentDetail": "Student Psych Detail"
     }
 }

@@ -30,7 +30,7 @@
       <!-- Profile Header Card -->
       <div
         class="relative overflow-hidden rounded-xl border shadow-theme-md"
-        :class="schoolGradientStyle ? 'border-white/10' : 'bg-gradient-to-r from-brand-500 to-brand-600 border-brand-200 dark:border-brand-800'"
+        :class="schoolGradientStyle ? 'border-white/10' : 'bg-gradient-to-r from-brand-600 to-brand-700 border-brand-200 dark:border-brand-800'"
         :style="schoolGradientStyle || {}"
       >
         <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5"></div>
@@ -371,7 +371,7 @@
                           class="flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 dark:border-gray-700 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         >
                           <FileText class="h-3 w-3 text-gray-400" />
-                          <span class="max-w-[60px] truncate text-xs text-brand-500">{{ att.original_name }}</span>
+                          <span class="max-w-[60px] truncate text-xs text-brand-600 dark:text-brand-400">{{ att.original_name }}</span>
                         </button>
                       </template>
                     </div>
@@ -381,7 +381,7 @@
                     <button
                       v-if="ach.certificate"
                       @click="downloadCertificate(ach.id)"
-                      class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-brand-500 dark:hover:bg-white/5 transition-colors"
+                      class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-brand-700 dark:hover:bg-white/5 transition-colors"
                     >
                       <Download class="h-4 w-4" />
                     </button>
@@ -625,6 +625,8 @@ import {
 import type { StudentDetail, PsychologicalState } from '@/types/student'
 import type { Achievement, ReadingEntry, AchievementCategory, Attachment } from '@/types/achievement'
 import ReportHistoryList from '@/components/reports/ReportHistoryList.vue'
+import { SERIES_STUDENT } from '@/components/analytics/chartTheme'
+import { currentIntlLocale } from '@/i18n'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -790,7 +792,7 @@ function scoreLabel(score: number): string {
 function formatDate(dateStr: string): string {
   if (!dateStr) return '—'
   try {
-    return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(dateStr))
+    return new Intl.DateTimeFormat(currentIntlLocale(), { dateStyle: 'medium' }).format(new Date(dateStr))
   } catch {
     return dateStr
   }
@@ -804,10 +806,10 @@ const lineChartSeries = computed(() => {
 })
 
 const lineChartOptions = computed(() => ({
-  chart: { fontFamily: 'Outfit, sans-serif', type: 'line', toolbar: { show: false }, animations: { enabled: true } },
-  colors: ['#465FFF'],
+  chart: { fontFamily: 'Manrope, sans-serif', type: 'line', toolbar: { show: false }, animations: { enabled: true } },
+  colors: [SERIES_STUDENT],
   stroke: { curve: 'smooth', width: 3 },
-  markers: { size: 6, colors: ['#465FFF'], strokeWidth: 2, strokeColors: '#fff' },
+  markers: { size: 6, colors: [SERIES_STUDENT], strokeWidth: 2, strokeColors: '#fff' },
   dataLabels: { enabled: false },
   xaxis: {
     categories: ['Q1', 'Q2', 'Q3', 'Q4'],
@@ -830,8 +832,8 @@ const radarChartOptions = computed(() => {
   if (!student.value) return {}
   const labels = Object.keys(student.value.cumulative_subject_grades)
   return {
-    chart: { fontFamily: 'Outfit, sans-serif', type: 'radar', toolbar: { show: false } },
-    colors: ['#465FFF'],
+    chart: { fontFamily: 'Manrope, sans-serif', type: 'radar', toolbar: { show: false } },
+    colors: [SERIES_STUDENT],
     fill: { opacity: 0.2 },
     stroke: { width: 2 },
     markers: { size: 4 },

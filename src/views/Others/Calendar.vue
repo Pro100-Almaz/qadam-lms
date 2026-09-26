@@ -101,7 +101,7 @@
 
               <button
                 @click="handleAddOrUpdateEvent"
-                class="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 sm:w-auto"
+                class="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 sm:w-auto"
               >
                 {{ selectedEvent ? 'Update Changes' : 'Add Event' }}
               </button>
@@ -206,7 +206,7 @@
               </button>
               <button
                 @click="handleAddOrUpdateEvent"
-                class="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 sm:w-auto"
+                class="btn btn-success btn-update-event flex w-full justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 sm:w-auto"
               >
                 {{ selectedEvent ? 'Update Changes' : 'Add Event' }}
               </button>

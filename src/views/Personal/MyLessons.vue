@@ -13,7 +13,7 @@
       <div class="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-500/10">
         <ShieldAlert class="h-8 w-8 text-orange-500" />
       </div>
-      <p class="text-base font-medium text-gray-800 dark:text-white/90">This page is only available for teachers.</p>
+      <p class="text-base font-medium text-gray-800 dark:text-white/90">{{ t('attendance.teachersOnly') }}</p>
     </div>
 
     <!-- Error -->
@@ -31,7 +31,7 @@
         <div>
           <h1 class="text-xl font-bold text-gray-800 dark:text-white/90">{{ t('nav.myLessons') }}</h1>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {{ lessons.length }} {{ lessons.length === 1 ? 'lesson' : 'lessons' }}
+            {{ t('lessons.lessonsCount', { count: lessons.length }) }}
           </p>
         </div>
         <div class="flex items-center gap-3">
@@ -39,8 +39,8 @@
             v-model="selectedQuarter"
             class="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
           >
-            <option :value="0">All Quarters</option>
-            <option v-for="q in [1, 2, 3, 4]" :key="q" :value="q">Quarter {{ q }}</option>
+            <option :value="0">{{ t('lessons.allQuarters') }}</option>
+            <option v-for="q in [1, 2, 3, 4]" :key="q" :value="q">{{ t('attendance.quarterN', { n: q }) }}</option>
           </select>
         </div>
       </div>
@@ -55,22 +55,22 @@
                   {{ t('common.name') }}
                 </th>
                 <th class="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Subject
+                  {{ t('lessons.subject') }}
                 </th>
                 <th class="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Class
+                  {{ t('lessons.class') }}
                 </th>
                 <th class="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Date
+                  {{ t('lessons.date') }}
                 </th>
                 <th class="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Quarter
+                  {{ t('lessons.quarter') }}
                 </th>
                 <th class="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Status
+                  {{ t('common.status') }}
                 </th>
                 <th class="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 w-32">
-                  Graded
+                  {{ t('teacherDashboard.graded') }}
                 </th>
               </tr>
             </thead>
@@ -143,6 +143,7 @@ import {
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { getLessonsApi } from '@/api/lessons'
 import { useAuth } from '@/composables/useAuth'
+import { currentIntlLocale } from '@/i18n'
 import type { Lesson } from '@/types/lesson'
 
 const { t } = useI18n()
@@ -166,7 +167,7 @@ const filteredLessons = computed(() => {
 function formatDate(dateStr: string): string {
   if (!dateStr) return '—'
   try {
-    return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(dateStr))
+    return new Intl.DateTimeFormat(currentIntlLocale(), { dateStyle: 'medium' }).format(new Date(dateStr))
   } catch {
     return dateStr
   }
@@ -204,7 +205,7 @@ async function fetchLessons() {
     const res = await getLessonsApi()
     lessons.value = res.data
   } catch {
-    error.value = 'Failed to load lessons.'
+    error.value = t('lessons.loadFailed')
   } finally {
     loading.value = false
   }

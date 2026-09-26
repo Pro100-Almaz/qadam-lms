@@ -6,7 +6,7 @@
           <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">{{ t('clubs.title') }}</h1>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('clubs.subtitle') }}</p>
         </div>
-        <router-link to="/clubs/create" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600">
+        <router-link to="/clubs/create" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-700">
           <Plus class="h-4 w-4" /> {{ t('clubs.create') }}
         </router-link>
       </div>
@@ -65,7 +65,7 @@
             <p class="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-300"><CalendarClock class="h-3.5 w-3.5 text-brand-500" />{{ t('clubs.weeklySchedule') }}</p>
             <div class="flex flex-wrap gap-2">
               <span v-for="slot in club.schedule.slice(0, 3)" :key="slot.id" class="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"><span class="font-medium">{{ dayName(slot.weekday) }}</span>{{ formatTime(slot.start_time) }}–{{ formatTime(slot.end_time) }}<span v-if="slot.location" class="text-gray-400">· {{ slot.location }}</span></span>
-              <span v-if="club.schedule.length > 3" class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-brand-500">{{ t('clubs.moreSessions', { count: club.schedule.length - 3 }) }}</span>
+              <span v-if="club.schedule.length > 3" class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-brand-600 dark:text-brand-400">{{ t('clubs.moreSessions', { count: club.schedule.length - 3 }) }}</span>
             </div>
           </div>
 
@@ -94,6 +94,7 @@ import ClubStatusBadge from '@/components/clubs/ClubStatusBadge.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import { getClubsApi, type ClubAcademicYear, type ClubListItem, type ClubWeekday } from '@/api/clubs'
 import { useDebounce } from '@/composables/useDebounce'
+import { currentIntlLocale } from '@/i18n'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -144,7 +145,7 @@ watch(currentPage, fetchClubs)
 onMounted(fetchClubs)
 
 function formatDateRange(startDate: string, endDate: string): string {
-  const locale = document.documentElement.lang || 'ru'
+  const locale = currentIntlLocale()
   const format = (value: string) => new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
   return `${format(startDate)} – ${format(endDate)}`
 }

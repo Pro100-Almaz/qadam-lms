@@ -178,6 +178,7 @@ import {
   type HomeworkGrade,
 } from '@/api/homeworks'
 import type { Student } from '@/types/student'
+import { currentIntlLocale } from '@/i18n'
 
 const props = defineProps<{
   offeringId: number
@@ -322,7 +323,7 @@ function columnTitle(homework: Homework): string {
 
 function formatShortDate(value: string): string {
   if (!value) return '—'
-  return new Intl.DateTimeFormat(document.documentElement.lang || 'ru', {
+  return new Intl.DateTimeFormat(currentIntlLocale(), {
     day: '2-digit',
     month: 'short',
     timeZone: 'UTC',
@@ -331,7 +332,7 @@ function formatShortDate(value: string): string {
 
 function formatDate(value: string): string {
   if (!value) return '—'
-  return new Intl.DateTimeFormat(document.documentElement.lang || 'ru', {
+  return new Intl.DateTimeFormat(currentIntlLocale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
