@@ -231,7 +231,7 @@
                     <button
                       type="button"
                       @click="selectAllGroups"
-                      class="text-brand-500 hover:text-brand-600 dark:text-brand-400 transition"
+                      class="text-brand-600 hover:text-brand-700 dark:text-brand-400 transition"
                     >
                       {{ $t('common.active') }}... ({{ $t('common.total') }}: {{ classGroups.length }})
                     </button>
@@ -262,7 +262,7 @@
                 <button
                   type="submit"
                   :disabled="submitting"
-                  class="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60 transition"
+                  class="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-600 px-5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 transition"
                 >
                   <Loader2 v-if="submitting" class="h-4 w-4 animate-spin" />
                   <Plus v-else class="h-4 w-4" />

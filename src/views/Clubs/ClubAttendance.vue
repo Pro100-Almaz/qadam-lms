@@ -1,7 +1,7 @@
 <template>
   <AdminLayout>
     <div class="mx-auto max-w-6xl space-y-6">
-      <router-link :to="`/clubs/${clubId}`" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400">
+      <router-link :to="`/clubs/${clubId}`" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-700 dark:text-gray-400">
         <ArrowLeft class="h-4 w-4" /> {{ t('clubs.backToClub') }}
       </router-link>
 
@@ -75,7 +75,7 @@
           </section>
 
           <div class="flex justify-end">
-            <button type="button" :disabled="!attendance.records.length || attendanceSaving" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50" @click="saveAttendance"><Loader2 v-if="attendanceSaving" class="h-4 w-4 animate-spin" /><Save v-else class="h-4 w-4" />{{ t('clubs.saveAttendance') }}</button>
+            <button type="button" :disabled="!attendance.records.length || attendanceSaving" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50" @click="saveAttendance"><Loader2 v-if="attendanceSaving" class="h-4 w-4 animate-spin" /><Save v-else class="h-4 w-4" />{{ t('clubs.saveAttendance') }}</button>
           </div>
         </template>
 
@@ -106,7 +106,7 @@
             </button>
           </div>
           <p v-else-if="!historyError" class="px-5 py-12 text-center text-sm text-gray-500 dark:text-gray-400">{{ t('clubs.noAttendanceHistory') }}</p>
-          <div v-else class="px-5 py-10 text-center"><p class="text-sm text-error-500">{{ t('clubs.attendanceHistoryLoadError') }}</p><button type="button" class="mt-3 text-sm font-medium text-brand-500" @click="loadHistory">{{ t('clubs.tryAgain') }}</button></div>
+          <div v-else class="px-5 py-10 text-center"><p class="text-sm text-error-500">{{ t('clubs.attendanceHistoryLoadError') }}</p><button type="button" class="mt-3 text-sm font-medium text-brand-600 dark:text-brand-400" @click="loadHistory">{{ t('clubs.tryAgain') }}</button></div>
           <div v-if="!historyLoading && !historyError && historyTotal > 0" class="border-t border-gray-200 px-5 py-4 dark:border-gray-800">
             <Pagination :total="historyTotal" :current-page="historyPage" :page-size="historyPageSize" :page-sizes="[10, 20, 50]" @update:current-page="changeHistoryPage" @update:page-size="changeHistoryPageSize" />
           </div>
@@ -133,6 +133,7 @@ import ClubSessionSelect from '@/components/clubs/ClubSessionSelect.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import { getClubApi, getClubAttendanceHistoryApi, getClubSessionAttendanceApi, replaceClubSessionAttendanceApi, type ClubAttendanceHistoryItem, type ClubAttendanceStatus, type ClubDetail, type ClubSessionAttendance, type ClubWeekday } from '@/api/clubs'
 import { useToast } from '@/composables/useToast'
+import { currentIntlLocale } from '@/i18n'
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -380,7 +381,7 @@ function errorDetail(error: unknown): string {
 }
 
 function formatDisplayDate(value: string): string {
-  const locale = document.documentElement.lang || 'ru'
+  const locale = currentIntlLocale()
   return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
 }
 

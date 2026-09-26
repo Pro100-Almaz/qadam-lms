@@ -52,6 +52,7 @@ import { useI18n } from 'vue-i18n'
 import { FileText, ChevronRight, CheckCircle2, Loader2, XCircle } from 'lucide-vue-next'
 import { getStudentReportsApi } from '@/api/reports'
 import type { StudentReportListItem, ReportStatus } from '@/types/report'
+import { currentIntlLocale } from '@/i18n'
 
 const props = defineProps<{ studentId: number }>()
 
@@ -69,7 +70,7 @@ function statusClass(status: ReportStatus): string {
 
 function formatDate(iso: string): string {
   try {
-    return new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
+    return new Intl.DateTimeFormat(currentIntlLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
   } catch {
     return iso
   }

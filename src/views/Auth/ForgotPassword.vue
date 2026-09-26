@@ -49,7 +49,7 @@
                     <button
                       type="submit"
                       :disabled="isLoading"
-                      class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-600 shadow-theme-xs hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg
                         v-if="isLoading"
@@ -66,7 +66,7 @@
                   <div class="text-center">
                     <router-link
                       to="/signin"
-                      class="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                      class="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400"
                     >
                       {{ $t('auth.backToSignIn') }}
                     </router-link>

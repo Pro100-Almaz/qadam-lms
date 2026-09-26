@@ -86,12 +86,13 @@ import { useRouter } from 'vue-router'
 import { CalendarDays, Puzzle } from 'lucide-vue-next'
 import Pagination from '@/components/ui/Pagination.vue'
 import { getStudentClubsApi, type StudentClub } from '@/api/clubs'
+import { currentIntlLocale } from '@/i18n'
 
 const props = defineProps<{
   studentId: number
 }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const router = useRouter()
 const clubs = ref<StudentClub[]>([])
 const total = ref(0)
@@ -148,7 +149,7 @@ function attendanceWidth(count: number, club: StudentClub): string {
 }
 
 function formatDate(value: string): string {
-  return new Intl.DateTimeFormat(locale.value, {
+  return new Intl.DateTimeFormat(currentIntlLocale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

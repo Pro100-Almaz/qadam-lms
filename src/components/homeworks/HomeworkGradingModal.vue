@@ -70,7 +70,7 @@
                 class="rounded-lg px-2 py-2 hover:bg-gray-50 dark:hover:bg-white/5"
               >
                 <div class="flex items-center gap-3">
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-500 dark:bg-brand-500/10">
+                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
                     {{ initials(row.fullName) }}
                   </div>
                   <p class="min-w-0 flex-1 truncate text-sm text-gray-700 dark:text-gray-300">
@@ -142,7 +142,7 @@
                 v-if="canGrade"
                 type="button"
                 :disabled="saving || loading || loadError || !dirtyCount"
-                class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
                 @click="save"
               >
                 <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />

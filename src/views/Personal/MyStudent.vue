@@ -13,7 +13,7 @@
       <div class="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-500/10">
         <ShieldAlert class="h-8 w-8 text-orange-500" />
       </div>
-      <p class="text-base font-medium text-gray-800 dark:text-white/90">{{ t('common.noAccess') || 'This page is only available for parent users.' }}</p>
+      <p class="text-base font-medium text-gray-800 dark:text-white/90">{{ t('common.parentOnly') }}</p>
     </div>
 
     <!-- Error -->
@@ -27,7 +27,7 @@
     <!-- Content -->
     <div v-else-if="student" class="space-y-6">
       <!-- Profile Header Card -->
-      <div class="relative overflow-hidden rounded-xl border border-brand-200 bg-gradient-to-r from-brand-500 to-brand-600 dark:border-brand-800 shadow-theme-md">
+      <div class="relative overflow-hidden rounded-xl border border-brand-200 bg-gradient-to-r from-brand-600 to-brand-700 dark:border-brand-800 shadow-theme-md">
         <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5"></div>
         <div class="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-white/5"></div>
 
@@ -190,7 +190,7 @@
 
       <!-- Psychological states (view-only) -->
       <div class="space-y-4">
-        <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">Psychological States</h2>
+        <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('students.psychologicalStates') }}</h2>
 
         <div v-if="student.psychological_states.current.length > 0" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           <div
@@ -261,6 +261,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { getStudentDetailApi } from '@/api/students'
 import { useAuth } from '@/composables/useAuth'
 import type { StudentDetail } from '@/types/student'
+import { currentIntlLocale } from '@/i18n'
 
 const { t } = useI18n()
 const { user: authUser } = useAuth()
@@ -346,7 +347,7 @@ function scoreLabel(score: number): string {
 function formatDate(dateStr: string): string {
   if (!dateStr) return '—'
   try {
-    return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(dateStr))
+    return new Intl.DateTimeFormat(currentIntlLocale(), { dateStyle: 'medium' }).format(new Date(dateStr))
   } catch {
     return dateStr
   }

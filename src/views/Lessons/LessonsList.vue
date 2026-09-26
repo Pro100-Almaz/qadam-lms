@@ -14,7 +14,7 @@
         <button
           v-if="canAddLesson"
           @click="showAddModal = true"
-          class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
+          class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 transition"
         >
           <Plus class="h-4 w-4" />
           {{ $t('lessons.addNew') }}
@@ -82,7 +82,7 @@
             class="px-4 py-1.5 text-sm font-medium transition first:rounded-l-lg last:rounded-r-lg"
             :class="
               currentView === v
-                ? 'bg-brand-500 text-white'
+                ? 'bg-brand-600 text-white'
                 : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5'
             "
           >
@@ -130,7 +130,7 @@
                 class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium"
                 :class="{
                   'text-gray-400 dark:text-gray-600': !day.isCurrentMonth,
-                  'bg-brand-500 text-white': day.isToday,
+                  'bg-brand-600 text-white': day.isToday,
                   'text-gray-700 dark:text-gray-300': day.isCurrentMonth && !day.isToday,
                 }"
               >
@@ -178,7 +178,7 @@
                 </div>
                 <div
                   class="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold"
-                  :class="isToday(day.date) ? 'bg-brand-500 text-white' : 'text-gray-800 dark:text-white/90'"
+                  :class="isToday(day.date) ? 'bg-brand-600 text-white' : 'text-gray-800 dark:text-white/90'"
                 >
                   {{ day.date.getDate() }}
                 </div>
@@ -437,7 +437,7 @@
                   <button
                     type="submit"
                     :disabled="savingLesson"
-                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 transition"
+                    class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition"
                   >
                     <Loader2 v-if="savingLesson" class="h-4 w-4 animate-spin" />
                     {{ $t('common.save') }}
@@ -477,8 +477,9 @@ import type { Teacher } from '@/types/teacher'
 import { useAuth } from '@/composables/useAuth'
 import { useCurrentQuarter } from '@/composables/useCurrentQuarter'
 import { useRouter } from 'vue-router'
+import { currentIntlLocale } from '@/i18n'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const router = useRouter()
 const { user: authUser } = useAuth()
 const { quarter: currentQuarter, load: loadCurrentQuarter } = useCurrentQuarter()
@@ -854,7 +855,7 @@ function formatHour(hour: number): string {
 }
 
 function formatFullDate(date: Date): string {
-  return date.toLocaleDateString(locale.value === 'kz' ? 'kk-KZ' : locale.value === 'ru' ? 'ru-RU' : 'en-US', {
+  return date.toLocaleDateString(currentIntlLocale(), {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -863,7 +864,7 @@ function formatFullDate(date: Date): string {
 }
 
 const currentTitle = computed(() => {
-  const loc = locale.value === 'kz' ? 'kk-KZ' : locale.value === 'ru' ? 'ru-RU' : 'en-US'
+  const loc = currentIntlLocale()
   if (currentView.value === 'month') {
     return currentDate.value.toLocaleDateString(loc, { month: 'long', year: 'numeric' })
   }
@@ -879,7 +880,7 @@ const currentTitle = computed(() => {
 })
 
 const formattedDateRange = computed(() => {
-  const loc = locale.value === 'kz' ? 'kk-KZ' : locale.value === 'ru' ? 'ru-RU' : 'en-US'
+  const loc = currentIntlLocale()
   if (currentView.value === 'month') {
     const year = currentDate.value.getFullYear()
     const month = currentDate.value.getMonth()

@@ -38,7 +38,7 @@
           </button>
         </div>
       </div>
-      <span>{{ $t('pagination.of') }} {{ total }} {{ $t('pagination.entries') }}</span>
+      <span>{{ $t('pagination.ofTotal', { total }) }}</span>
     </div>
 
     <!-- Page buttons -->
@@ -62,7 +62,7 @@
           class="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition"
           :class="
             page === currentPage
-              ? 'bg-brand-500 text-white'
+              ? 'bg-brand-600 text-white'
               : 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5'
           "
         >

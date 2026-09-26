@@ -55,7 +55,7 @@
             <p class="text-xs text-gray-400 dark:text-gray-500">{{ t('documentPreview.errorBody') }}</p>
             <button
               @click="downloadAttachment"
-              class="mt-2 inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition"
+              class="mt-2 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition"
             >
               <Download class="h-4 w-4" />
               {{ t('documentPreview.download') }}
@@ -69,7 +69,7 @@
             <div class="mt-2 flex items-center gap-3">
               <button
                 @click="downloadAttachment"
-                class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 shadow-theme-xs transition"
+                class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 shadow-theme-xs transition"
               >
                 <Download class="h-4 w-4" />
                 {{ t('documentPreview.download') }}

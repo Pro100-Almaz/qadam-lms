@@ -13,7 +13,7 @@
         </div>
         <button
           @click="showAddModal = true"
-          class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
+          class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 transition"
         >
           <Plus class="h-4 w-4" />
           {{ $t('subjects.addNew') }}
@@ -47,7 +47,7 @@
             <button
               @click="selectedLanguage = ''; langDropdownOpen = false"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedLanguage }"
+              :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': !selectedLanguage }"
             >
               {{ $t('subjects.allLanguages') }}
             </button>
@@ -56,7 +56,7 @@
               :key="lang"
               @click="selectedLanguage = lang; langDropdownOpen = false"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedLanguage === lang }"
+              :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': selectedLanguage === lang }"
             >
               {{ $t('subjects.languages.' + lang) }}
             </button>

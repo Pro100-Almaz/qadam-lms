@@ -14,7 +14,7 @@
         <AlertCircle class="h-8 w-8 text-red-500" />
       </div>
       <p class="text-base font-medium text-gray-800 dark:text-white/90">{{ error }}</p>
-      <button @click="fetchDashboard" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
+      <button @click="fetchDashboard" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors">
         {{ t('common.retry') }}
       </button>
     </div>

@@ -101,6 +101,7 @@ import { useI18n } from 'vue-i18n'
 import { AlertTriangle, ChevronRight } from 'lucide-vue-next'
 import VueApexCharts from 'vue3-apexcharts'
 import type { PsychologistDashboard } from '@/types/teacherDashboard'
+import { currentIntlLocale } from '@/i18n'
 
 const props = defineProps<{ data: PsychologistDashboard }>()
 const { t } = useI18n()
@@ -111,7 +112,7 @@ const barChartSeries = computed(() => [{
 }])
 
 const barChartOptions = computed(() => ({
-  chart: { fontFamily: 'Outfit, sans-serif', type: 'bar', toolbar: { show: false } },
+  chart: { fontFamily: 'Manrope, sans-serif', type: 'bar', toolbar: { show: false } },
   colors: ['#F44336', '#FF9800', '#FFC107', '#8BC34A', '#4CAF50'],
   plotOptions: {
     bar: {
@@ -156,7 +157,7 @@ function psychDotClass(score: number) {
 
 function formatDate(dateStr: string) {
   try {
-    return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(dateStr))
+    return new Intl.DateTimeFormat(currentIntlLocale(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(dateStr))
   } catch {
     return dateStr
   }

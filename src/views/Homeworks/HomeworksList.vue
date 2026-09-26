@@ -8,7 +8,7 @@
         </div>
         <router-link
           to="/homeworks/create"
-          class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600"
+          class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-700"
         >
           <Plus class="h-4 w-4" /> {{ t('homeworks.create') }}
         </router-link>
@@ -70,7 +70,7 @@
         <button
           v-if="hasActiveFilters"
           type="button"
-          class="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400"
+          class="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-gray-500 transition hover:text-brand-700 dark:text-gray-400"
           @click="resetFilters"
         >
           <X class="h-4 w-4" /> {{ t('common.reset') }}
@@ -346,6 +346,7 @@ import { useBackdropClose } from '@/composables/useBackdropClose'
 import { useHomeworkPermissions } from '@/composables/useHomeworkPermissions'
 import { useToast } from '@/composables/useToast'
 import type { Subject } from '@/types/subject'
+import { currentIntlLocale } from '@/i18n'
 
 const { t, locale } = useI18n()
 const { success } = useToast()
@@ -584,7 +585,7 @@ function loadFilterOptions() {
 
 function formatDate(value: string): string {
   if (!value) return '—'
-  const localeTag = document.documentElement.lang || 'ru'
+  const localeTag = currentIntlLocale()
   return new Intl.DateTimeFormat(localeTag, {
     day: '2-digit',
     month: 'short',
@@ -595,7 +596,7 @@ function formatDate(value: string): string {
 
 function formatDateTime(value: string): string {
   if (!value) return '—'
-  const localeTag = document.documentElement.lang || 'ru'
+  const localeTag = currentIntlLocale()
   return new Intl.DateTimeFormat(localeTag, {
     day: '2-digit',
     month: 'short',

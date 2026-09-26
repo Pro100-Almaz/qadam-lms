@@ -40,7 +40,7 @@
         <button
           type="button"
           :disabled="disabled"
-          class="w-16 shrink-0 rounded-md px-2 py-1 text-left text-xs font-semibold text-gray-600 transition hover:text-brand-500 disabled:cursor-not-allowed dark:text-gray-400"
+          class="w-16 shrink-0 rounded-md px-2 py-1 text-left text-xs font-semibold text-gray-600 transition hover:text-brand-700 disabled:cursor-not-allowed dark:text-gray-400"
           @click="toggleGrade(grade)"
         >
           {{ t('homeworks.gradeShort', { number: grade.number }) }}

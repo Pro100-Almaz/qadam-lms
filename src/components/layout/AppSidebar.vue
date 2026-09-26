@@ -20,14 +20,24 @@
       ]"
     >
       <router-link to="/" class="flex items-center" @click="closeMobileSidebar">
-        <span
-          v-if="isExpanded || isHovered || isMobileOpen"
-          class="text-xl font-bold text-gray-900 dark:text-white"
-        >Qadam <span class="text-brand-400">LMS</span></span>
-        <span
+        <template v-if="isExpanded || isHovered || isMobileOpen">
+          <img
+            class="h-10 w-auto dark:hidden"
+            src="/images/logo/logo.svg"
+            alt="Qadam School"
+          />
+          <img
+            class="hidden h-10 w-auto dark:block"
+            src="/images/logo/logo-dark.svg"
+            alt="Qadam School"
+          />
+        </template>
+        <img
           v-else
-          class="text-lg font-bold text-brand-400"
-        >Q</span>
+          class="h-9 w-9"
+          src="/images/logo/logo-icon.svg"
+          alt="Qadam School"
+        />
       </router-link>
     </div>
     <div

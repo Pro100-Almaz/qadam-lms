@@ -36,7 +36,7 @@
           <div class="flex items-center gap-2">
             <router-link
               :to="`/lessons/${lesson.id}/grading`"
-              class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
+              class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 transition"
             >
               <ClipboardCheck class="h-4 w-4" />
               {{ t('lessons.gradeStudents') }}
@@ -131,7 +131,7 @@
               </button>
               <button
                 @click="openAddTopicModal"
-                class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 transition"
               >
                 <Plus class="h-4 w-4" />
                 {{ t('lessons.addTopic') }}
@@ -210,7 +210,7 @@
               </button>
               <button
                 @click="openAddSubtopicModal"
-                class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 transition"
               >
                 <Plus class="h-4 w-4" />
                 {{ t('lessons.addSubtopic') }}
@@ -406,7 +406,7 @@
                     <button
                       type="submit"
                       :disabled="saving"
-                      class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-600 disabled:opacity-50"
+                      class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
                     >
                       <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
                       {{ t('common.save') }}
@@ -504,7 +504,7 @@
                     <button
                       type="submit"
                       :disabled="saving"
-                      class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-600 disabled:opacity-50"
+                      class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
                     >
                       <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
                       {{ t('common.save') }}
@@ -1000,18 +1000,18 @@ async function handleSaveSubtopic() {
     topicTotalWeight.value = (await getTopicTotalWeightApi(lesson.value?.topics.find((t) => t.id === subtopicForm.value.parent)?.id ?? 0)) || 0
     if (topicTotalWeight.value == 100) {
       success(
-        'Общий вес текущей темы',
-        'Общий вес темы составляет 100%.'
+        t('lessons.topicWeightTitle'),
+        t('lessons.topicWeightComplete')
       )
     } else if (topicTotalWeight.value > 100) {
       warning(
-        'Общий вес текущей темы()',
-        `Общий вес темы составляет ${topicTotalWeight.value}%. Рекомендуется скорректировать веса подтем.`
+        t('lessons.topicWeightTitle'),
+        t('lessons.topicWeightExceeded', { percent: topicTotalWeight.value })
       )
     } else {
       info(
-        'Общий вес текущей темы',
-        `Общий вес темы составляет ${topicTotalWeight.value}%. Распределите оставшийся вес между подтемами.`
+        t('lessons.topicWeightTitle'),
+        t('lessons.topicWeightRemaining', { percent: topicTotalWeight.value })
       )
     }
 

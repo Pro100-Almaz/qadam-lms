@@ -63,7 +63,7 @@ const buttonClass = computed(() => {
   const size = props.size === 'sm' ? 'px-3 py-2 text-xs' : 'px-4 py-2.5 text-sm'
   const variant =
     props.variant === 'primary'
-      ? 'bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600'
+      ? 'bg-brand-600 text-white shadow-theme-xs hover:bg-brand-700'
       : 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5'
   return `${base} ${size} ${variant}`
 })

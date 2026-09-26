@@ -40,7 +40,7 @@
             <button
               @click="selectYear(null)"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedYearId }"
+              :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': !selectedYearId }"
             >
               {{ $t('students.allYears') }}
             </button>
@@ -49,7 +49,7 @@
               :key="year.id"
               @click="selectYear(year.id)"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedYearId === year.id }"
+              :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': selectedYearId === year.id }"
             >
               {{ year.year }}
               <span v-if="year.is_active" class="ml-auto text-xs text-success-600 dark:text-success-400">{{ $t('common.current') }}</span>
@@ -73,7 +73,7 @@
             <button
               @click="selectClassGroup(null)"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedClassGroupId }"
+              :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': !selectedClassGroupId }"
             >
               {{ $t('students.allClasses') }}
             </button>
@@ -82,7 +82,7 @@
               :key="cg.id"
               @click="selectClassGroup(cg.id)"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedClassGroupId === cg.id }"
+              :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': selectedClassGroupId === cg.id }"
             >
               {{ cg.display_name }}
             </button>

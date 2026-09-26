@@ -40,9 +40,9 @@
       <div class="report-header">
         <div class="header-content">
           <div class="header-brand">
-            <div class="brand-icon">📊</div>
+            <img class="brand-icon" src="/images/logo/logo-dark.svg" alt="Qadam School" />
             <div>
-              <div class="brand-label">Qadam Analytics</div>
+              <div class="brand-label">{{ t('app.name') }}</div>
               <div class="brand-school">{{ t('app.school') }}</div>
             </div>
           </div>
@@ -289,7 +289,7 @@
           </div>
           <div class="footer-right">
             <span class="footer-dot" />
-            Qadam Analytics — AI Generated
+            {{ t('app.name') }} — {{ t('reports.aiGenerated') }}
           </div>
         </div>
       </div>
@@ -303,6 +303,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { getReportApi, downloadReportPdfApi } from '@/api/reports'
 import type { StudentReport, SubjectRow, TrendDirection } from '@/types/report'
+import { currentIntlLocale } from '@/i18n'
 
 const route = useRoute()
 const router = useRouter()
@@ -379,7 +380,7 @@ function badgeClass(label: string): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en', {
+  return new Date(iso).toLocaleDateString(currentIntlLocale(), {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
   })
 }
@@ -437,7 +438,7 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700&display=swap');
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 .report-page {
@@ -460,7 +461,7 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
   --shadow-lg: 0 2px 20px rgba(0,0,0,0.1);
   --radius: 12px;
   --radius-sm: 8px;
-  --font-display: 'Outfit', sans-serif;
+  --font-display: 'Manrope', sans-serif;
   --font-body: 'Noto Sans', sans-serif;
 
   font-family: var(--font-body);
@@ -575,7 +576,7 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 }
 .header-content { max-width: 100%; }
 .header-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
-.brand-icon { font-size: 28px; }
+.brand-icon { height: 28px; width: auto; }
 .brand-label { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 0.5px; }
 .brand-school { font-size: 12px; opacity: 0.7; margin-top: 2px; }
 .header-title {

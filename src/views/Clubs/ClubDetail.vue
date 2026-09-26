@@ -1,7 +1,7 @@
 <template>
   <AdminLayout>
     <div class="mx-auto max-w-6xl space-y-6">
-      <router-link to="/clubs" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400">
+      <router-link to="/clubs" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-700 dark:text-gray-400">
         <ArrowLeft class="h-4 w-4" />
         {{ t('clubs.backToClubs') }}
       </router-link>
@@ -31,7 +31,7 @@
             <router-link :to="`/clubs/${club.id}/edit`" class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5">
               <Pencil class="h-4 w-4" /> {{ t('clubs.editClub') }}
             </router-link>
-            <router-link :to="`/clubs/${club.id}/attendance`" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600">
+            <router-link :to="`/clubs/${club.id}/attendance`" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700">
               <ClipboardCheck class="h-4 w-4" /> {{ t('clubs.checkAttendance') }}
             </router-link>
           </div>
@@ -115,7 +115,7 @@
               <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">{{ t('clubs.attachmentSizeHint') }}</p>
               <div v-if="club.attachments.length" class="mt-4 space-y-2">
                 <div v-for="file in club.attachments" :key="file.id" class="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
-                  <button type="button" class="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left transition hover:text-brand-500" @click="openAttachmentPreview(file)"><Paperclip class="h-4 w-4 shrink-0 text-gray-400" /><span class="truncate">{{ file.name }}</span></button>
+                  <button type="button" class="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left transition hover:text-brand-700" @click="openAttachmentPreview(file)"><Paperclip class="h-4 w-4 shrink-0 text-gray-400" /><span class="truncate">{{ file.name }}</span></button>
                   <button type="button" :disabled="actionPending" :aria-label="t('clubs.deleteAttachment')" :title="t('clubs.deleteAttachment')" class="rounded-md p-1.5 text-gray-400 transition hover:bg-error-50 hover:text-error-500 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-error-500/10" @click="confirmAttachmentDeletion(file)"><Trash2 class="h-3.5 w-3.5" /></button>
                 </div>
               </div>
@@ -184,7 +184,7 @@
             <div v-else-if="availableStudentsError" class="px-5 py-10 text-center">
               <CircleAlert class="mx-auto h-7 w-7 text-error-500" />
               <p class="mt-2 text-sm text-error-500">{{ t('clubs.availableStudentsLoadError') }}</p>
-              <button type="button" class="mt-3 text-sm font-medium text-brand-500 hover:text-brand-600" @click="fetchAvailableStudents">{{ t('clubs.tryAgain') }}</button>
+              <button type="button" class="mt-3 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400" @click="fetchAvailableStudents">{{ t('clubs.tryAgain') }}</button>
             </div>
             <div v-else-if="availableStudents.length" class="divide-y divide-gray-100 dark:divide-gray-800">
               <label v-for="student in availableStudents" :key="student.id" class="flex cursor-pointer items-center gap-3 px-4 py-3 transition hover:bg-gray-50 dark:hover:bg-white/5">
@@ -203,7 +203,7 @@
             <span class="text-sm text-gray-500 dark:text-gray-400">{{ t('clubs.selectedCount', { count: selectedStudentIds.size }) }}</span>
             <div class="flex gap-3">
               <button type="button" :disabled="memberUpdatePending" class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5" @click="availableStudentsOpen = false">{{ t('common.cancel') }}</button>
-              <button type="button" :disabled="!selectedStudentIds.size || memberUpdatePending" class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60" @click="registerSelectedStudents"><Loader2 v-if="memberUpdatePending" class="h-4 w-4 animate-spin" />{{ t('clubs.registerUsers') }}</button>
+              <button type="button" :disabled="!selectedStudentIds.size || memberUpdatePending" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60" @click="registerSelectedStudents"><Loader2 v-if="memberUpdatePending" class="h-4 w-4 animate-spin" />{{ t('clubs.registerUsers') }}</button>
             </div>
           </div>
         </div>
@@ -232,6 +232,7 @@ import { useDebounce } from '@/composables/useDebounce'
 import { useToast } from '@/composables/useToast'
 import type { ClassGroup } from '@/types/academic'
 import type { Attachment } from '@/types/achievement'
+import { currentIntlLocale } from '@/i18n'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -522,7 +523,7 @@ async function performConfirmedAction() {
 }
 
 function formatDateRange(startDate: string, endDate: string): string {
-  const locale = document.documentElement.lang || 'ru'
+  const locale = currentIntlLocale()
   const format = (value: string) => new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
   return `${format(startDate)} – ${format(endDate)}`
 }

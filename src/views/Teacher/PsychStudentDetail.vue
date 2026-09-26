@@ -102,6 +102,8 @@ import VueApexCharts from 'vue3-apexcharts'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { getPsychStudentDetailApi } from '@/api/teacherDashboard'
 import type { PsychStudentDetail } from '@/types/teacherDashboard'
+import { SERIES_STUDENT } from '@/components/analytics/chartTheme'
+import { currentIntlLocale } from '@/i18n'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -120,14 +122,14 @@ const trendChartOptions = computed(() => {
   if (!detail.value) return {}
   const sorted = [...detail.value.history].reverse()
   return {
-    chart: { fontFamily: 'Outfit, sans-serif', type: 'line', toolbar: { show: false }, zoom: { enabled: false } },
-    colors: ['#465FFF'],
+    chart: { fontFamily: 'Manrope, sans-serif', type: 'line', toolbar: { show: false }, zoom: { enabled: false } },
+    colors: [SERIES_STUDENT],
     stroke: { curve: 'smooth', width: 3 },
-    markers: { size: 6, colors: ['#465FFF'], strokeWidth: 2, strokeColors: '#fff' },
-    dataLabels: { enabled: true, offsetY: -10, style: { fontSize: '12px', fontWeight: 600, colors: ['#465FFF'] }, background: { enabled: false } },
+    markers: { size: 6, colors: [SERIES_STUDENT], strokeWidth: 2, strokeColors: '#fff' },
+    dataLabels: { enabled: true, offsetY: -10, style: { fontSize: '12px', fontWeight: 600, colors: [SERIES_STUDENT] }, background: { enabled: false } },
     xaxis: {
       categories: sorted.map((e) => {
-        try { return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(new Date(e.time_added)) } catch { return '' }
+        try { return new Intl.DateTimeFormat(currentIntlLocale(), { day: '2-digit', month: 'short' }).format(new Date(e.time_added)) } catch { return '' }
       }),
       labels: { style: { fontSize: '11px', colors: '#9CA3AF' }, rotate: -45, rotateAlways: sorted.length > 8 },
     },
@@ -151,7 +153,7 @@ function scoreBgClass(score: number) {
 
 function formatDate(dateStr: string) {
   try {
-    return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(dateStr))
+    return new Intl.DateTimeFormat(currentIntlLocale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(dateStr))
   } catch {
     return dateStr
   }

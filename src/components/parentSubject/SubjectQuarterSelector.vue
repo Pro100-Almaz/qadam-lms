@@ -9,7 +9,7 @@
       :class="[
         'flex h-9 w-16 items-center justify-center rounded-lg text-sm font-medium transition',
         modelValue === q
-          ? 'bg-brand-500 text-white shadow-sm'
+          ? 'bg-brand-600 text-white shadow-sm'
           : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5',
       ]"
     >

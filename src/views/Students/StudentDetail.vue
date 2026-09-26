@@ -220,7 +220,7 @@
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <!-- Line chart: Quarter Performance -->
           <div class="rounded-xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
-            <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">Quarter Performance</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ t('students.quarterGrade') }}</h3>
             <VueApexCharts
               type="line"
               height="300"
@@ -230,7 +230,7 @@
           </div>
           <!-- Radar chart: Subject Performance -->
           <div class="rounded-xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
-            <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">Subject Performance</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ t('subjects.title') }}</h3>
             <VueApexCharts
               v-if="radarChartSeries[0].data.length > 0"
               type="radar"
@@ -253,7 +253,7 @@
           <button
             v-if="isAdmin"
             @click="openAddStateModal"
-            class="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
+            class="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
           >
             <Plus class="h-4 w-4" />
             {{ t('students.addState') }}
@@ -339,7 +339,7 @@
           <button
             v-if="isAdmin"
             @click="openAddStateModal"
-            class="mt-4 flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
+            class="mt-4 flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
           >
             <Plus class="h-4 w-4" />
             {{ t('students.addFirstState') }}
@@ -377,7 +377,7 @@
             <button
               v-if="isAdmin"
               @click="openAddAchievementModal"
-              class="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
+              class="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
             >
               <Plus class="h-4 w-4" />
               {{ t('students.addAchievement') }}
@@ -435,7 +435,7 @@
                         </div>
                         <div v-else class="group/att flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 dark:border-gray-700 dark:bg-gray-800/50">
                           <FileText class="h-3 w-3 text-gray-400" />
-                          <button @click="previewAttachment = att" class="max-w-[60px] truncate text-xs text-brand-500 hover:underline">{{ att.original_name }}</button>
+                          <button @click="previewAttachment = att" class="max-w-[60px] truncate text-xs text-brand-600 hover:underline dark:text-brand-400">{{ att.original_name }}</button>
                           <button v-if="isAdmin" @click="removeAttachment(att.id)" class="rounded p-0.5 opacity-0 group-hover/att:opacity-100 hover:bg-red-50 dark:hover:bg-red-500/10 transition-opacity">
                             <Trash2 class="h-2.5 w-2.5 text-red-500" />
                           </button>
@@ -449,7 +449,7 @@
                       <button
                         v-if="ach.certificate"
                         @click="downloadCertificate(ach.id)"
-                        class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-brand-500 dark:hover:bg-white/5 transition-colors"
+                        class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-brand-700 dark:hover:bg-white/5 transition-colors"
                         :title="t('students.download')"
                       >
                         <Download class="h-4 w-4" />
@@ -481,7 +481,7 @@
             <button
               v-if="isAdmin"
               @click="openAddReadingModal"
-              class="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
+              class="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
             >
               <Plus class="h-4 w-4" />
               {{ t('students.addReadingEntry') }}
@@ -508,7 +508,7 @@
                   <div v-if="isAdmin" class="flex shrink-0 items-center gap-1">
                     <button
                       @click="openEditReadingModal(entry)"
-                      class="rounded-lg p-1 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-brand-50 hover:text-brand-500 dark:hover:bg-brand-500/10 transition-all"
+                      class="rounded-lg p-1 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 transition-all"
                     >
                       <Pencil class="h-3.5 w-3.5" />
                     </button>
@@ -549,7 +549,7 @@
           <button
             v-if="canGenerateReport"
             @click="showReportModal = true"
-            class="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors"
+            class="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 transition-colors"
           >
             <Sparkles class="h-4 w-4" />
             {{ t('reports.generate') }}
@@ -567,7 +567,7 @@
             <button
               v-if="isHomeroomTeacher"
               @click="openEditInfoModal"
-              class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-brand-500 dark:hover:bg-white/5 transition-colors"
+              class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-brand-700 dark:hover:bg-white/5 transition-colors"
               :title="t('profile.editPersonalInfo')"
             >
               <Pencil class="h-4 w-4" />
@@ -691,7 +691,7 @@
               <input
                 v-model="newState.name"
                 type="text"
-                placeholder="e.g. Anxious, Motivated..."
+                :placeholder="t('students.stateNamePlaceholder')"
                 class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               />
             </div>
@@ -726,7 +726,7 @@
               <textarea
                 v-model="newState.comment"
                 rows="3"
-                placeholder="Optional notes about the student's state..."
+                :placeholder="t('students.stateCommentPlaceholder')"
                 class="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
               ></textarea>
             </div>
@@ -742,7 +742,7 @@
             <button
               @click="submitNewState"
               :disabled="!newState.name || newState.score === 0 || submittingState"
-              class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               <Loader2 v-if="submittingState" class="h-4 w-4 animate-spin" />
               {{ t('common.save') }}
@@ -778,23 +778,23 @@
             </div>
             <div v-if="newAchievement.category !== 'extracurricular'">
               <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.awardType') }}</label>
-              <input v-model="newAchievement.award_type" type="text" placeholder="e.g. Gold Medal" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+              <input v-model="newAchievement.award_type" type="text" :placeholder="t('students.awardTypePlaceholder')" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
             </div>
             <div v-if="newAchievement.category !== 'extracurricular'">
               <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.place') }}</label>
-              <input v-model="newAchievement.place" type="text" placeholder="e.g. National, Regional" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+              <input v-model="newAchievement.place" type="text" :placeholder="t('students.placePlaceholder')" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
             </div>
             <div v-if="newAchievement.category === 'extracurricular'">
               <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.role') }} <span class="text-red-500">*</span></label>
-              <input v-model="newAchievement.role" type="text" placeholder="e.g. Club President" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+              <input v-model="newAchievement.role" type="text" :placeholder="t('students.rolePlaceholder')" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
             </div>
             <div v-if="newAchievement.category === 'extracurricular'">
               <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.duration') }}</label>
-              <input v-model="newAchievement.duration" type="text" placeholder="e.g. Sep 2025 – May 2026" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
+              <input v-model="newAchievement.duration" type="text" :placeholder="t('students.durationPlaceholder')" class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30" />
             </div>
             <div>
               <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('common.description') }}</label>
-              <textarea v-model="newAchievement.description" rows="3" placeholder="Describe the achievement..." class="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"></textarea>
+              <textarea v-model="newAchievement.description" rows="3" :placeholder="t('students.achievementDescriptionPlaceholder')" class="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"></textarea>
             </div>
             <div>
               <label class="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('students.attachments') }}</label>
@@ -815,7 +815,7 @@
           </div>
           <div class="mt-6 flex gap-3">
             <button @click="showAddAchievementModal = false; achievementFiles = []" class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5">{{ t('common.cancel') }}</button>
-            <button @click="submitAchievement" :disabled="!newAchievement.academic_year || savingAchievement" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors">
+            <button @click="submitAchievement" :disabled="!newAchievement.academic_year || savingAchievement" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors">
               <Loader2 v-if="savingAchievement" class="h-4 w-4 animate-spin" />
               {{ t('common.save') }}
             </button>
@@ -869,7 +869,7 @@
                   <X class="h-3 w-3" />
                 </button>
               </div>
-              <div v-else @click="readingCoverInput?.click()" class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-3 text-sm text-gray-500 hover:border-brand-300 hover:text-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+              <div v-else @click="readingCoverInput?.click()" class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-3 text-sm text-gray-500 hover:border-brand-300 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
                 <ImagePlus class="h-4 w-4" />
                 <span>{{ t('students.attachCover') }}</span>
               </div>
@@ -878,7 +878,7 @@
           </div>
           <div class="mt-6 flex gap-3">
             <button @click="showAddReadingModal = false" class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5">{{ t('common.cancel') }}</button>
-            <button @click="submitReadingEntry" :disabled="!newReading.title || !newReading.academic_year || savingReading" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors">
+            <button @click="submitReadingEntry" :disabled="!newReading.title || !newReading.academic_year || savingReading" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors">
               <Loader2 v-if="savingReading" class="h-4 w-4 animate-spin" />
               {{ t('common.save') }}
             </button>
@@ -1000,7 +1000,7 @@
               <button
                 type="submit"
                 :disabled="savingInfo"
-                class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
               >
                 <Loader2 v-if="savingInfo" class="h-4 w-4 animate-spin" />
                 {{ t('common.save') }}
@@ -1165,6 +1165,8 @@ import { getSchoolGroupApi, type SchoolGroup } from '@/api/auth'
 import { useAuth } from '@/composables/useAuth'
 import GenerateReportModal from '@/components/reports/GenerateReportModal.vue'
 import ReportHistoryList from '@/components/reports/ReportHistoryList.vue'
+import { SERIES_STUDENT } from '@/components/analytics/chartTheme'
+import { currentIntlLocale } from '@/i18n'
 
 // ─── i18n / route ────────────────────────────────────────────────────────────
 const { t } = useI18n()
@@ -1427,7 +1429,7 @@ function scoreLabel(score: number): string {
 function formatDate(dateStr: string): string {
   if (!dateStr) return '—'
   try {
-    return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(dateStr))
+    return new Intl.DateTimeFormat(currentIntlLocale(), { dateStyle: 'medium' }).format(new Date(dateStr))
   } catch {
     return dateStr
   }
@@ -1442,17 +1444,17 @@ const lineChartSeries = computed(() => {
 
 const lineChartOptions = computed(() => ({
   chart: {
-    fontFamily: 'Outfit, sans-serif',
+    fontFamily: 'Manrope, sans-serif',
     type: 'line',
     toolbar: { show: false },
     zoom: { enabled: false },
     animations: { enabled: true, easing: 'easeinout', speed: 600 },
   },
-  colors: ['#465FFF'],
+  colors: [SERIES_STUDENT],
   stroke: { curve: 'smooth', width: 3 },
   markers: {
     size: 7,
-    colors: ['#465FFF'],
+    colors: [SERIES_STUDENT],
     strokeWidth: 3,
     strokeColors: '#fff',
     hover: { sizeOffset: 3 },
@@ -1460,7 +1462,7 @@ const lineChartOptions = computed(() => ({
   dataLabels: {
     enabled: true,
     offsetY: -10,
-    style: { fontSize: '13px', fontWeight: 600, colors: ['#465FFF'] },
+    style: { fontSize: '13px', fontWeight: 600, colors: [SERIES_STUDENT] },
     background: { enabled: false },
   },
   xaxis: {
@@ -1502,17 +1504,17 @@ const radarChartOptions = computed(() => {
   const labels = Object.keys(student.value.cumulative_subject_grades)
   return {
     chart: {
-      fontFamily: 'Outfit, sans-serif',
+      fontFamily: 'Manrope, sans-serif',
       type: 'radar',
       toolbar: { show: false },
       dropShadow: { enabled: true, blur: 4, left: 1, top: 1, opacity: 0.1 },
     },
-    colors: ['#465FFF'],
+    colors: [SERIES_STUDENT],
     fill: { opacity: 0.15, type: 'solid' },
     stroke: { width: 2.5 },
     markers: {
       size: 5,
-      colors: ['#465FFF'],
+      colors: [SERIES_STUDENT],
       strokeWidth: 2,
       strokeColors: '#fff',
       hover: { sizeOffset: 2 },
@@ -1535,8 +1537,8 @@ const radarChartOptions = computed(() => {
     },
     dataLabels: {
       enabled: true,
-      style: { fontSize: '11px', fontWeight: 600, colors: ['#465FFF'] },
-      background: { enabled: true, borderRadius: 2, padding: 3, borderColor: 'transparent', foreColor: '#465FFF', dropShadow: { enabled: false } },
+      style: { fontSize: '11px', fontWeight: 600, colors: [SERIES_STUDENT] },
+      background: { enabled: true, borderRadius: 2, padding: 3, borderColor: 'transparent', foreColor: SERIES_STUDENT, dropShadow: { enabled: false } },
       formatter: (v: number) => `${v}%`,
     },
     tooltip: {

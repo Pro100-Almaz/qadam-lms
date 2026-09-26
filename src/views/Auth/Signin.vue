@@ -158,7 +158,7 @@
                       </div>
                       <router-link
                         to="/forgot-password"
-                        class="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
+                        class="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400"
                         >{{ $t('auth.forgotPassword') }}</router-link
                       >
                     </div>
@@ -167,7 +167,7 @@
                       <button
                         type="submit"
                         :disabled="isLoading"
-                        class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-600 shadow-theme-xs hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <svg
                           v-if="isLoading"
@@ -194,18 +194,6 @@
                     </div>
                   </div>
                 </form>
-                <!-- <div class="mt-5">
-                  <p
-                    class="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start"
-                  >
-                    {{ $t('auth.noAccount') }}
-                    <router-link
-                      to="/signup"
-                      class="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                      >{{ $t('auth.signUp') }}</router-link
-                    >
-                  </p>
-                </div> -->
               </div>
             </div>
           </div>
@@ -275,7 +263,7 @@
               {{ $t('app.school') }}
             </h2>
             <p class="text-sm text-gray-400 mb-6">
-              Learning Management System
+              {{ $t('app.tagline') }}
             </p>
             <!-- Animated feature pills -->
             <div class="flex flex-wrap justify-center gap-2 max-w-xs">

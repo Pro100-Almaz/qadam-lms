@@ -84,6 +84,7 @@ import { useI18n } from 'vue-i18n'
 import { BookOpen, ChevronRight, MessageSquare } from 'lucide-vue-next'
 import type { ParentChildLessonGrade } from '@/types/parentSelf'
 import { useGradeHelpers } from '@/composables/useGradeHelpers'
+import { currentIntlLocale } from '@/i18n'
 
 defineProps<{
   lessons: ParentChildLessonGrade[]
@@ -105,7 +106,7 @@ function percentOf(lesson: ParentChildLessonGrade): number {
 function formatDate(dateStr: string): string {
   if (!dateStr) return '—'
   try {
-    return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(dateStr))
+    return new Intl.DateTimeFormat(currentIntlLocale(), { dateStyle: 'medium' }).format(new Date(dateStr))
   } catch {
     return dateStr
   }

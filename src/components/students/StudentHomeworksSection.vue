@@ -165,6 +165,7 @@ import HomeworkAttachmentList from '@/components/homeworks/HomeworkAttachmentLis
 import Pagination from '@/components/ui/Pagination.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
 import { attachmentsOf, getStudentHomeworksApi, type StudentHomework } from '@/api/homeworks'
+import { currentIntlLocale } from '@/i18n'
 
 export interface HomeworkSubjectOption {
   id: number
@@ -260,7 +261,7 @@ function gradeColor(homework: StudentHomework): string {
 
 function formatDate(value: string): string {
   if (!value) return '—'
-  const localeTag = document.documentElement.lang || 'ru'
+  const localeTag = currentIntlLocale()
   return new Intl.DateTimeFormat(localeTag, {
     day: '2-digit',
     month: 'short',

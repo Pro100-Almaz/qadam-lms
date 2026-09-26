@@ -1,7 +1,8 @@
 {
     "app": {
         "name": "Qadam LMS",
-        "school": "Школа Qadam"
+        "school": "Школа Qadam",
+        "tagline": "Система управления обучением"
     },
     "nav": {
         "dashboard": "Главная",
@@ -174,7 +175,10 @@
         "details": "Подробности",
         "reset": "Сбросить",
         "selectOption": "Выберите вариант",
-        "noComment": "Нет комментариев"
+        "noComment": "Нет комментариев",
+        "parentOnly": "Эта страница доступна только родителям.",
+        "homeroomTeachersOnly": "Эта страница доступна только классным руководителям.",
+        "commandSearchPlaceholder": "Поиск или команда..."
     },
     "validation": {
         "required": "Это поле обязательно",
@@ -920,7 +924,13 @@
             "friday": "Пятница",
             "saturday": "Суббота",
             "sunday": "Воскресенье"
-        }
+        },
+        "topicWeightTitle": "Общий вес текущей темы",
+        "topicWeightComplete": "Общий вес темы составляет 100%.",
+        "topicWeightExceeded": "Общий вес темы составляет {percent}%. Рекомендуется скорректировать веса подтем.",
+        "topicWeightRemaining": "Общий вес темы составляет {percent}%. Распределите оставшийся вес между подтемами.",
+        "loadFailed": "Не удалось загрузить уроки.",
+        "lessonsCount": "Уроков: {count}"
     },
     "teachers": {
         "title": "Учителя",
@@ -1048,7 +1058,14 @@
         "quarterGrade": "Оценка за четверть",
         "scorePercent": "Балл (%)",
         "noHistory": "История отсутствует",
-        "belowAvg": "Ниже среднего"
+        "belowAvg": "Ниже среднего",
+        "stateNamePlaceholder": "например, Тревожность, Мотивированность...",
+        "stateCommentPlaceholder": "Необязательные заметки о состоянии ученика...",
+        "awardTypePlaceholder": "например, Золотая медаль",
+        "placePlaceholder": "например, Республиканский, Городской",
+        "rolePlaceholder": "например, Президент клуба",
+        "durationPlaceholder": "например, Сен 2025 – Май 2026",
+        "achievementDescriptionPlaceholder": "Опишите достижение..."
     },
     "profile": {
         "title": "Профиль",
@@ -1088,8 +1105,7 @@
     },
     "pagination": {
         "show": "Показать",
-        "of": "из",
-        "entries": "записей"
+        "ofTotal": "из {total} записей"
     },
     "teacherDashboard": {
         "welcome": "Добро пожаловать, {name}",
@@ -1154,6 +1170,7 @@
         "allSubjects": "Все предметы"
     },
     "reports": {
+        "aiGenerated": "Сгенерировано ИИ",
         "generate": "Создать ИИ-отчёт",
         "generating": "Генерация отчёта...",
         "estimatedTime": "Генерация отчёта обычно занимает 5-10 секунд",
@@ -1223,5 +1240,19 @@
         "notLinked": "Этот ребёнок не связан с вашим аккаунтом.",
         "notEnrolled": "Этот ребёнок не изучает этот предмет.",
         "loadFailed": "Не удалось загрузить данные предмета."
+    },
+    "pageTitles": {
+        "notFound": "Страница не найдена",
+        "subjectsActive": "Предметы — Активные",
+        "subjectsProcessing": "Предметы — В обработке",
+        "subjectsArchived": "Предметы — Архивные",
+        "subjectDetail": "Детали предмета",
+        "teacherDetail": "Детали учителя",
+        "studentDetail": "Детали ученика",
+        "studentClubDetail": "Детали кружка ученика",
+        "clubDetail": "Детали кружка",
+        "childDetail": "Детали ребёнка",
+        "childSubjectDetail": "Предмет ребёнка",
+        "psychStudentDetail": "Психологический профиль ученика"
     }
 }

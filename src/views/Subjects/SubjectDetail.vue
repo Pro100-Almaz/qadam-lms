@@ -78,7 +78,7 @@
                 :class="[
                 'transition inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-white/70',
                 activeClassGroup === o.class_group.id
-                ? 'bg-brand-500 text-white shadow-sm'
+                ? 'bg-brand-600 text-white shadow-sm'
                 : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5',]"
               >
                 {{ o.class_group.display_name }}
@@ -111,7 +111,7 @@
             <button
               v-if="canAddLesson"
               @click="openAddLessonModal"
-              class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 transition"
+              class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 transition"
             >
               <Plus class="h-4 w-4" />
               {{ $t('subjects.addLesson') }}
@@ -149,7 +149,7 @@
             :class="[
               'flex h-9 w-16 items-center justify-center rounded-lg text-sm font-medium transition',
               activeQuarter === q
-                ? 'bg-brand-500 text-white shadow-sm'
+                ? 'bg-brand-600 text-white shadow-sm'
                 : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5',
             ]"
           >
@@ -514,7 +514,7 @@
                 <button
                   type="submit"
                   :disabled="savingLesson"
-                  class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 transition"
+                  class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition"
                 >
                   <Loader2 v-if="savingLesson" class="h-4 w-4 animate-spin" />
                   {{ $t('common.save') }}
@@ -559,6 +559,7 @@ import { useBackdropClose } from '@/composables/useBackdropClose'
 import type { SubjectDetail, SubjectGrades } from '@/types/subject'
 import { formatUserName } from '@/utils/userName'
 import { formatLanguageGroup } from '@/utils/subjectLanguage'
+import { currentIntlLocale } from '@/i18n'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -869,7 +870,7 @@ function formatDate(dateStr: string): string {
   if (!dateStr) return '—'
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return dateStr
-  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+  return d.toLocaleDateString(currentIntlLocale(), { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────────

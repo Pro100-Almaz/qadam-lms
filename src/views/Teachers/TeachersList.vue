@@ -42,7 +42,7 @@
             <button
               @click="selectedOccupation = ''; occupationDropdownOpen = false"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': !selectedOccupation }"
+              :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': !selectedOccupation }"
             >
               {{ $t('teachers.allPositions') }}
             </button>
@@ -51,7 +51,7 @@
               :key="occ"
               @click="selectedOccupation = occ; occupationDropdownOpen = false"
               class="flex w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              :class="{ 'bg-brand-50 text-brand-500 dark:bg-brand-500/10': selectedOccupation === occ }"
+              :class="{ 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400': selectedOccupation === occ }"
             >
               {{ occ }}
             </button>

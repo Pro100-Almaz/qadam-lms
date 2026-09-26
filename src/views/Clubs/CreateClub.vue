@@ -1,7 +1,7 @@
 <template>
   <AdminLayout>
     <div class="mx-auto min-w-0 max-w-6xl space-y-6">
-      <button type="button" @click="router.push(backTarget)" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400">
+      <button type="button" @click="router.push(backTarget)" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-700 dark:text-gray-400">
         <ArrowLeft class="h-4 w-4" />
         {{ t('clubs.backToClubs') }}
       </button>
@@ -150,7 +150,7 @@
 
         <div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 dark:border-gray-800 sm:flex-row sm:justify-end">
           <button type="button" @click="router.push(backTarget)" class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/5">{{ t('common.cancel') }}</button>
-          <button type="submit" :disabled="saving || loadingAcademicYears" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="submit" :disabled="saving || loadingAcademicYears" class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60">
             <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
             <Save v-else-if="isEditing" class="h-4 w-4" />
             <Plus v-else class="h-4 w-4" />
@@ -177,7 +177,7 @@
               <div v-for="slot in selectedDaySlots" :key="slot.id" class="flex min-w-0 items-center justify-between gap-2 rounded-md border border-gray-200 bg-white px-2.5 py-2 text-xs font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
                 <span class="min-w-0 break-words">{{ slot.startTime }}–{{ slot.endTime }}<span v-if="slot.location" class="font-normal text-gray-400"> · {{ slot.location }}</span></span>
                 <span class="flex gap-1">
-                  <button type="button" :aria-label="t('common.edit')" class="rounded p-1 text-gray-400 hover:bg-brand-50 hover:text-brand-500 dark:hover:bg-brand-500/10" @click="editScheduleSlot(slot)"><Pencil class="h-3.5 w-3.5" /></button>
+                  <button type="button" :aria-label="t('common.edit')" class="rounded p-1 text-gray-400 hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10" @click="editScheduleSlot(slot)"><Pencil class="h-3.5 w-3.5" /></button>
                   <button type="button" :aria-label="t('common.delete')" class="rounded p-1 text-gray-400 hover:bg-error-50 hover:text-error-500 dark:hover:bg-error-500/10" @click="deleteScheduleSlot(slot.id)"><Trash2 class="h-3.5 w-3.5" /></button>
                 </span>
               </div>

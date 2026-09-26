@@ -1,7 +1,7 @@
 <template>
   <AdminLayout>
     <div class="mx-auto max-w-6xl space-y-6">
-      <button type="button" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400" @click="goBack">
+      <button type="button" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-700 dark:text-gray-400" @click="goBack">
         <ArrowLeft class="h-4 w-4" />
         {{ t('common.back') }}
       </button>
@@ -103,7 +103,7 @@
         </div>
         <div v-else-if="attendanceError" class="px-5 py-10 text-center">
           <p class="text-sm text-error-500">{{ attendanceError }}</p>
-          <button type="button" class="mt-3 text-sm font-medium text-brand-500 hover:text-brand-600" @click="fetchAttendance">{{ t('clubs.tryAgain') }}</button>
+          <button type="button" class="mt-3 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400" @click="fetchAttendance">{{ t('clubs.tryAgain') }}</button>
         </div>
         <div v-else-if="attendanceRecords.length" class="max-w-full overflow-x-auto custom-scrollbar">
           <table class="w-full min-w-[720px]">
@@ -153,6 +153,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import ClubMonthYearPicker from '@/components/clubs/ClubMonthYearPicker.vue'
 import ClubStatusBadge from '@/components/clubs/ClubStatusBadge.vue'
 import Pagination from '@/components/ui/Pagination.vue'
+import { currentIntlLocale } from '@/i18n'
 import {
   getStudentClubApi,
   getStudentClubAttendanceApi,
@@ -164,7 +165,7 @@ import {
 
 const route = useRoute()
 const router = useRouter()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const studentId = Number(route.params.studentId)
 const clubId = Number(route.params.clubId)
 
@@ -296,7 +297,7 @@ function formatLocalDate(date: Date): string {
 }
 
 function formatDate(value: string): string {
-  return new Intl.DateTimeFormat(locale.value === 'kz' ? 'kk' : locale.value, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
+  return new Intl.DateTimeFormat(currentIntlLocale(), { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
 }
 
 function dayName(day: ClubWeekday): string {

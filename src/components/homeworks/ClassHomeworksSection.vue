@@ -90,6 +90,7 @@ import { CalendarDays, CircleAlert, NotebookPen, Target, User } from 'lucide-vue
 import HomeworkAttachmentList from '@/components/homeworks/HomeworkAttachmentList.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import { attachmentsOf, getMyClassHomeworksApi, type Homework } from '@/api/homeworks'
+import { currentIntlLocale } from '@/i18n'
 
 /**
  * Published homework of the caller's homeroom class, across every subject —
@@ -157,7 +158,7 @@ function isOverdue(homework: Homework): boolean {
 
 function formatDate(value: string): string {
   if (!value) return '—'
-  const localeTag = document.documentElement.lang || 'ru'
+  const localeTag = currentIntlLocale()
   return new Intl.DateTimeFormat(localeTag, {
     day: '2-digit',
     month: 'short',

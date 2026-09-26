@@ -3,7 +3,7 @@
     <div class="mx-auto min-w-0 max-w-4xl space-y-6">
       <button
         type="button"
-        class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-500 dark:text-gray-400"
+        class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-brand-700 dark:text-gray-400"
         @click="router.push('/homeworks')"
       >
         <ArrowLeft class="h-4 w-4" />
@@ -254,7 +254,7 @@
             v-if="canEdit"
             type="submit"
             :disabled="saving"
-            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
             <Save v-else-if="isEditing" class="h-4 w-4" />

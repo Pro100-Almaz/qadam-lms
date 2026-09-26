@@ -1,7 +1,8 @@
 {
     "app": {
         "name": "Qadam LMS",
-        "school": "Qadam мектебі"
+        "school": "Qadam мектебі",
+        "tagline": "Оқу үдерісін басқару жүйесі"
     },
     "nav": {
         "dashboard": "Басты бет",
@@ -174,7 +175,10 @@
         "details": "Толығырақ",
         "reset": "Қалпына келтіру",
         "selectOption": "Опцияны таңдаңыз",
-        "noComment": "Пікірлер жоқ"
+        "noComment": "Пікірлер жоқ",
+        "parentOnly": "Бұл бет тек ата-аналарға қолжетімді.",
+        "homeroomTeachersOnly": "Бұл бет тек сынып жетекшілеріне қолжетімді.",
+        "commandSearchPlaceholder": "Іздеу немесе команда енгізіңіз..."
     },
     "validation": {
         "required": "Бұл өріс міндетті",
@@ -920,7 +924,13 @@
             "friday": "Жұма",
             "saturday": "Сенбі",
             "sunday": "Жексенбі"
-        }
+        },
+        "topicWeightTitle": "Ағымдағы тақырыптың жалпы салмағы",
+        "topicWeightComplete": "Тақырыптың жалпы салмағы 100% құрайды.",
+        "topicWeightExceeded": "Тақырыптың жалпы салмағы {percent}% құрайды. Ішкі тақырыптардың салмағын түзету ұсынылады.",
+        "topicWeightRemaining": "Тақырыптың жалпы салмағы {percent}% құрайды. Қалған салмақты ішкі тақырыптар арасында бөліңіз.",
+        "loadFailed": "Сабақтарды жүктеу мүмкін болмады.",
+        "lessonsCount": "Сабақтар саны: {count}"
     },
     "teachers": {
         "title": "Мұғалімдер",
@@ -1048,7 +1058,14 @@
         "quarterGrade": "Тоқсан бағасы",
         "scorePercent": "Балл (%)",
         "noHistory": "Тарих жоқ",
-        "belowAvg": "Орташадан төмен"
+        "belowAvg": "Орташадан төмен",
+        "stateNamePlaceholder": "мысалы, Мазасыздық, Ынталылық...",
+        "stateCommentPlaceholder": "Оқушының жағдайы туралы қосымша ескертпелер...",
+        "awardTypePlaceholder": "мысалы, Алтын медаль",
+        "placePlaceholder": "мысалы, Республикалық, Қалалық",
+        "rolePlaceholder": "мысалы, Клуб президенті",
+        "durationPlaceholder": "мысалы, Қыр 2025 – Мам 2026",
+        "achievementDescriptionPlaceholder": "Жетістікті сипаттаңыз..."
     },
     "profile": {
         "title": "Профиль",
@@ -1087,9 +1104,8 @@
         "confirmDeleteGrade": "Бұл оқушының бағасын жойғыңыз келетініне сенімдісіз бе?"
     },
     "pagination": {
-        "show": "Көрсету",
-        "of": "из",
-        "entries": "жазба"
+        "show": "Бетте",
+        "ofTotal": "· барлығы {total} жазба"
     },
     "teacherDashboard": {
         "welcome": "Қош келдіңіз, {name}",
@@ -1154,6 +1170,7 @@
         "allSubjects": "Барлық пәндер"
     },
     "reports": {
+        "aiGenerated": "ЖИ арқылы жасалған",
         "generate": "AI есеп жасау",
         "generating": "Есеп жасалуда...",
         "estimatedTime": "Есеп жасау әдетте 5-10 секунд алады",
@@ -1223,5 +1240,19 @@
         "notLinked": "Бұл бала сіздің аккаунтыңызбен байланыспаған.",
         "notEnrolled": "Бұл бала бұл пәнді оқымайды.",
         "loadFailed": "Пән мәліметтерін жүктеу мүмкін болмады."
+    },
+    "pageTitles": {
+        "notFound": "Бет табылмады",
+        "subjectsActive": "Пәндер — Белсенді",
+        "subjectsProcessing": "Пәндер — Өңделуде",
+        "subjectsArchived": "Пәндер — Мұрағатталған",
+        "subjectDetail": "Пән мәліметтері",
+        "teacherDetail": "Мұғалім мәліметтері",
+        "studentDetail": "Оқушы мәліметтері",
+        "studentClubDetail": "Оқушының үйірме мәліметтері",
+        "clubDetail": "Үйірме мәліметтері",
+        "childDetail": "Бала мәліметтері",
+        "childSubjectDetail": "Баланың пәні",
+        "psychStudentDetail": "Оқушының психологиялық профилі"
     }
 }
