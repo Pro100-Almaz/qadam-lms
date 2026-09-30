@@ -1,6 +1,9 @@
 <template>
+  <!-- While the mobile sidebar is open the header drops under its backdrop
+       (z-9999), so the sidebar and dimmed page read as one layer. -->
   <header
-    class="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 lg:border-b"
+    class="sticky top-0 flex w-full bg-white border-gray-200 dark:border-gray-800 dark:bg-gray-900 lg:border-b"
+    :class="isMobileOpen ? 'z-999 lg:z-99999' : 'z-99999'"
   >
     <div class="flex flex-col items-center justify-between grow lg:flex-row lg:px-6">
       <div
@@ -86,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useSidebar } from '@/composables/useSidebar'
 import ThemeToggler from '../common/ThemeToggler.vue'
 import SearchBar from './header/SearchBar.vue'
@@ -115,7 +118,15 @@ const toggleDropdown = () => {
 
 const isApplicationMenuOpen = ref(false)
 
+// The mobile sidebar is pinned 4rem down — the header's height with this menu
+// closed. Open, the menu's extra row covers the sidebar's top, so on a small
+// screen only one of the two is ever open.
 const toggleApplicationMenu = () => {
   isApplicationMenuOpen.value = !isApplicationMenuOpen.value
+  if (isApplicationMenuOpen.value && isMobileOpen.value) toggleMobileSidebar()
 }
+
+watch(isMobileOpen, open => {
+  if (open) isApplicationMenuOpen.value = false
+})
 </script>

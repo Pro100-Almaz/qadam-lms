@@ -1,7 +1,7 @@
 <template>
   <aside
     :class="[
-      'fixed left-0 top-16 flex h-[calc(100dvh-4rem)] flex-col border-r border-gray-200 bg-white px-5 text-gray-900 transition-all duration-300 ease-in-out z-99999 lg:top-0 lg:h-dvh dark:border-gray-800 dark:bg-gray-900',
+      'fixed left-0 top-0 flex h-dvh flex-col border-r border-gray-200 bg-white px-5 text-gray-900 transition-all duration-300 ease-in-out z-99999 dark:border-gray-800 dark:bg-gray-900',
       {
         'lg:w-[290px]': isExpanded || isMobileOpen || isHovered,
         'lg:w-[90px]': !isExpanded && !isHovered,
@@ -15,7 +15,7 @@
   >
     <div
       :class="[
-        'py-8 flex',
+        'py-8 flex items-center',
         !isExpanded && !isHovered ? 'lg:justify-center' : 'justify-start',
       ]"
     >
@@ -39,6 +39,16 @@
           alt="Qadam School"
         />
       </router-link>
+      <!-- The header — and its menu toggle — sits under the backdrop while the
+           mobile sidebar is open, so the sidebar carries its own close. -->
+      <button
+        type="button"
+        class="ml-auto flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
+        :aria-label="t('common.cancel')"
+        @click="closeMobileSidebar"
+      >
+        <X class="h-5 w-5" />
+      </button>
     </div>
     <div
       class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-4 duration-300 ease-linear no-scrollbar"
@@ -224,6 +234,7 @@ import {
   CalendarCog,
   CalendarClock,
   NotebookPen,
+  X,
 } from "lucide-vue-next";
 
 import {
