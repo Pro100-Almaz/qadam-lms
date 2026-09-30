@@ -508,7 +508,14 @@ export interface AssignmentHeatmapParams {
 export interface HeatmapAssignment {
   id: number
   title: string
-  category: AssignmentCategory
+  /** Any `/assignment-categories/` code, `homework` included. */
+  category: AssignmentCategory | (string & {})
+  /**
+   * Sent by `/analytics/offerings/{id}/assignment-heatmap/`, which returns
+   * inactive assignments too. Optional because the teacher-scoped route is not
+   * confirmed to send it; the gradebook then falls back to the list endpoint.
+   */
+  is_active?: boolean
   /** `YYYY-MM-DD`. */
   date: string
   max_grade: number

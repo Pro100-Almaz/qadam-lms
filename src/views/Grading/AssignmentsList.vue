@@ -90,6 +90,24 @@
             clearable
           />
         </div>
+        <!-- Off by default: inactive assignments stay out of the tables, but a
+             teacher still needs a way to reach one to switch it back on. -->
+        <label class="inline-flex h-10 cursor-pointer items-center gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+          <button
+            type="button"
+            role="switch"
+            :aria-checked="filters.showInactive"
+            class="relative h-6 w-11 shrink-0 rounded-full transition focus:outline-hidden focus:ring-3 focus:ring-brand-500/20"
+            :class="filters.showInactive ? 'bg-brand-500' : 'bg-gray-300 dark:bg-gray-700'"
+            @click="filters.showInactive = !filters.showInactive"
+          >
+            <span
+              class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all"
+              :class="filters.showInactive ? 'left-[22px]' : 'left-0.5'"
+            ></span>
+          </button>
+          {{ t('assignments.showInactive') }}
+        </label>
         <button
           v-if="hasActiveFilters"
           type="button"
@@ -140,6 +158,7 @@
           :date-to="filters.dateTo"
           :reload-token="reloadTokens[group.offeringId] ?? 0"
           :writable-assignment-ids="writableAssignmentIds(group)"
+          :show-inactive="filters.showInactive"
           @edit-assignment="openEdit"
         />
       </div>
@@ -246,12 +265,12 @@ import {
   type AssignmentOfferingPickerItem,
 } from '@/api/analytics'
 import {
-  SUBJECT_ASSIGNMENT_CATEGORIES,
   deleteSubjectAssignmentApi,
   getSubjectAssignmentsApi,
   type SubjectAssignment,
   type SubjectAssignmentCategory,
 } from '@/api/subjectAssignments'
+import { useAssignmentCategories } from '@/composables/useAssignmentCategories'
 import { useAssignmentPermissions } from '@/composables/useAssignmentPermissions'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { matchSubjectNames } from '@/composables/useSubjectNameLookup'
@@ -260,6 +279,7 @@ import type { LanguageGroup, Subject } from '@/types/subject'
 
 const { t } = useI18n()
 const { success } = useToast()
+const { categories, load: loadCategories } = useAssignmentCategories()
 const {
   isTeacher,
   canCreate,
@@ -291,6 +311,8 @@ const filters = ref({
   /** Both `YYYY-MM-DD`, matched against the assignment's academic date. */
   dateFrom: '',
   dateTo: '',
+  /** Client-side only: the list endpoint returns both, flagged by `is_active`. */
+  showInactive: false,
 })
 const currentPage = ref(1)
 /** Tables per page — each one loads a grid of its own, so the page stays small. */
@@ -303,7 +325,7 @@ const pageSize = ref(5)
  * taught to one class. Sorted the way a teacher scans them: by subject, then by
  * class; columns within a table run oldest to newest.
  */
-const groups = computed<OfferingGroup[]>(() => {
+const allGroups = computed<OfferingGroup[]>(() => {
   const grouped = new Map<number, OfferingGroup>()
   assignments.value.forEach(assignment => {
     if (!heatmapOfferingIds.value.has(assignment.offering_id)) return
@@ -333,6 +355,19 @@ const groups = computed<OfferingGroup[]>(() => {
         a.classGroupName.localeCompare(b.classGroupName),
     )
 })
+
+/**
+ * The tables actually shown. "Show inactive" only decides whether a table whose
+ * assignments are *all* switched off appears; hiding inactive columns inside a
+ * table is the table's job. Each table still gets every one of its offering's
+ * assignments, inactive included — the heatmap it draws from does not say which
+ * columns are inactive, so the table looks that up in this list.
+ */
+const groups = computed<OfferingGroup[]>(() =>
+  filters.value.showInactive
+    ? allGroups.value
+    : allGroups.value.filter(group => group.assignments.some(assignment => assignment.is_active !== false)),
+)
 
 /** The select stores its option value untyped; the grids take the union. */
 const categoryFilter = computed<SubjectAssignmentCategory | null>(
@@ -367,7 +402,6 @@ function reloadOffering(offeringId: number) {
 const formOpen = ref(false)
 /** `null` puts the shared modal into create mode. */
 const formTarget = ref<SubjectAssignment | null>(null)
-
 function openCreate() {
   formTarget.value = null
   formOpen.value = true
@@ -508,11 +542,9 @@ const statisticsOfferings = computed<StatisticsOfferingOption[]>(() =>
   })),
 )
 
+/** Same list, and the same backend names, as the form's Type select. */
 const categoryOptions = computed<SelectOption[]>(() =>
-  SUBJECT_ASSIGNMENT_CATEGORIES.map(category => ({
-    value: category,
-    label: t(`assignments.categories.${category}`),
-  })),
+  categories.value.map(category => ({ value: category.code, label: category.name })),
 )
 
 const hasActiveFilters = computed(
@@ -521,11 +553,19 @@ const hasActiveFilters = computed(
     Boolean(filters.value.classGroup) ||
     Boolean(filters.value.category) ||
     Boolean(filters.value.dateFrom) ||
-    Boolean(filters.value.dateTo),
+    Boolean(filters.value.dateTo) ||
+    filters.value.showInactive,
 )
 
 function resetFilters() {
-  filters.value = { subject: null, classGroup: null, category: null, dateFrom: '', dateTo: '' }
+  filters.value = {
+    subject: null,
+    classGroup: null,
+    category: null,
+    dateFrom: '',
+    dateTo: '',
+    showInactive: false,
+  }
 }
 
 /** Well past a term's assignments for one class, and under any sane API cap. */
@@ -615,6 +655,7 @@ async function loadFilterOptions() {
   const [pickerResult] = await Promise.all([
     getAssignmentOfferingsApi(),
     loadOfferings(),
+    loadCategories(),
   ])
   assignmentOfferings.value = pickerResult.data.offerings
 }

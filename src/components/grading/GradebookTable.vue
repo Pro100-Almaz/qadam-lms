@@ -81,13 +81,19 @@
               <button
                 type="button"
                 class="block w-full overflow-hidden px-2 py-2.5 transition"
-                :class="editTarget(column.assignment.id)
-                  ? 'hover:bg-gray-50 dark:hover:bg-white/5'
-                  : 'cursor-default'"
+                :class="[
+                  editTarget(column.assignment.id)
+                    ? 'hover:bg-gray-50 dark:hover:bg-white/5'
+                    : 'cursor-default',
+                  { 'opacity-50': isInactive(column) },
+                ]"
                 :title="columnTitle(column)"
                 @click.stop="requestEdit(column.assignment.id)"
               >
-                <span class="mx-auto mb-1 block h-1 w-6 rounded-full" :class="CATEGORY_DOTS[column.assignment.category]"></span>
+                <span
+                  class="mx-auto mb-1 block h-1 w-6 rounded-full"
+                  :class="CATEGORY_DOTS[column.assignment.category] ?? 'bg-gray-400'"
+                ></span>
                 <span class="block truncate text-[11px] font-medium text-gray-700 dark:text-gray-300">
                   {{ formatAcademicDay(column.assignment.date) }}
                 </span>
@@ -96,6 +102,12 @@
                 </span>
                 <span class="block text-[10px] font-normal text-gray-400 dark:text-gray-500">
                   / {{ column.assignment.max_grade }}
+                </span>
+                <span
+                  v-if="isInactive(column)"
+                  class="mt-0.5 block text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                >
+                  {{ t('assignments.inactive') }}
                 </span>
               </button>
             </th>
@@ -143,25 +155,37 @@
               @focusout="onCellFocusOut(student.id, column.assignment.id, $event)"
             >
               <template v-if="editableCell(column)">
-                <div class="relative mx-auto w-14">
+                <!-- Widened while it shows a comment, so the label has room and
+                     the (invisible) input under it still catches every click. -->
+                <div
+                  class="relative mx-auto"
+                  :class="showsCommentPreview(student.id, column.assignment.id) ? 'w-[72px]' : 'w-14'"
+                >
                   <input
                     :value="draftValue(student.id, column.assignment.id)"
                     type="number"
                     min="0"
                     :max="column.assignment.max_grade"
                     inputmode="numeric"
-                    class="h-8 w-14 rounded-md border px-2 text-center text-sm font-medium tabular-nums outline-none transition dark:bg-gray-900"
-                    :class="cellMessage(student.id, column.assignment.id)
-                      ? 'border-error-300 text-error-600 focus:border-error-400 dark:border-error-500/50 dark:text-error-400'
-                      : isDirtyCell(student.id, column.assignment.id)
-                        ? 'border-brand-300 bg-brand-50 text-brand-700 focus:border-brand-500 dark:border-brand-500/50 dark:bg-brand-500/10 dark:text-brand-300'
-                        : 'border-transparent bg-transparent hover:border-gray-200 focus:border-brand-500 dark:hover:border-gray-700'"
+                    class="h-8 w-full rounded-md border px-2 text-center text-sm font-medium tabular-nums outline-none transition dark:bg-gray-900"
+                    :class="inputClass(student.id, column.assignment.id)"
                     :aria-label="cellInputLabel(student.full_name, column.assignment.title)"
                     @input="setDraftValue(student.id, column.assignment.id, ($event.target as HTMLInputElement).value)"
                     @focus="activeCellKey = cellKey(column.assignment.id, student.id)"
                     @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
                     @keydown.esc.prevent="revertCell(student.id, column.assignment.id, $event)"
                   />
+                  <!-- A comment with no mark would otherwise be an empty box,
+                       indistinguishable from a student nobody has looked at.
+                       It stands in for the input — which is still there, just
+                       invisible — so only one box shows at a time, and a click
+                       or Tab lands in the input and swaps the two back. -->
+                  <span
+                    v-if="showsCommentPreview(student.id, column.assignment.id)"
+                    class="pointer-events-none absolute inset-0 block truncate rounded-md bg-gray-100 px-1.5 text-left text-[11px] font-normal italic leading-8 text-gray-600 dark:bg-white/10 dark:text-gray-300"
+                  >
+                    {{ draftComment(student.id, column.assignment.id) }}
+                  </span>
                   <!-- The mark leaves for the server the moment the cell does,
                        so the cell has to say for itself where it got to. -->
                   <Loader2
@@ -172,6 +196,12 @@
                     v-else-if="isSavedCell(student.id, column.assignment.id)"
                     class="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-success-500"
                   />
+                  <!-- A mark that also carries a comment says so. -->
+                  <span
+                    v-else-if="hasMarkAndComment(student.id, column.assignment.id)"
+                    class="pointer-events-none absolute -right-1 top-0.5 h-1.5 w-1.5 rounded-full bg-brand-400"
+                    aria-hidden="true"
+                  ></span>
                 </div>
                 <p
                   v-if="cellMessage(student.id, column.assignment.id)"
@@ -321,6 +351,11 @@ const props = defineProps<{
   dateTo?: string
   writableAssignmentIds?: number[]
   /**
+   * Inactive assignments are left out unless this is set; shown, they are
+   * dimmed so they still read as switched off.
+   */
+  showInactive?: boolean
+  /**
    * Bumped by the parent when this offering's marks changed under it. Reloading
    * on every save school-wide would refetch every visible table instead.
    */
@@ -345,11 +380,15 @@ interface Column {
   index: number
 }
 
-/** Same hues as `AssignmentCategoryBadge`, so a category keeps one colour. */
-const CATEGORY_DOTS: Record<AssignmentCategory, string> = {
+/**
+ * Same hues as `AssignmentCategoryBadge`, so a category keeps one colour.
+ * Admin-added categories have no hue of their own and fall back to grey.
+ */
+const CATEGORY_DOTS: Record<AssignmentCategory | (string & {}), string> = {
   lesson: 'bg-blue-light-500',
   exam: 'bg-warning-500',
   final: 'bg-error-500',
+  homework: 'bg-purple-500',
 }
 
 const data = ref<AssignmentHeatmapResponse | null>(null)
@@ -379,6 +418,7 @@ const studentCount = computed(() => data.value?.class_size ?? students.value.len
 const columns = computed<Column[]>(() =>
   (data.value?.assignments ?? [])
     .map((assignment, index) => ({ assignment, index }))
+    .filter(column => props.showInactive || !isInactive(column))
     .sort(
       (a, b) =>
         a.assignment.date.localeCompare(b.assignment.date) || a.assignment.id - b.assignment.id,
@@ -472,6 +512,15 @@ const assignmentById = computed(
 
 const writableIds = computed(() => new Set(props.writableAssignmentIds ?? []))
 
+/**
+ * The heatmap's own flag when it sends one, else the list endpoint's copy. A
+ * column neither knows about counts as active, so nothing vanishes on a guess.
+ */
+function isInactive(column: Column): boolean {
+  const flag = column.assignment.is_active ?? assignmentById.value.get(column.assignment.id)?.is_active
+  return flag === false
+}
+
 /** Where each student and assignment sits in the response's matrices. */
 const rowIndexByStudent = computed(
   () => new Map(students.value.map((student, index) => [student.id, index])),
@@ -540,15 +589,38 @@ function closeActiveCell() {
 }
 
 /**
- * The comment box hangs under the cell being edited. It is not shown on every
- * focus — a teacher tabbing down a column would get a panel opening and closing
- * over the row below on every step — only once the cell has something to say:
- * an edit in progress, or a comment already on the mark.
+ * The comment box hangs under the cell being edited, from the moment it is
+ * focused — a comment may stand on its own, with no mark at all, so it must
+ * not wait for one to be typed first.
  */
 function showsCommentBox(studentId: number, assignmentId: number): boolean {
-  if (activeCellKey.value !== cellKey(assignmentId, studentId)) return false
-  return isDirtyCell(studentId, assignmentId) || draftComment(studentId, assignmentId) !== ''
+  return activeCellKey.value === cellKey(assignmentId, studentId)
 }
+
+function hasMarkAndComment(studentId: number, assignmentId: number): boolean {
+  return draftValue(studentId, assignmentId).trim() !== ''
+    && draftComment(studentId, assignmentId).trim() !== ''
+}
+
+/** The input's look: hidden under a comment label, errored, edited, or at rest. */
+function inputClass(studentId: number, assignmentId: number): string {
+  if (showsCommentPreview(studentId, assignmentId)) return 'border-transparent bg-transparent opacity-0'
+  if (cellMessage(studentId, assignmentId)) {
+    return 'border-error-300 text-error-600 focus:border-error-400 dark:border-error-500/50 dark:text-error-400'
+  }
+  if (isDirtyCell(studentId, assignmentId)) {
+    return 'border-brand-300 bg-brand-50 text-brand-700 focus:border-brand-500 dark:border-brand-500/50 dark:bg-brand-500/10 dark:text-brand-300'
+  }
+  return 'border-transparent bg-transparent hover:border-gray-200 focus:border-brand-500 dark:hover:border-gray-700'
+}
+
+/** At rest, a cell holding only a comment shows the comment instead of the input. */
+function showsCommentPreview(studentId: number, assignmentId: number): boolean {
+  if (activeCellKey.value === cellKey(assignmentId, studentId)) return false
+  return draftValue(studentId, assignmentId).trim() === ''
+    && draftComment(studentId, assignmentId).trim() !== ''
+}
+
 
 function isDirtyCell(studentId: number, assignmentId: number): boolean {
   const key = cellKey(assignmentId, studentId)
@@ -627,6 +699,9 @@ function cellTitle(rowIndex: number, column: Column): string {
       ? `${t('statistics.points')}: ${rawGrade(rowIndex, column)} / ${column.assignment.max_grade}`
       : t('statistics.notGraded'),
   )
+  // Only writable cells load their comments; the heatmap itself carries none.
+  const comment = student ? draftComment(student.id, column.assignment.id).trim() : ''
+  if (comment) lines.push(`${t('studentGrades.comment')}: ${comment}`)
   return lines.join('\n')
 }
 

@@ -137,12 +137,17 @@
                   v-model="categoryModel"
                   :options="categoryOptions"
                   :aria-label="t('assignments.category')"
-                  :disabled="categoriesLoading && !categoryOptions.length"
+                  :disabled="isEditingHomework || (categoriesLoading && !categoryOptions.length)"
                   :trigger-class="triggerClass(Boolean(fieldErrors.category))"
                 />
                 <p v-if="fieldErrors.category" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.category }}</p>
                 <p v-else-if="categoriesError" class="mt-1.5 text-xs text-error-500">
                   {{ t('assignments.categoriesLoadFailed') }}
+                </p>
+                <!-- The backend makes the homework behind it; its description,
+                     files and deletion live on the Homeworks page. -->
+                <p v-else-if="isHomework" class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ isEditing ? t('assignments.homeworkEditHint') : t('assignments.homeworkCreateHint') }}
                 </p>
               </div>
               <div>
@@ -162,16 +167,42 @@
                 <p v-else class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ t('assignments.maxGradeHint') }}</p>
               </div>
             </div>
+
+            <div class="flex items-start justify-between gap-4 rounded-lg border border-gray-200 p-3 sm:p-4 dark:border-gray-800">
+              <div class="min-w-0">
+                <p id="assignment-active-label" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('assignments.activeLabel') }}
+                </p>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ t('assignments.activeHint') }}</p>
+                <p v-if="fieldErrors.isActive" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.isActive }}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                :aria-checked="form.isActive"
+                aria-labelledby="assignment-active-label"
+                class="relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition focus:outline-hidden focus:ring-3 focus:ring-brand-500/20"
+                :class="form.isActive ? 'bg-brand-500' : 'bg-gray-300 dark:bg-gray-700'"
+                @click="form.isActive = !form.isActive"
+              >
+                <span
+                  class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all"
+                  :class="form.isActive ? 'left-[22px]' : 'left-0.5'"
+                ></span>
+              </button>
+            </div>
           </form>
 
           <!-- Footer. On mobile the actions fill the width and Delete drops
                below them, away from the thumb's path to Save. -->
           <div
             class="flex flex-col-reverse gap-3 border-t border-gray-200 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:px-6 dark:border-gray-800"
-            :class="isEditing ? 'sm:justify-between' : 'sm:justify-end'"
+            :class="isEditing && !isEditingHomework ? 'sm:justify-between' : 'sm:justify-end'"
           >
+            <!-- A homework assignment goes when its homework is deleted, on the
+                 Homeworks page; the API refuses it here. -->
             <button
-              v-if="isEditing"
+              v-if="isEditing && !isEditingHomework"
               type="button"
               :disabled="saving"
               class="inline-flex items-center justify-center gap-2 rounded-lg border border-error-200 px-4 py-2 text-sm font-medium text-error-500 transition hover:bg-error-50 disabled:opacity-50 dark:border-error-500/30 dark:hover:bg-error-500/10"
@@ -219,6 +250,7 @@ import { useToast } from '@/composables/useToast'
 import type { TeacherSubjectOfferings } from '@/composables/useTeacherOfferings'
 import { toIsoDate } from '@/utils/attendanceWeeks'
 import {
+  HOMEWORK_CATEGORY,
   createSubjectAssignmentApi,
   updateSubjectAssignmentApi,
   type SubjectAssignment,
@@ -254,6 +286,12 @@ const backdrop = useBackdropClose(() => {
 
 const isEditing = computed(() => Boolean(props.assignment))
 
+/**
+ * A homework assignment is tied to the `/homeworks/` row the backend made for
+ * it, so its type stays put and it cannot be deleted from here.
+ */
+const isEditingHomework = computed(() => props.assignment?.category === HOMEWORK_CATEGORY)
+
 const saving = ref(false)
 const submitError = ref('')
 const fieldErrors = ref<Record<string, string>>({})
@@ -266,6 +304,7 @@ const form = ref({
   maxGrade: '10',
   /** `YYYY-MM-DD`, the format both the date input and the API speak. */
   date: toIsoDate(new Date()),
+  isActive: true,
 })
 
 const subjectOptions = computed<SelectOption[]>(() =>
@@ -288,6 +327,9 @@ const offeringOptions = computed<SelectOption[]>(
  * request's `Accept-Language` — so both the list and its labels come from
  * there. An edited assignment whose category has since been removed still
  * gets an option (labelled by its code), so the select never reads as blank.
+ *
+ * Homework is picked like any other: the backend creates the homework behind
+ * the assignment, and the teacher fills in the rest on the Homeworks page.
  */
 const categoryOptions = computed<SelectOption[]>(() => {
   const options = categories.value.map(category => ({ value: category.code, label: category.name }))
@@ -305,6 +347,8 @@ const categoryModel = computed<number | string | null>({
     if (value != null && value !== '') form.value.category = String(value)
   },
 })
+
+const isHomework = computed(() => form.value.category === HOMEWORK_CATEGORY)
 
 /** Matches `triggerClass`, minus the select chevron's spacing. */
 function dateInputClass(hasError: boolean): string {
@@ -344,6 +388,7 @@ watch(
         category: editing.category,
         maxGrade: String(editing.max_grade),
         date: editing.date,
+        isActive: editing.is_active ?? true,
       }
       return
     }
@@ -356,6 +401,7 @@ watch(
       category: 'lesson',
       maxGrade: '10',
       date: toIsoDate(new Date()),
+      isActive: true,
     }
   },
   { immediate: true },
@@ -395,6 +441,7 @@ async function submit() {
           category: form.value.category,
           max_grade: Number(form.value.maxGrade),
           date: form.value.date,
+          is_active: form.value.isActive,
         })
       : await createSubjectAssignmentApi({
           offering: Number(form.value.offering),
@@ -402,6 +449,7 @@ async function submit() {
           category: form.value.category,
           max_grade: Number(form.value.maxGrade),
           date: form.value.date,
+          is_active: form.value.isActive,
         })
     success(t(editing ? 'assignments.updatedSuccess' : 'assignments.createdSuccess'))
     emit('saved', data)
@@ -414,7 +462,7 @@ async function submit() {
 }
 
 function requestDelete() {
-  if (!props.assignment || saving.value) return
+  if (!props.assignment || isEditingHomework.value || saving.value) return
   emit('delete', props.assignment)
 }
 
@@ -445,6 +493,7 @@ function applyBackendErrors(error: unknown) {
     category: 'category',
     max_grade: 'maxGrade',
     date: 'date',
+    is_active: 'isActive',
   }
 
   const mapped: Record<string, string> = {}

@@ -30,6 +30,10 @@ const STYLES: Partial<Record<SubjectAssignmentCategory, { chip: string; dot: str
     chip: 'bg-error-50 text-error-600 dark:bg-error-500/10 dark:text-error-400',
     dot: 'bg-error-500',
   },
+  homework: {
+    chip: 'bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400',
+    dot: 'bg-purple-500',
+  },
 }
 
 const props = defineProps<{ category: SubjectAssignmentCategory }>()
