@@ -4,10 +4,26 @@ import api, { type PaginatedResponse } from './client'
  * A graded piece of work — a lesson mark, an exam or a final. Distinct from
  * `Homework`: an assignment carries no description, files or due date, only a
  * title and the scale its grades are measured on.
+ *
+ * The category is a `code` from `/assignment-categories/`, which admins can
+ * extend — so any string is valid, the three literals are just the seeded ones.
  */
-export type SubjectAssignmentCategory = 'lesson' | 'exam' | 'final'
+export type SubjectAssignmentCategory = 'lesson' | 'exam' | 'final' | (string & {})
 
+/** The seeded codes — the fallback when `/assignment-categories/` cannot be read. */
 export const SUBJECT_ASSIGNMENT_CATEGORIES: SubjectAssignmentCategory[] = ['lesson', 'exam', 'final']
+
+/** One row of `/assignment-categories/`. `code` is what an assignment stores. */
+export interface AssignmentCategoryOption {
+  id: number
+  code: string
+  name: string
+}
+
+/** Shared by every school and ordered by name. Not paginated. */
+export function getAssignmentCategoriesApi() {
+  return api.get<AssignmentCategoryOption[]>('/assignment-categories/')
+}
 
 /**
  * One assignment. Note the shape difference from `Homework`: the offering is

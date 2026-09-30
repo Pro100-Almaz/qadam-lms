@@ -498,7 +498,8 @@ export function getAssignmentTrajectoryApi(
 // ─── 5. Assignment heatmap ────────────────────────────────────────────────────
 
 export interface AssignmentHeatmapParams {
-  category?: AssignmentCategory
+  /** Any `/assignment-categories/` code — the gradebook filters on admin-added ones too. */
+  category?: AssignmentCategory | (string & {})
   date_from?: string
   date_to?: string
   missing?: MissingMode

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { currentIntlLocale } from '@/i18n'
 import type { AuthTokens } from '@/types/auth'
 
 const api = axios.create({
@@ -43,6 +44,9 @@ export function unwrapPaginated<T>(data: ListResponse<T>): PaginatedResponse<T> 
 // ─── Request interceptor ──────────────────────────────────────────────────────
 
 api.interceptors.request.use((config) => {
+  // The browser's own header carries the OS language, not the one picked in
+  // the app's switcher — so localized API text follows the switcher instead.
+  config.headers['Accept-Language'] = currentIntlLocale()
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
   }

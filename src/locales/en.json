@@ -558,7 +558,8 @@
         "categories": {
             "lesson": "Lesson",
             "exam": "Exam",
-            "final": "Final"
+            "final": "Final",
+            "homework": "Homework"
         },
         "maxGrade": "Max grade",
         "maxGradeHint": "The highest mark a student can earn.",
@@ -569,6 +570,7 @@
         "selectClass": "Select class",
         "pickSubjectFirst": "Pick a subject first",
         "noOfferings": "You are not assigned to any subject yet.",
+        "categoriesLoadFailed": "Could not load assignment types.",
         "allSubjects": "All subjects",
         "allClassGroups": "All classes",
         "allCategories": "All types",

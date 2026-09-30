@@ -558,7 +558,8 @@
         "categories": {
             "lesson": "Сабақ",
             "exam": "Бақылау",
-            "final": "Қорытынды"
+            "final": "Қорытынды",
+            "homework": "Үй тапсырмасы"
         },
         "maxGrade": "Макс. балл",
         "maxGradeHint": "Оқушы ала алатын ең жоғары балл.",
@@ -569,6 +570,7 @@
         "selectClass": "Сыныпты таңдаңыз",
         "pickSubjectFirst": "Алдымен пәнді таңдаңыз",
         "noOfferings": "Сізге әзірге бірде-бір пән тағайындалмаған.",
+        "categoriesLoadFailed": "Тапсырма түрлерін жүктеу мүмкін болмады.",
         "allSubjects": "Барлық пәндер",
         "allClassGroups": "Барлық сыныптар",
         "allCategories": "Барлық түрлері",

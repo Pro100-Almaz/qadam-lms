@@ -558,7 +558,8 @@
         "categories": {
             "lesson": "Урок",
             "exam": "Контрольная",
-            "final": "Итоговая"
+            "final": "Итоговая",
+            "homework": "Домашнее задание"
         },
         "maxGrade": "Макс. балл",
         "maxGradeHint": "Наивысший балл, который может получить ученик.",
@@ -569,6 +570,7 @@
         "selectClass": "Выберите класс",
         "pickSubjectFirst": "Сначала выберите предмет",
         "noOfferings": "Вам пока не назначен ни один предмет.",
+        "categoriesLoadFailed": "Не удалось загрузить типы заданий.",
         "allSubjects": "Все предметы",
         "allClassGroups": "Все классы",
         "allCategories": "Все типы",

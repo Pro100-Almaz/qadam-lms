@@ -3,16 +3,20 @@
     <Transition name="fade">
       <div
         v-if="open"
-        class="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-4 sm:items-center"
+        class="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-3 sm:items-center sm:p-4"
         role="dialog"
         aria-modal="true"
         :aria-label="isEditing ? t('assignments.editTitle') : t('assignments.createTitle')"
         @mousedown="backdrop.onMouseDown"
         @mouseup="backdrop.onMouseUp"
       >
-        <div class="flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white shadow-xl dark:bg-gray-900">
+        <!-- `dvh`, not `vh`: on mobile `vh` ignores the browser toolbar, which
+             pushed the footer buttons off-screen. -->
+        <div
+          class="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col rounded-xl bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] dark:bg-gray-900"
+        >
           <!-- Header -->
-          <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+          <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-4 sm:px-6 dark:border-gray-800">
             <div class="min-w-0">
               <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
                 {{ isEditing ? t('assignments.editTitle') : t('assignments.createTitle') }}
@@ -31,7 +35,7 @@
             </button>
           </div>
 
-          <form class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5" novalidate @submit.prevent="submit">
+          <form class="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6" novalidate @submit.prevent="submit">
             <p
               v-if="submitError"
               class="flex items-start gap-2 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-600 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-400"
@@ -41,16 +45,16 @@
             </p>
 
             <!-- Edit: the offering is immutable, so it reads as plain text. -->
-            <dl v-if="isEditing" class="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4 dark:bg-white/5">
+            <dl v-if="isEditing" class="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-3 sm:p-4 dark:bg-white/5">
               <div>
                 <dt class="text-xs text-gray-500 dark:text-gray-400">{{ t('assignments.subject') }}</dt>
-                <dd class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">
+                <dd class="mt-1 break-words text-sm font-medium text-gray-800 dark:text-white/90">
                   {{ assignment?.subject_name || '—' }}
                 </dd>
               </div>
               <div>
                 <dt class="text-xs text-gray-500 dark:text-gray-400">{{ t('assignments.classGroup') }}</dt>
-                <dd class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">
+                <dd class="mt-1 break-words text-sm font-medium text-gray-800 dark:text-white/90">
                   {{ assignment?.class_group_name || '—' }}
                 </dd>
               </div>
@@ -104,7 +108,7 @@
                 type="text"
                 maxlength="255"
                 :placeholder="t('assignments.titlePlaceholder')"
-                class="h-11 w-full rounded-lg border bg-white px-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
+                class="h-11 w-full rounded-lg border bg-white px-4 text-base text-gray-800 shadow-theme-xs placeholder:text-gray-400 sm:text-sm focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30"
                 :class="fieldErrors.title ? 'border-error-500' : 'border-gray-300 dark:border-gray-700'"
               />
               <p v-if="fieldErrors.title" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.title }}</p>
@@ -133,8 +137,13 @@
                   v-model="categoryModel"
                   :options="categoryOptions"
                   :aria-label="t('assignments.category')"
-                  :trigger-class="triggerClass(false)"
+                  :disabled="categoriesLoading && !categoryOptions.length"
+                  :trigger-class="triggerClass(Boolean(fieldErrors.category))"
                 />
+                <p v-if="fieldErrors.category" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.category }}</p>
+                <p v-else-if="categoriesError" class="mt-1.5 text-xs text-error-500">
+                  {{ t('assignments.categoriesLoadFailed') }}
+                </p>
               </div>
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
@@ -146,7 +155,7 @@
                   inputmode="numeric"
                   min="1"
                   step="1"
-                  class="h-11 w-full rounded-lg border bg-white px-4 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90"
+                  class="h-11 w-full rounded-lg border bg-white px-4 text-base text-gray-800 shadow-theme-xs focus:border-brand-300 sm:text-sm focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90"
                   :class="fieldErrors.maxGrade ? 'border-error-500' : 'border-gray-300 dark:border-gray-700'"
                 />
                 <p v-if="fieldErrors.maxGrade" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.maxGrade }}</p>
@@ -155,9 +164,10 @@
             </div>
           </form>
 
-          <!-- Footer -->
+          <!-- Footer. On mobile the actions fill the width and Delete drops
+               below them, away from the thumb's path to Save. -->
           <div
-            class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-800 sm:flex-row sm:items-center"
+            class="flex flex-col-reverse gap-3 border-t border-gray-200 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:px-6 dark:border-gray-800"
             :class="isEditing ? 'sm:justify-between' : 'sm:justify-end'"
           >
             <button
@@ -170,11 +180,11 @@
               <Trash2 class="h-4 w-4" />
               {{ t('common.delete') }}
             </button>
-            <div class="flex justify-end gap-3">
+            <div class="flex gap-3 sm:justify-end">
               <button
                 type="button"
                 :disabled="saving"
-                class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+                class="inline-flex flex-1 items-center justify-center rounded-lg border sm:flex-none border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
                 @click="emit('close')"
               >
                 {{ t('common.cancel') }}
@@ -182,7 +192,7 @@
               <button
                 type="button"
                 :disabled="saving"
-                class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+                class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 sm:flex-none px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
                 @click="submit"
               >
                 <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
@@ -203,12 +213,12 @@ import { useI18n } from 'vue-i18n'
 import { CircleAlert, Loader2, Trash2, X } from 'lucide-vue-next'
 import DatePicker from '@/components/ui/DatePicker.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
+import { useAssignmentCategories } from '@/composables/useAssignmentCategories'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { useToast } from '@/composables/useToast'
 import type { TeacherSubjectOfferings } from '@/composables/useTeacherOfferings'
 import { toIsoDate } from '@/utils/attendanceWeeks'
 import {
-  SUBJECT_ASSIGNMENT_CATEGORIES,
   createSubjectAssignmentApi,
   updateSubjectAssignmentApi,
   type SubjectAssignment,
@@ -232,6 +242,12 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const { success } = useToast()
+const {
+  categories,
+  loading: categoriesLoading,
+  error: categoriesError,
+  load: loadCategories,
+} = useAssignmentCategories()
 const backdrop = useBackdropClose(() => {
   if (!saving.value) emit('close')
 })
@@ -267,19 +283,26 @@ const offeringOptions = computed<SelectOption[]>(
       ?.offerings.map(offering => ({ value: offering.offeringId, label: offering.displayName })) ?? [],
 )
 
-const categoryOptions = computed<SelectOption[]>(() =>
-  SUBJECT_ASSIGNMENT_CATEGORIES.map(category => ({
-    value: category,
-    label: t(`assignments.categories.${category}`),
-  })),
-)
+/**
+ * Admins add categories in the back office, and the API names them in the
+ * request's `Accept-Language` — so both the list and its labels come from
+ * there. An edited assignment whose category has since been removed still
+ * gets an option (labelled by its code), so the select never reads as blank.
+ */
+const categoryOptions = computed<SelectOption[]>(() => {
+  const options = categories.value.map(category => ({ value: category.code, label: category.name }))
+  const current = form.value.category
+  if (current && !options.some(option => option.value === current)) {
+    options.push({ value: current, label: current })
+  }
+  return options
+})
 
-/** `SelectMenu` speaks `string | number | null`; the form field is narrower. */
+/** `SelectMenu` speaks `string | number | null`; the form field is a code string. */
 const categoryModel = computed<number | string | null>({
   get: () => form.value.category,
   set: value => {
-    const picked = SUBJECT_ASSIGNMENT_CATEGORIES.find(category => category === value)
-    if (picked) form.value.category = picked
+    if (value != null && value !== '') form.value.category = String(value)
   },
 })
 
@@ -309,6 +332,7 @@ watch(
   () => [props.open, props.assignment?.id],
   () => {
     if (!props.open) return
+    void loadCategories()
     submitError.value = ''
     fieldErrors.value = {}
     const editing = props.assignment
