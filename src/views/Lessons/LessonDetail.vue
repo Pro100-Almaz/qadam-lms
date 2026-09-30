@@ -345,7 +345,7 @@
         >
           <div
             v-if="showTopicModal"
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
+            class="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @mousedown="addTopicBackdrop.onMouseDown"
             @mouseup="addTopicBackdrop.onMouseUp"
           >
@@ -431,7 +431,7 @@
         >
           <div
             v-if="showSubtopicModal"
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
+            class="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @mousedown="addSubtopicBackdrop.onMouseDown"
             @mouseup="addSubtopicBackdrop.onMouseUp"
           >
@@ -529,7 +529,7 @@
         >
           <div
             v-if="showGradeModal && selectedStudent"
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
+            class="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @click.self="showGradeModal = false"
           >
             <Transition
@@ -644,7 +644,7 @@
         >
           <div
             v-if="showConfirmModal"
-            class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
+            class="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/30 py-4 backdrop-blur-sm sm:items-center"
             @click.self="showConfirmModal = false"
           >
             <Transition

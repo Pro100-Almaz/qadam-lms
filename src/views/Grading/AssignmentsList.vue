@@ -179,7 +179,7 @@
       <Transition name="fade">
         <div
           v-if="deleteTarget"
-          class="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
+          class="fixed inset-0 z-[100000] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/50 p-4"
           role="dialog"
           aria-modal="true"
           @mousedown="deleteBackdrop.onMouseDown"
