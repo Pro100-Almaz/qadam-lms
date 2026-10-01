@@ -67,6 +67,16 @@
 
       <!-- Filters -->
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <!-- Required, never cleared: a whole year of assignments is too much to
+             load, and the quarter is how a teacher reads the gradebook anyway. -->
+        <div class="w-full sm:w-36">
+          <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('assignments.quarter') }}</label>
+          <SelectMenu
+            v-model="quarterModel"
+            :options="quarterOptions"
+            :aria-label="t('assignments.quarter')"
+          />
+        </div>
         <div class="w-full sm:w-48">
           <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('assignments.subject') }}</label>
           <SelectMenu
@@ -184,6 +194,7 @@
           :subject-name="group.subjectName"
           :class-group-name="group.classGroupName"
           :assignments="group.assignments"
+          :quarter="filters.quarter"
           :category="categoryFilter"
           :date-from="filters.dateFrom"
           :date-to="filters.dateTo"
@@ -373,7 +384,12 @@ const assignmentOfferings = ref<AssignmentOfferingPickerItem[]>([])
 const loading = ref(true)
 const loadError = ref(false)
 
+/** The quarter the page opens on, and the one Reset goes back to. */
+const DEFAULT_QUARTER = 1
+
 const filters = ref({
+  /** 1–4, always set: the assignment's own `quarter`, not its date. */
+  quarter: DEFAULT_QUARTER,
   subject: null as number | string | null,
   classGroup: null as number | string | null,
   category: null as number | string | null,
@@ -645,8 +661,22 @@ const categoryOptions = computed<SelectOption[]>(() =>
   categories.value.map(category => ({ value: category.code, label: category.name })),
 )
 
+const quarterOptions = computed<SelectOption[]>(() =>
+  [1, 2, 3, 4].map(value => ({ value, label: t('assignments.quarterOption', { quarter: value }) })),
+)
+
+/** `SelectMenu` speaks `string | number | null`; the quarter is always 1–4. */
+const quarterModel = computed<number | string | null>({
+  get: () => filters.value.quarter,
+  set: value => {
+    const picked = Number(value)
+    if (picked >= 1 && picked <= 4) filters.value.quarter = picked
+  },
+})
+
 const hasActiveFilters = computed(
   () =>
+    filters.value.quarter !== DEFAULT_QUARTER ||
     Boolean(filters.value.subject) ||
     Boolean(filters.value.classGroup) ||
     Boolean(filters.value.category) ||
@@ -657,6 +687,7 @@ const hasActiveFilters = computed(
 
 function resetFilters() {
   filters.value = {
+    quarter: DEFAULT_QUARTER,
     subject: null,
     classGroup: null,
     category: null,
@@ -686,6 +717,7 @@ async function fetchAssignments() {
     const collected: SubjectAssignment[] = []
     for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
       const { data } = await getSubjectAssignmentsApi({
+        quarter: filters.value.quarter,
         subject: filters.value.subject ? Number(filters.value.subject) : undefined,
         class_group: filters.value.classGroup ? Number(filters.value.classGroup) : undefined,
         category: (filters.value.category as SubjectAssignmentCategory) || undefined,
@@ -708,6 +740,7 @@ async function fetchAssignments() {
 
 watch(
   () => [
+    filters.value.quarter,
     filters.value.subject,
     filters.value.classGroup,
     filters.value.category,

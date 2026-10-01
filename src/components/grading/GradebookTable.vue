@@ -339,6 +339,8 @@ const props = defineProps<{
   readOnly?: boolean
   /** Removes the outer card frame when the table already lives inside a panel. */
   embedded?: boolean
+  /** 1–4. Required: an offering's whole year is too much for one grid. */
+  quarter: number
   /** The page's filters, passed through so the grid matches what was asked for. */
   category?: SubjectAssignmentCategory | null
   dateFrom?: string
@@ -755,6 +757,7 @@ async function load() {
   try {
     const [assignments, students] = await Promise.all([
       getAllOfferingGradesApi(props.offeringId, {
+        quarter: props.quarter,
         category: props.category || undefined,
         date_from: props.dateFrom || undefined,
         date_to: props.dateTo || undefined,
@@ -917,6 +920,7 @@ watch(
   () => [
     props.offeringId,
     props.classGroupId,
+    props.quarter,
     props.category,
     props.dateFrom,
     props.dateTo,

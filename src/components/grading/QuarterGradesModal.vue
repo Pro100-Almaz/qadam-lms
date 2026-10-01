@@ -535,7 +535,6 @@ import {
   X,
 } from 'lucide-vue-next'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
-import { getAcademicYearsApi } from '@/api/academic'
 import { readAnalyticsError, type AssignmentOfferingPickerItem } from '@/api/analytics'
 import {
   createQuarterGradesApi,
@@ -550,7 +549,6 @@ import { useAssignmentCategories } from '@/composables/useAssignmentCategories'
 import { useClassRoster } from '@/composables/useClassRoster'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { useToast } from '@/composables/useToast'
-import type { AcademicYear } from '@/types/academic'
 import { formatAcademicDay } from '@/utils/gradeDates'
 import { flattenErrorMessage } from '@/utils/fileDownload'
 
@@ -566,9 +564,9 @@ import { flattenErrorMessage } from '@/utils/fileDownload'
  * The estimate only advises, and the weights are not saved anywhere. What is
  * saved is the grade the teacher types, through `/offerings/{id}/quarter-grades/`.
  *
- * The marks come from `/offerings/{id}/subject-grades/`, bounded by the
- * quarter's dates from the academic year, laid over the class roster — so
- * every student has a row, including the ones without a single mark.
+ * The marks come from `/offerings/{id}/subject-grades/?quarter=`, laid over the
+ * class roster — so every student has a row, including the ones without a
+ * single mark.
  */
 const props = defineProps<{
   open: boolean
@@ -640,16 +638,6 @@ const filtersComplete = computed(() => Boolean(selectedOffering.value && quarter
 watch(classGroupId, () => {
   if (!subjectOptions.value.some(option => option.value === offeringId.value)) offeringId.value = null
 })
-
-// ─── Academic year ───────────────────────────────────────────────────────────
-
-/** Fetched once per modal instance; quarter dates do not move mid-session. */
-const academicYears = ref<AcademicYear[] | null>(null)
-
-async function loadAcademicYears(): Promise<AcademicYear[]> {
-  if (!academicYears.value) academicYears.value = (await getAcademicYearsApi()).data
-  return academicYears.value
-}
 
 // ─── Sheet ───────────────────────────────────────────────────────────────────
 
@@ -782,18 +770,10 @@ async function loadSheet() {
   loading.value = true
   loadError.value = ''
   try {
-    const years = await loadAcademicYears()
-    const year = years.find(item => item.id === offering.academic_year_id) ?? years.find(item => item.is_active)
-    const range = year?.quarters?.find(item => item.quarter === quarterNumber)
-    if (!range?.start || !range?.end) {
-      if (token !== loadToken) return
-      sheet.value = null
-      loadError.value = t('quarterGrades.quarterDatesMissing', { quarter: quarterNumber })
-      return
-    }
-
     const [assignments, roster, { data: saved }] = await Promise.all([
-      getAllOfferingGradesApi(offering.id, { date_from: range.start, date_to: range.end }),
+      // The assignment's own quarter, not its date: a teacher can file an
+      // assignment under a different quarter than its date falls in.
+      getAllOfferingGradesApi(offering.id, { quarter: quarterNumber }),
       classRoster.get(offering.class_group_id),
       getQuarterGradesApi(offering.id, quarterNumber),
       loadCategories(),

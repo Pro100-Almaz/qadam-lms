@@ -619,7 +619,13 @@
         "gradebookHint": "Pick a column to grade, edit or delete its assignment",
         "averageShort": "Avg",
         "classAverage": "Class avg",
-        "noGradebookColumns": "No assignments in this range."
+        "noGradebookColumns": "No assignments in this range.",
+        "quarter": "Quarter",
+        "quarterOption": "Quarter {quarter}",
+        "quarterAuto": "From the date",
+        "quarterAutoHint": "Left empty, the quarter is taken from the date.",
+        "quarterKeptHint": "Kept as chosen, even if the date falls in another quarter.",
+        "quarterRecalcHint": "The date changed, so the quarter will be recalculated from it. Pick one to keep it."
     },
     "studentGrades": {
         "title": "Grades",
@@ -708,7 +714,6 @@
         "fillCount": "{count} empty cell(s) will be filled.",
         "apply": "Apply",
         "noOfferings": "You don't teach any classes you can grade.",
-        "quarterDatesMissing": "Quarter {quarter} has no dates set in the academic year, so its assignments can't be found.",
         "noChanges": "No changes to save.",
         "changesSummary": "To save: {create} new · {update} changed · {remove} removed",
         "saveFailed": "The grades could not be saved.",

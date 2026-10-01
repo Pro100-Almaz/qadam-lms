@@ -66,6 +66,13 @@ export interface SubjectAssignment {
    * date to show the reader, and the one lists are ordered by.
    */
   date: string
+  /**
+   * 1–4. Filled from `date` when not sent, recalculated when only `date` is
+   * patched, and kept as sent when both are — so it may disagree with the date
+   * on purpose. `null` on rows the backend could not place; those never match
+   * a `quarter` filter.
+   */
+  quarter: number | null
   created_at: string
 }
 
@@ -81,6 +88,8 @@ export interface SubjectAssignmentListParams {
   date_from?: string
   /** On or before this academic day, `YYYY-MM-DD`. */
   date_to?: string
+  /** 1–4; anything else is a 400. */
+  quarter?: number
   page?: number
   page_size?: number
 }
@@ -94,6 +103,8 @@ export interface CreateSubjectAssignmentRequest {
   max_grade: number
   /** Required, `YYYY-MM-DD`: omitting it is a 400, not a default of today. */
   date: string
+  /** 1–4. Optional: the backend fills it from `date`. */
+  quarter?: number
   is_active?: boolean
 }
 
@@ -168,6 +179,8 @@ export interface SubjectGradeListParams {
   date?: string
   date_from?: string
   date_to?: string
+  /** The assignment's quarter, 1–4. */
+  quarter?: number
   page?: number
   page_size?: number
 }
@@ -192,6 +205,8 @@ export interface OfferingGradesAssignment extends SubjectAssignment {
 
 /** The assignment filters of `/subject-assignments/`, scoped to one offering. */
 export interface OfferingGradesParams {
+  /** The assignment's own `quarter`, 1–4 — not derived from the dates below. */
+  quarter?: number
   category?: SubjectAssignmentCategory
   date?: string
   date_from?: string

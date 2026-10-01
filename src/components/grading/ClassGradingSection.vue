@@ -5,7 +5,17 @@
         <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">{{ t('myClass.subjectsAndGrades') }}</h2>
         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ t('assignments.classSectionSubtitle') }}</p>
       </div>
-      <div class="flex shrink-0 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+      <div class="flex shrink-0 flex-wrap items-center gap-2">
+      <!-- Assignments only: homework is listed on its own, without quarters. -->
+      <div v-if="activeMode === 'assignments'" class="w-36">
+        <SelectMenu
+          v-model="quarterModel"
+          :options="quarterOptions"
+          :aria-label="t('assignments.quarter')"
+          trigger-class="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-3 text-left text-xs font-medium text-gray-700 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+        />
+      </div>
+      <div class="flex rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
         <button
           v-for="mode in gradeModes"
           :key="mode.key"
@@ -18,6 +28,7 @@
         >
           {{ mode.label }}
         </button>
+      </div>
       </div>
     </div>
 
@@ -83,6 +94,7 @@
           v-if="selectedSubject && activeMode === 'assignments'"
           :offering-id="selectedSubject.offeringId"
           :class-group-id="classGroupId"
+          :quarter="quarter"
           :subject-name="selectedSubject.subjectName"
           :class-group-name="selectedSubject.classGroupName"
           embedded
@@ -106,6 +118,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronRight, CircleAlert, ClipboardList } from 'lucide-vue-next'
 import GradebookTable from '@/components/grading/GradebookTable.vue'
+import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
 import HomeworkGradebookTable from '@/components/homeworks/HomeworkGradebookTable.vue'
 import { getAcademicYearsApi } from '@/api/academic'
 import { getTeachingAssignmentsApi } from '@/api/teachingAssignments'
@@ -129,6 +142,20 @@ const selectedOfferingId = ref<number | null>(null)
 const loading = ref(true)
 const loadError = ref(false)
 const activeMode = ref<'assignments' | 'homeworks'>('assignments')
+/** Required by the gradebook; starts on 1, like the grading page. */
+const quarter = ref(1)
+
+const quarterOptions = computed<SelectOption[]>(() =>
+  [1, 2, 3, 4].map(value => ({ value, label: t('assignments.quarterOption', { quarter: value }) })),
+)
+
+const quarterModel = computed<number | string | null>({
+  get: () => quarter.value,
+  set: value => {
+    const picked = Number(value)
+    if (picked >= 1 && picked <= 4) quarter.value = picked
+  },
+})
 
 const gradeModes = computed(() => [
   { key: 'assignments' as const, label: t('assignments.tabAssignments') },

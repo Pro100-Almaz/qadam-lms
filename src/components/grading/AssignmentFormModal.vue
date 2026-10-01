@@ -114,18 +114,38 @@
               <p v-if="fieldErrors.title" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.title }}</p>
             </div>
 
-            <div>
-              <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                {{ t('assignments.date') }} <span class="text-error-500">*</span>
-              </label>
-              <DatePicker
-                v-model="form.date"
-                :placeholder="t('assignments.pickDate')"
-                :aria-label="t('assignments.date')"
-                :input-class="dateInputClass(Boolean(fieldErrors.date))"
-              />
-              <p v-if="fieldErrors.date" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.date }}</p>
-              <p v-else class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ t('assignments.dateHint') }}</p>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                  {{ t('assignments.date') }} <span class="text-error-500">*</span>
+                </label>
+                <DatePicker
+                  v-model="form.date"
+                  :placeholder="t('assignments.pickDate')"
+                  :aria-label="t('assignments.date')"
+                  :input-class="dateInputClass(Boolean(fieldErrors.date))"
+                />
+                <p v-if="fieldErrors.date" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.date }}</p>
+                <p v-else class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ t('assignments.dateHint') }}</p>
+              </div>
+              <!-- Optional: left empty, the backend takes the quarter from the
+                   date. Picked, it is kept even if the date says otherwise. -->
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                  {{ t('assignments.quarter') }}
+                </label>
+                <SelectMenu
+                  v-model="quarterModel"
+                  :options="quarterOptions"
+                  :placeholder="t('assignments.quarterAuto')"
+                  :aria-label="t('assignments.quarter')"
+                  clearable
+                  :clear-label="t('assignments.quarterAuto')"
+                  :trigger-class="triggerClass(Boolean(fieldErrors.quarter))"
+                />
+                <p v-if="fieldErrors.quarter" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.quarter }}</p>
+                <p v-else class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ quarterHint }}</p>
+              </div>
             </div>
 
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -304,7 +324,52 @@ const form = ref({
   maxGrade: '10',
   /** `YYYY-MM-DD`, the format both the date input and the API speak. */
   date: toIsoDate(new Date()),
+  /** 1–4, or `null` for "from the date". */
+  quarter: null as number | null,
   isActive: true,
+})
+
+/**
+ * Whether the teacher picked the quarter in this session, and the date the
+ * assignment was opened with. The API recalculates `quarter` whenever `date`
+ * is sent without it, and keeps both when both are sent — so what to send
+ * depends on what was touched (see `quarterToSend`).
+ */
+const quarterTouched = ref(false)
+const originalDate = ref('')
+
+const quarterOptions = computed<SelectOption[]>(() =>
+  [1, 2, 3, 4].map(value => ({ value, label: t('assignments.quarterOption', { quarter: value }) })),
+)
+
+const quarterModel = computed<number | string | null>({
+  get: () => form.value.quarter,
+  set: value => {
+    const picked = Number(value)
+    form.value.quarter = value === null || value === '' ? null : picked >= 1 && picked <= 4 ? picked : null
+    quarterTouched.value = true
+  },
+})
+
+/** On edit, an untouched quarter follows a changed date, as the API will do. */
+const quarterFollowsDate = computed(
+  () => isEditing.value && !quarterTouched.value && form.value.date !== originalDate.value,
+)
+
+/**
+ * - picked, or kept as stored while the date stands: sent, so it is kept;
+ * - "from the date", or an untouched quarter under a new date: left out, so
+ *   the backend works it out from the date.
+ */
+const quarterToSend = computed<number | undefined>(() => {
+  if (form.value.quarter === null || quarterFollowsDate.value) return undefined
+  return form.value.quarter
+})
+
+const quarterHint = computed(() => {
+  if (quarterFollowsDate.value) return t('assignments.quarterRecalcHint')
+  if (form.value.quarter === null) return t('assignments.quarterAutoHint')
+  return t('assignments.quarterKeptHint')
 })
 
 const subjectOptions = computed<SelectOption[]>(() =>
@@ -388,8 +453,11 @@ watch(
         category: editing.category,
         maxGrade: String(editing.max_grade),
         date: editing.date,
+        quarter: editing.quarter ?? null,
         isActive: editing.is_active ?? true,
       }
+      quarterTouched.value = false
+      originalDate.value = editing.date
       return
     }
     const [firstSubject] = props.subjectGroups
@@ -401,8 +469,11 @@ watch(
       category: 'lesson',
       maxGrade: '10',
       date: toIsoDate(new Date()),
+      quarter: null,
       isActive: true,
     }
+    quarterTouched.value = false
+    originalDate.value = ''
   },
   { immediate: true },
 )
@@ -441,6 +512,7 @@ async function submit() {
           category: form.value.category,
           max_grade: Number(form.value.maxGrade),
           date: form.value.date,
+          quarter: quarterToSend.value,
           is_active: form.value.isActive,
         })
       : await createSubjectAssignmentApi({
@@ -449,6 +521,7 @@ async function submit() {
           category: form.value.category,
           max_grade: Number(form.value.maxGrade),
           date: form.value.date,
+          quarter: quarterToSend.value,
           is_active: form.value.isActive,
         })
     success(t(editing ? 'assignments.updatedSuccess' : 'assignments.createdSuccess'))
@@ -493,6 +566,7 @@ function applyBackendErrors(error: unknown) {
     category: 'category',
     max_grade: 'maxGrade',
     date: 'date',
+    quarter: 'quarter',
     is_active: 'isActive',
   }
 
