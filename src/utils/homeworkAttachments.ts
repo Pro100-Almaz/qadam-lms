@@ -75,6 +75,30 @@ export function pickAttachments(files: File[], usedSlots: number): AttachmentPic
   return { accepted, rejected }
 }
 
+const EXTENSION_BY_MIME: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/bmp': '.bmp',
+  'application/pdf': '.pdf',
+}
+
+/**
+ * Browsers name every clipboard image `image.png` (or nothing at all), so a
+ * few pastes would be indistinguishable in the list — give each one a
+ * timestamped name with an extension that matches its MIME type.
+ */
+export function nameClipboardFile(file: File, index: number): File {
+  const extension = EXTENSION_BY_MIME[file.type] ?? extensionOf(file.name)
+  const stamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-')
+  const suffix = index ? `-${index + 1}` : ''
+  return new File([file], `pasted-${stamp}${suffix}${extension}`, {
+    type: file.type,
+    lastModified: Date.now(),
+  })
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`

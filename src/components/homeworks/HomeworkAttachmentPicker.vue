@@ -24,6 +24,7 @@
       <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
         {{ t('homeworkAttachments.hint', { formats: ALLOWED_ATTACHMENT_EXTENSIONS.join(', '), size: maxSizeLabel }) }}
       </p>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('homeworkAttachments.pasteHint') }}</p>
       <p class="mt-1 text-xs" :class="remainingSlots ? 'text-gray-400' : 'text-warning-600 dark:text-warning-400'">
         {{ remainingSlots
           ? t('homeworkAttachments.slotsLeft', { count: remainingSlots, max: MAX_HOMEWORK_ATTACHMENTS })
@@ -81,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { FileImage, FileText, Paperclip, Plus, X } from 'lucide-vue-next'
 import {
@@ -90,6 +91,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   MAX_HOMEWORK_ATTACHMENTS,
   formatFileSize,
+  nameClipboardFile,
   pickAttachments,
 } from '@/utils/homeworkAttachments'
 
@@ -144,6 +146,26 @@ function onDrop(event: DragEvent) {
   dragging.value = false
   addFiles([...(event.dataTransfer?.files ?? [])])
 }
+
+function isEditable(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement
+    && (target.isContentEditable || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)
+}
+
+// Listens on the whole page so Ctrl+V works without focusing the drop zone first.
+function onPaste(event: ClipboardEvent) {
+  const clipboard = event.clipboardData
+  const files = [...(clipboard?.files ?? [])]
+  if (props.disabled || !files.length) return
+  // Copying from Word or Excel puts a rendered picture next to the text — when
+  // that lands in a text field, the user meant the text, so leave it alone.
+  if (isEditable(event.target) && clipboard?.types.includes('text/plain')) return
+  event.preventDefault()
+  addFiles(files.map(nameClipboardFile))
+}
+
+onMounted(() => document.addEventListener('paste', onPaste))
+onBeforeUnmount(() => document.removeEventListener('paste', onPaste))
 
 function removeAt(index: number) {
   emit('update:modelValue', props.modelValue.filter((_, position) => position !== index))
