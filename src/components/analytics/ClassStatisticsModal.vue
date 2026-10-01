@@ -84,6 +84,8 @@ export interface StatisticsOfferingOption {
   label: string
   /** The class group, usually — shown under the label in the picker. */
   sublabel?: string
+  /** The offering's class. Needed by the assignment statistics, whose rows are its roster. */
+  classGroupId?: number
 }
 
 /**

@@ -35,7 +35,7 @@
         />
       </div>
 
-      <!-- The heatmap has no quarter parameter; it is bounded by dates. -->
+      <!-- No quarter parameter here: assignments are filtered by date. -->
       <div class="w-full sm:w-40">
         <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
           {{ t('assignments.dateFrom') }}
@@ -77,7 +77,11 @@
     >
       {{ t('statistics.pickOffering') }}
     </p>
-    <AssignmentHeatmap v-else-if="!loading && !loadError && heatmap" :data="heatmap" />
+    <AssignmentHeatmap
+      v-else-if="!loading && !loadError && grid"
+      :data="grid"
+      :class-group-name="selectedOffering?.sublabel"
+    />
   </StatisticsModalShell>
 </template>
 
@@ -92,28 +96,33 @@ import AssignmentHeatmap from '@/components/analytics/AssignmentHeatmap.vue'
 import type { StatisticsOfferingOption } from '@/components/analytics/ClassStatisticsModal.vue'
 import {
   ASSIGNMENT_CATEGORIES,
-  getAssignmentHeatmapApi,
   readAnalyticsError,
   type AssignmentCategory,
-  type AssignmentHeatmapResponse,
   type MissingMode,
 } from '@/api/analytics'
+import { getAllOfferingGradesApi } from '@/api/subjectAssignments'
+import { useClassRoster } from '@/composables/useClassRoster'
+import { buildGradeGrid, type GradeGrid } from '@/utils/offeringGradeGrid'
 
 /**
  * A class against the **assignments** they were set — the record the grading
  * page keeps, not the lesson-topic gradebook on a subject's page.
  *
- * Bounded by dates rather than by a quarter, because that is what the endpoint
- * takes: an assignment belongs to an offering and a date, and the server has no
- * quarter of its own to filter on here.
+ * Built in the browser, by the same `buildGradeGrid` the gradebook table uses,
+ * from `/offerings/{id}/subject-grades/` and the class roster — so this view and
+ * the table can never disagree about the same class. Switched-off assignments
+ * are left out, as they are from the gradebook by default.
  *
- * Restricted to the offering's teachers, its homeroom teacher, psychologists and
- * admin — the grid names every student in the class, so a student or parent
- * asking gets a 403. Hosts must gate the button accordingly.
+ * Bounded by dates rather than by a quarter: an assignment belongs to an
+ * offering and a date, and the endpoint has no quarter of its own to filter on.
+ *
+ * The grades endpoint scopes itself (a caller with no access gets an empty
+ * list), but the grid still names every student in the class, so hosts should
+ * offer it to staff only.
  */
 const props = defineProps<{
   open: boolean
-  /** The offerings the caller may look at — anything else is a 403. */
+  /** The offerings the caller may look at. Each needs its `classGroupId`. */
   offerings: StatisticsOfferingOption[]
   defaultOfferingId?: number | null
   offeringsLoading?: boolean
@@ -129,7 +138,7 @@ const dateFrom = ref('')
 const dateTo = ref('')
 const missing = ref<MissingMode>('exclude')
 
-const heatmap = ref<AssignmentHeatmapResponse | null>(null)
+const grid = ref<GradeGrid | null>(null)
 const loading = ref(false)
 const loadError = ref('')
 
@@ -141,9 +150,14 @@ const offeringOptions = computed<SelectOption[]>(() =>
   })),
 )
 
+const selectedOffering = computed(
+  () => props.offerings.find(offering => offering.offeringId === Number(offeringId.value)) ?? null,
+)
+
 const headerSubtitle = computed(() => {
-  if (heatmap.value) {
-    return `${heatmap.value.offering.subject} · ${heatmap.value.offering.class_group}`
+  const offering = selectedOffering.value
+  if (grid.value && offering) {
+    return offering.sublabel ? `${offering.label} · ${offering.sublabel}` : offering.label
   }
   return t('statistics.assignmentClassSubtitle')
 })
@@ -175,26 +189,41 @@ const missingModel = computed<number | string | null>({
   },
 })
 
+const classRoster = useClassRoster()
+/** Drops a response that lands after the filters moved on. */
+let loadToken = 0
+
 async function loadHeatmap() {
-  if (!offeringId.value) {
-    heatmap.value = null
+  const offering = selectedOffering.value
+  if (!offering) {
+    grid.value = null
     return
   }
+  const token = ++loadToken
   loading.value = true
   loadError.value = ''
   try {
-    const { data } = await getAssignmentHeatmapApi(Number(offeringId.value), {
-      category: category.value ?? undefined,
-      date_from: dateFrom.value || undefined,
-      date_to: dateTo.value || undefined,
-      missing: missing.value,
-    })
-    heatmap.value = data
+    if (!offering.classGroupId) throw new Error('offering without a class group')
+    const [assignments, roster] = await Promise.all([
+      getAllOfferingGradesApi(offering.offeringId, {
+        category: category.value ?? undefined,
+        date_from: dateFrom.value || undefined,
+        date_to: dateTo.value || undefined,
+      }),
+      classRoster.get(offering.classGroupId),
+    ])
+    if (token !== loadToken) return
+    // Oldest first, active only — the gradebook's default reading.
+    const active = assignments
+      .filter(assignment => assignment.is_active !== false)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
+    grid.value = buildGradeGrid(active, roster, missing.value).grid
   } catch (error) {
-    heatmap.value = null
+    if (token !== loadToken) return
+    grid.value = null
     loadError.value = readAnalyticsError(error) || t('statistics.loadError')
   } finally {
-    loading.value = false
+    if (token === loadToken) loading.value = false
   }
 }
 
