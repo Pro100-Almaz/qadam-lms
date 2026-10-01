@@ -38,12 +38,19 @@
                 :key="assignment.id"
                 scope="col"
                 class="border-b border-gray-200 px-2 py-2.5 text-center text-[11px] font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400"
+                :class="{ 'opacity-50': isInactive(assignment) }"
                 :title="assignmentTitle(assignment)"
               >
-                <span class="mx-auto mb-0.5 block h-1 w-6 rounded-full" :class="DOTS[assignment.category]"></span>
+                <span class="mx-auto mb-0.5 block h-1 w-6 rounded-full" :class="DOTS[assignment.category] ?? 'bg-gray-400'"></span>
                 <span class="block max-w-[120px] truncate">{{ assignment.title }}</span>
                 <span class="block text-[10px] font-normal text-gray-400 dark:text-gray-500">
                   {{ assignment.max_grade }}
+                </span>
+                <span
+                  v-if="isInactive(assignment)"
+                  class="mt-0.5 block text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                >
+                  {{ t('assignments.inactive') }}
                 </span>
               </th>
               <th
@@ -67,6 +74,7 @@
                 v-for="(assignment, columnIndex) in assignments"
                 :key="assignment.id"
                 class="border-b border-gray-100 p-0.5 text-center dark:border-gray-800"
+                :class="{ 'opacity-50': isInactive(assignment) }"
               >
                 <span
                   class="flex h-9 min-w-[52px] items-center justify-center rounded text-xs font-medium tabular-nums"
@@ -191,10 +199,12 @@ const rowMeans = computed(() => props.data.row_means ?? [])
 const columnMeans = computed(() => props.data.column_means ?? [])
 
 /** Same hues as `AssignmentCategoryBadge`, so a category keeps one colour. */
-const DOTS: Record<AssignmentCategory, string> = {
+/** Admin-added categories have no hue of their own and fall back to grey. */
+const DOTS: Record<AssignmentCategory | (string & {}), string> = {
   lesson: 'bg-blue-light-500',
   exam: 'bg-warning-500',
   final: 'bg-error-500',
+  homework: 'bg-purple-500',
 }
 
 function isGraded(rowIndex: number, columnIndex: number): boolean {
@@ -272,9 +282,17 @@ function rowMeanTitle(rowIndex: number): string {
   return t('statistics.rowMeanHint', { graded, total: assignments.value.length })
 }
 
+/**
+ * The endpoint flags each assignment with `is_active`. Inactive ones stay in the
+ * grid, as the endpoint sent them, but greyed so they read as switched off.
+ */
+function isInactive(assignment: HeatmapAssignment): boolean {
+  return assignment.is_active === false
+}
+
 function assignmentTitle(assignment: HeatmapAssignment): string {
   return [
-    assignment.title,
+    isInactive(assignment) ? `${assignment.title} (${t('assignments.inactive')})` : assignment.title,
     `${t('assignments.category')}: ${t(`assignments.categories.${assignment.category}`)}`,
     `${t('assignments.date')}: ${assignment.date}`,
     `${t('assignments.maxGrade')}: ${assignment.max_grade}`,

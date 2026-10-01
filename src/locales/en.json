@@ -515,6 +515,7 @@
         "none": "No files attached.",
         "addFiles": "Add files",
         "hint": "Allowed: {formats}. Up to {size} per file.",
+        "pasteHint": "You can also paste a copied image or file with Ctrl+V (⌘V on Mac).",
         "slotsLeft": "{count} of {max} slots left",
         "limitReached": "File limit reached ({max} files).",
         "uploading": "Uploading… {percent}%",
@@ -558,7 +559,8 @@
         "categories": {
             "lesson": "Lesson",
             "exam": "Exam",
-            "final": "Final"
+            "final": "Final",
+            "homework": "Homework"
         },
         "maxGrade": "Max grade",
         "maxGradeHint": "The highest mark a student can earn.",
@@ -569,6 +571,13 @@
         "selectClass": "Select class",
         "pickSubjectFirst": "Pick a subject first",
         "noOfferings": "You are not assigned to any subject yet.",
+        "categoriesLoadFailed": "Could not load assignment types.",
+        "homeworkCreateHint": "A homework is created for it. Add the description and files on the Homeworks page.",
+        "homeworkEditHint": "Its description and files are edited on the Homeworks page. Deleting that homework deletes this assignment.",
+        "activeLabel": "Active",
+        "activeHint": "Inactive assignments are hidden from the gradebook until switched back on.",
+        "inactive": "Inactive",
+        "showInactive": "Show inactive",
         "allSubjects": "All subjects",
         "allClassGroups": "All classes",
         "allCategories": "All types",
@@ -618,11 +627,11 @@
         "allSubjects": "All subjects",
         "grade": "Grade",
         "comment": "Comment",
+        "notGraded": "Not graded",
         "summary": "{count} grade(s) · average {percent}% on this page",
         "loadError": "Grades could not be loaded.",
         "noResults": "No grades recorded yet.",
-        "assignmentDate": "Assignment date",
-        "gradedAt": "Graded"
+        "assignmentDate": "Assignment date"
     },
     "gradeReport": {
         "button": "Download report",

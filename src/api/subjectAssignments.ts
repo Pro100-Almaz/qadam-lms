@@ -4,10 +4,35 @@ import api, { type PaginatedResponse } from './client'
  * A graded piece of work — a lesson mark, an exam or a final. Distinct from
  * `Homework`: an assignment carries no description, files or due date, only a
  * title and the scale its grades are measured on.
+ *
+ * The category is a `code` from `/assignment-categories/`, which admins can
+ * extend — so any string is valid, the three literals are just the seeded ones.
  */
-export type SubjectAssignmentCategory = 'lesson' | 'exam' | 'final'
+export type SubjectAssignmentCategory = 'lesson' | 'exam' | 'final' | (string & {})
 
+/**
+ * The one code the frontend has to know by name. Creating an assignment with
+ * it makes the backend create a real `/homeworks/` row behind it (see
+ * `SubjectAssignment.detail_id`); its description and files are filled in on
+ * the Homeworks page. Such an assignment cannot be deleted directly — deleting
+ * its homework deletes it.
+ */
+export const HOMEWORK_CATEGORY = 'homework'
+
+/** The seeded codes — the fallback when `/assignment-categories/` cannot be read. */
 export const SUBJECT_ASSIGNMENT_CATEGORIES: SubjectAssignmentCategory[] = ['lesson', 'exam', 'final']
+
+/** One row of `/assignment-categories/`. `code` is what an assignment stores. */
+export interface AssignmentCategoryOption {
+  id: number
+  code: string
+  name: string
+}
+
+/** Shared by every school and ordered by name. Not paginated. */
+export function getAssignmentCategoriesApi() {
+  return api.get<AssignmentCategoryOption[]>('/assignment-categories/')
+}
 
 /**
  * One assignment. Note the shape difference from `Homework`: the offering is
@@ -18,8 +43,17 @@ export interface SubjectAssignment {
   id: number
   title: string
   category: SubjectAssignmentCategory
+  /** The category's name, localized by the request's `Accept-Language`. */
+  category_name?: string
   /** Upper bound of every grade on this assignment. Always ≥ 1. */
   max_grade: number
+  /**
+   * Id of the record behind the assignment, when there is one. For a
+   * `homework` assignment it is the `/homeworks/<id>/` row the backend made.
+   */
+  detail_id?: number | null
+  /** Inactive assignments are hidden from the gradebook unless asked for. */
+  is_active: boolean
   offering_id: number
   subject_id: number
   subject_name: string
@@ -60,6 +94,7 @@ export interface CreateSubjectAssignmentRequest {
   max_grade: number
   /** Required, `YYYY-MM-DD`: omitting it is a 400, not a default of today. */
   date: string
+  is_active?: boolean
 }
 
 /** Everything but `offering`, which the API rejects as immutable. */

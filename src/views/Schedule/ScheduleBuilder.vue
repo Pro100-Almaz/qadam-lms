@@ -136,7 +136,7 @@
       <Transition name="fade">
         <div
           v-if="editor"
-          class="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-4 sm:items-center"
+          class="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 p-4 sm:items-center"
           @click.self="closeEditor"
         >
           <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">

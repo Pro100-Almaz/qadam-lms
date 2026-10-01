@@ -403,6 +403,14 @@ layer(base);
 .flatpickr-wrapper {
   @apply w-full;
 }
+/* The calendar is appended to <body> at flatpickr's 99999, which sits under
+   any modal at 100000 (the layer above the sticky header). Match SelectMenu's
+   menu layer so a picker opened from a modal is never covered by it.
+   `!important` because flatpickr.css loads after this file (see main.ts) with
+   the same selector, so it would otherwise win on source order. */
+.flatpickr-calendar.open {
+  z-index: 100010 !important;
+}
 .flatpickr-calendar {
   @apply mt-2  !rounded-xl bg-black !p-5 !border !border-transparent dark:!border-white/5 !text-gray-500 dark:!bg-gray-900 dark:!text-gray-400 dark:!shadow-theme-xl 2xsm:!w-auto;
 }

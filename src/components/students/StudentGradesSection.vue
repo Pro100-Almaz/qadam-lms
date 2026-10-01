@@ -109,7 +109,17 @@
       class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
     >
       <div class="max-w-full overflow-x-auto custom-scrollbar">
-        <table class="w-full min-w-[880px]">
+        <!-- Fixed layout: the shares below hold on every page, rather than the
+             browser resizing columns around whichever text is longest. -->
+        <table class="w-full min-w-[900px] table-fixed">
+          <colgroup>
+            <col class="w-[18%]" />
+            <col class="w-[14%]" />
+            <col class="w-[12%]" />
+            <col class="w-[11%]" />
+            <col class="w-[32%]" />
+            <col class="w-[13%]" />
+          </colgroup>
           <thead>
             <tr class="border-b border-gray-200 dark:border-gray-800">
               <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -130,9 +140,6 @@
               <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 {{ t('studentGrades.assignmentDate') }}
               </th>
-              <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                {{ t('studentGrades.gradedAt') }}
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -141,34 +148,47 @@
               :key="grade.id"
               class="border-b border-gray-100 last:border-0 dark:border-gray-800"
             >
-              <td class="px-5 py-3.5">
-                <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ grade.assignment.title }}</p>
-              </td>
-              <td class="px-5 py-3.5">
-                <span class="text-sm text-gray-600 dark:text-gray-300">{{ grade.assignment.subject_name || '—' }}</span>
-              </td>
-              <td class="px-5 py-3.5">
-                <AssignmentCategoryBadge :category="grade.assignment.category" />
-              </td>
-              <td class="whitespace-nowrap px-5 py-3.5">
-                <span class="text-sm font-bold" :class="gradeColor(grade)">
-                  {{ grade.grade ?? '—' }}<span class="text-xs font-medium text-gray-400">/{{ grade.assignment.max_grade }}</span>
-                </span>
-              </td>
-              <td class="max-w-xs px-5 py-3.5">
-                <p class="line-clamp-2 text-sm text-gray-600 dark:text-gray-300" :title="grade.comments || undefined">
-                  {{ grade.comments || '—' }}
+              <!-- Clamped to two lines; the whole title is in the tooltip. -->
+              <td class="px-5 py-3.5 align-top">
+                <p
+                  class="line-clamp-2 break-words text-sm font-medium text-gray-800 dark:text-white/90"
+                  :title="grade.assignment.title"
+                >
+                  {{ grade.assignment.title }}
                 </p>
               </td>
-              <td class="whitespace-nowrap px-5 py-3.5">
-                <span class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ formatAcademicDate(grade.assignment.date) }}
+              <td class="px-5 py-3.5 align-top">
+                <span class="block break-words text-sm text-gray-600 dark:text-gray-300">{{ grade.assignment.subject_name || '—' }}</span>
+              </td>
+              <td class="px-5 py-3.5 align-top">
+                <AssignmentCategoryBadge :category="grade.assignment.category" />
+              </td>
+              <td class="whitespace-nowrap px-5 py-3.5 align-top">
+                <span v-if="grade.grade !== null" class="text-sm font-bold" :class="gradeColor(grade)">
+                  {{ grade.grade }}<span class="text-xs font-medium text-gray-400">/{{ grade.assignment.max_grade }}</span>
+                </span>
+                <!-- A comment-only row: no mark to put over the scale. -->
+                <span
+                  v-else
+                  class="inline-flex rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-xs font-medium text-gray-500 dark:border-gray-700 dark:text-gray-400"
+                >
+                  {{ t('studentGrades.notGraded') }}
                 </span>
               </td>
-              <!-- When the mark was entered, which need not be the lesson day. -->
-              <td class="whitespace-nowrap px-5 py-3.5">
+              <!-- Shown whole, line breaks kept: a clamped note with only a
+                   hover tooltip is unreadable on touch screens. -->
+              <td class="px-5 py-3.5 align-top">
+                <p
+                  v-if="grade.comments"
+                  class="whitespace-pre-line break-words text-sm text-gray-600 dark:text-gray-300"
+                >
+                  {{ grade.comments }}
+                </p>
+                <span v-else class="text-sm text-gray-400">—</span>
+              </td>
+              <td class="whitespace-nowrap px-5 py-3.5 align-top">
                 <span class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ formatRecordedAt(grade.created_at) }}
+                  {{ formatAcademicDate(grade.assignment.date) }}
                 </span>
               </td>
             </tr>
@@ -214,7 +234,7 @@ import {
   type SubjectAssignmentCategory,
   type SubjectGrade,
 } from '@/api/subjectAssignments'
-import { formatAcademicDate, formatRecordedAt } from '@/utils/gradeDates'
+import { formatAcademicDate } from '@/utils/gradeDates'
 
 export interface GradeSubjectOption {
   id: number
