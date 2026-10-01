@@ -148,27 +148,15 @@
         {{ t('statistics.legendNotGraded') }}
       </span>
     </div>
-
-    <p
-      v-if="data.truncated"
-      class="flex items-start gap-2 rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-400"
-    >
-      <TriangleAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
-      <span>{{ t('statistics.truncatedAssignments') }}</span>
-    </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { TriangleAlert } from 'lucide-vue-next'
-import type {
-  AssignmentCategory,
-  AssignmentHeatmapResponse,
-  HeatmapAssignment,
-} from '@/api/analytics'
+import type { AssignmentCategory, HeatmapAssignment } from '@/api/analytics'
 import { magnitudeStep, useChartTheme } from '@/components/analytics/chartTheme'
+import type { GradeGrid } from '@/utils/offeringGradeGrid'
 
 /**
  * A class against the assignments they were set, as percentages of each
@@ -182,19 +170,25 @@ import { magnitudeStep, useChartTheme } from '@/components/analytics/chartTheme'
  * to prevent. So ungraded cells are hatched and show a dash, and never take a
  * colour from the scale.
  *
- * The row and column means come from the server under whichever `missing` rule
- * was asked for, and under the default `exclude` their divisor is the marks
- * entered, not the column count — a row with one mark of 60% means 60, not 30.
- * `rowMeanTitle` spells that out rather than leaving the reader to assume.
+ * The row and column means arrive in the grid under whichever `missing` rule it
+ * was built with (see `buildGradeGrid`), and under the default `exclude` their
+ * divisor is the marks entered, not the column count — a row with one mark of
+ * 60% means 60, not 30. `rowMeanTitle` spells that out rather than leaving the
+ * reader to assume.
  */
-const props = defineProps<{ data: AssignmentHeatmapResponse }>()
+const props = defineProps<{
+  data: GradeGrid
+  /** Shown under the class mean. */
+  classGroupName?: string
+}>()
 
 const { t } = useI18n()
 const { chrome } = useChartTheme()
 
 const students = computed(() => props.data.students)
 const assignments = computed(() => props.data.assignments)
-const scale = computed(() => props.data.scale ?? { min: 0, max: 100 })
+/** Every cell is a percent of its assignment's maximum. */
+const scale = { min: 0, max: 100 }
 const rowMeans = computed(() => props.data.row_means ?? [])
 const columnMeans = computed(() => props.data.column_means ?? [])
 
@@ -250,8 +244,8 @@ function cellStyle(rowIndex: number, columnIndex: number) {
 
   const step = magnitudeStep(
     valueOf(rowIndex, columnIndex),
-    scale.value.min,
-    scale.value.max,
+    scale.min,
+    scale.max,
     ramp.value.colors.length,
   )
   return { backgroundColor: ramp.value.colors[step], color: ramp.value.inks[step] }
@@ -341,7 +335,7 @@ const tiles = computed(() => {
     {
       label: t('statistics.classMean'),
       value: gradedRows.length ? `${classMean.toFixed(1)}%` : '—',
-      hint: props.data.offering.class_group,
+      hint: props.classGroupName ?? '',
       tone: neutral,
     },
     {

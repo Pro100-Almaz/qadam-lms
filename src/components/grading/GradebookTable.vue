@@ -163,14 +163,15 @@
                 >
                   <input
                     :value="draftValue(student.id, column.assignment.id)"
-                    type="number"
-                    min="0"
-                    :max="column.assignment.max_grade"
+                    type="text"
                     inputmode="numeric"
+                    pattern="[0-9]*"
+                    autocomplete="off"
+                    :maxlength="String(column.assignment.max_grade).length"
                     class="h-8 w-full rounded-md border px-2 text-center text-sm font-medium tabular-nums outline-none transition dark:bg-gray-900"
                     :class="inputClass(student.id, column.assignment.id)"
                     :aria-label="cellInputLabel(student.full_name, column.assignment.title)"
-                    @input="setDraftValue(student.id, column.assignment.id, ($event.target as HTMLInputElement).value)"
+                    @input="setDraftValue(student.id, column.assignment.id, keepDigits($event))"
                     @focus="activeCellKey = cellKey(column.assignment.id, student.id)"
                     @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
                     @keydown.esc.prevent="revertCell(student.id, column.assignment.id, $event)"
@@ -277,48 +278,42 @@
       </table>
     </div>
 
-    <!-- The endpoint keeps only the most recent columns past its cap, so a long
-         range silently loses its oldest assignments unless this is said. -->
-    <p
-      v-if="!loading && !loadError && data?.truncated"
-      class="flex items-start gap-2 border-t border-gray-200 px-5 py-3 text-xs text-warning-700 dark:border-gray-800 dark:text-warning-400"
-    >
-      <TriangleAlert class="mt-0.5 h-3.5 w-3.5 shrink-0" />
-      <span>{{ t('statistics.truncatedAssignments') }}</span>
-    </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, CircleAlert, ClipboardList, Loader2, TriangleAlert, Users } from 'lucide-vue-next'
-import {
-  getAssignmentHeatmapApi,
-  getTeacherAssignmentHeatmapApi,
-  type AssignmentCategory,
-  type AssignmentHeatmapResponse,
-  type HeatmapAssignment,
-} from '@/api/analytics'
+import { Check, CircleAlert, ClipboardList, Loader2, Users } from 'lucide-vue-next'
+import type { AssignmentCategory, HeatmapAssignment } from '@/api/analytics'
 import {
   createAssignmentGradeApi,
   deleteSubjectGradeApi,
-  getAssignmentGradesApi,
+  getAllOfferingGradesApi,
   updateSubjectGradeApi,
+  type OfferingGradesAssignment,
   type SubjectAssignment,
   type SubjectAssignmentCategory,
 } from '@/api/subjectAssignments'
+import { useClassRoster } from '@/composables/useClassRoster'
 import { formatAcademicDay } from '@/utils/gradeDates'
+import {
+  buildGradeGrid,
+  gradeCellKey,
+  gridMeans,
+  type GradeCellRecord,
+  type GradeGrid,
+} from '@/utils/offeringGradeGrid'
 
 /**
  * One offering's gradebook: its class down the rows, its assignments across the
  * columns in academic-date order, marks in the cells.
  *
- * The grid comes from the assignment heatmap endpoint rather than from
- * `/subject-grades/` plus a roster, for two reasons: it is one request instead
- * of two, and it names *every* student in the class, including the ones with no
- * mark at all — a grade list can only ever name the students already graded, so
- * the empty cells that a teacher is reading this table for would be invisible.
+ * The grid is `/offerings/{id}/subject-grades/` — every assignment with its
+ * stored grade rows, ids and comments included, in one request — laid over the
+ * class roster. The roster is what gives every student a row: a grade list can
+ * only ever name the students already graded, so the empty cells a teacher is
+ * reading this table for would otherwise be invisible.
  *
  * Cells show the mark in the assignment's own points, not the percentage the
  * heatmap chart paints: this is a register to check a student's mark in, and
@@ -331,20 +326,19 @@ import { formatAcademicDay } from '@/utils/gradeDates'
  */
 const props = defineProps<{
   offeringId: number
+  /** The offering's class — whose roster gives the grid its rows. */
+  classGroupId: number
   subjectName: string
   classGroupName: string
   /**
-   * The offering's assignments as the list endpoint returned them, keyed by id.
-   * The columns come from the heatmap, but its assignment shape is not the one
-   * the form and grading modals take, so the full record is looked up here.
+   * The offering's assignments as the list endpoint returned them. Only a
+   * fallback now: the grades response carries the full records itself.
    */
   assignments?: SubjectAssignment[]
   /** Suppresses column actions when the table is used as a read-only register. */
   readOnly?: boolean
   /** Removes the outer card frame when the table already lives inside a panel. */
   embedded?: boolean
-  /** Uses the teacher-scoped analytics endpoint for homeroom class read access. */
-  teacherScoped?: boolean
   /** The page's filters, passed through so the grid matches what was asked for. */
   category?: SubjectAssignmentCategory | null
   dateFrom?: string
@@ -368,12 +362,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-interface GradeCellRecord {
-  gradeId: number | null
-  value: string
-  comments: string
-}
-
 /** A column, paired with its index into the server's matrices. */
 interface Column {
   assignment: HeatmapAssignment
@@ -391,7 +379,9 @@ const CATEGORY_DOTS: Record<AssignmentCategory | (string & {}), string> = {
   homework: 'bg-purple-500',
 }
 
-const data = ref<AssignmentHeatmapResponse | null>(null)
+const data = ref<GradeGrid | null>(null)
+/** The full assignment records of the last load, for the edit modal. */
+const loadedAssignments = ref<OfferingGradesAssignment[]>([])
 const loading = ref(true)
 const loadError = ref(false)
 const gradeRecords = ref<Record<string, GradeCellRecord>>({})
@@ -406,14 +396,25 @@ const savedKeys = ref<Record<string, true>>({})
 const savedTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const students = computed(() => data.value?.students ?? [])
-const rowMeans = computed(() => data.value?.row_means ?? [])
-const columnMeans = computed(() => data.value?.column_means ?? [])
+/**
+ * Over the columns on screen only: with "Show inactive" off, a hidden
+ * assignment's marks do not move anyone's average. Computed, so a saved mark
+ * (written into the grid by `applyGradeToGrid`) updates them with no refetch.
+ * Unmarked cells are left out, so one mark of 60% averages 60, not 6.
+ */
+const means = computed(() =>
+  data.value
+    ? gridMeans(data.value, columns.value.map(column => column.index))
+    : { rowMeans: [] as number[], columnMeans: [] as number[] },
+)
+const rowMeans = computed(() => means.value.rowMeans)
+const columnMeans = computed(() => means.value.columnMeans)
 const studentCount = computed(() => data.value?.class_size ?? students.value.length)
 
 /**
- * Oldest first. The response's own order is "most recent kept" once it truncates
- * and is not promised beyond that, so the reading order is imposed here — the
- * index into the matrices is carried along rather than assumed to match.
+ * Oldest first. The endpoint lists newest first, so the reading order is
+ * imposed here — the index into the matrices is carried along rather than
+ * assumed to match.
  */
 const columns = computed<Column[]>(() =>
   (data.value?.assignments ?? [])
@@ -507,14 +508,17 @@ const tableMinWidth = computed(
 )
 
 const assignmentById = computed(
-  () => new Map((props.assignments ?? []).map(assignment => [assignment.id, assignment])),
+  () =>
+    new Map<number, SubjectAssignment>(
+      [...(props.assignments ?? []), ...loadedAssignments.value].map(assignment => [assignment.id, assignment]),
+    ),
 )
 
 const writableIds = computed(() => new Set(props.writableAssignmentIds ?? []))
 
 /**
- * The heatmap's own flag when it sends one, else the list endpoint's copy. A
- * column neither knows about counts as active, so nothing vanishes on a guess.
+ * The grid's own flag, else the list endpoint's copy. A column neither knows
+ * about counts as active, so nothing vanishes on a guess.
  */
 function isInactive(column: Column): boolean {
   const flag = column.assignment.is_active ?? assignmentById.value.get(column.assignment.id)?.is_active
@@ -558,7 +562,7 @@ function requestEdit(assignmentId: number) {
 }
 
 function cellKey(assignmentId: number, studentId: number): string {
-  return `${assignmentId}:${studentId}`
+  return gradeCellKey(assignmentId, studentId)
 }
 
 function editableCell(column: Column): boolean {
@@ -571,6 +575,18 @@ function draftValue(studentId: number, assignmentId: number): string {
 
 function draftComment(studentId: number, assignmentId: number): string {
   return draftComments.value[cellKey(assignmentId, studentId)] ?? ''
+}
+
+/**
+ * Marks are whole points, so the cell is a text input that only takes digits:
+ * no spinner arrows, no wheel or arrow-key nudging, and a pasted "7.5" or "-3"
+ * is cleaned in place rather than typed in and then refused.
+ */
+function keepDigits(event: Event): string {
+  const input = event.target as HTMLInputElement
+  const digits = input.value.replace(/\D/g, '')
+  if (input.value !== digits) input.value = digits
+  return digits
 }
 
 function setDraftValue(studentId: number, assignmentId: number, value: string) {
@@ -699,7 +715,7 @@ function cellTitle(rowIndex: number, column: Column): string {
       ? `${t('statistics.points')}: ${rawGrade(rowIndex, column)} / ${column.assignment.max_grade}`
       : t('statistics.notGraded'),
   )
-  // Only writable cells load their comments; the heatmap itself carries none.
+  // Every cell has its comment now, read-only ones included.
   const comment = student ? draftComment(student.id, column.assignment.id).trim() : ''
   if (comment) lines.push(`${t('studentGrades.comment')}: ${comment}`)
   return lines.join('\n')
@@ -731,62 +747,34 @@ function rowMeanTitle(rowIndex: number): string {
   return t('statistics.rowMeanHint', { graded, total: columns.value.length })
 }
 
+const roster = useClassRoster()
+
 async function load() {
   loading.value = true
   loadError.value = false
   try {
-    const fetchHeatmap = props.teacherScoped
-      ? getTeacherAssignmentHeatmapApi
-      : getAssignmentHeatmapApi
-    const { data: response } = await fetchHeatmap(props.offeringId, {
-      category: props.category || undefined,
-      date_from: props.dateFrom || undefined,
-      date_to: props.dateTo || undefined,
-    })
-    data.value = response
-    await loadGradeRecords(response)
+    const [assignments, students] = await Promise.all([
+      getAllOfferingGradesApi(props.offeringId, {
+        category: props.category || undefined,
+        date_from: props.dateFrom || undefined,
+        date_to: props.dateTo || undefined,
+      }),
+      roster.get(props.classGroupId),
+    ])
+    const { grid, records } = buildGradeGrid(assignments, students)
+    loadedAssignments.value = assignments
+    data.value = grid
+    gradeRecords.value = records
     resetDrafts()
   } catch {
     data.value = null
+    loadedAssignments.value = []
     gradeRecords.value = {}
     resetDrafts()
     loadError.value = true
   } finally {
     loading.value = false
   }
-}
-
-async function loadGradeRecords(response: AssignmentHeatmapResponse) {
-  const records: Record<string, GradeCellRecord> = {}
-  response.assignments.forEach((assignment, columnIndex) => {
-    response.students.forEach((student, rowIndex) => {
-      const raw = response.raw_grades[rowIndex]?.[columnIndex]
-      records[cellKey(assignment.id, student.id)] = {
-        gradeId: null,
-        value: raw === null || raw === undefined ? '' : String(raw),
-        comments: '',
-      }
-    })
-  })
-
-  const editableAssignments = response.assignments.filter(assignment => writableIds.value.has(assignment.id))
-  const details = await Promise.allSettled(
-    editableAssignments.map(assignment =>
-      getAssignmentGradesApi(assignment.id, { page_size: Math.max(200, response.students.length) }),
-    ),
-  )
-
-  details.forEach(result => {
-    if (result.status === 'rejected') return
-    result.value.data.results.forEach(grade => {
-      records[cellKey(grade.assignment.id, grade.student)] = {
-        gradeId: grade.id,
-        value: grade.grade === null || grade.grade === undefined ? '' : String(grade.grade),
-        comments: grade.comments ?? '',
-      }
-    })
-  })
-  gradeRecords.value = records
 }
 
 // ─── Saving one cell ─────────────────────────────────────────────────────────
@@ -898,7 +886,7 @@ function setGradeRecord(key: string, record: GradeCellRecord) {
 }
 
 /**
- * The grid came from the heatmap endpoint, so a saved mark has to be written
+ * The grid is built once per load, so a saved mark has to be written
  * back into it by hand — refetching the whole table after every cell would
  * throw away the teacher's place in it.
  */
@@ -923,48 +911,16 @@ function applyGradeToGrid(assignmentId: number, studentId: number, value: string
   if (assignment && wasGraded !== graded) {
     assignment.graded_count = Math.max(0, assignment.graded_count + (graded ? 1 : -1))
   }
-
-  recomputeMeans()
-}
-
-/**
- * Both means are over the marks entered, not over the columns — the divisor the
- * endpoint uses under `missing=exclude`, kept so a locally saved mark moves the
- * averages the same way a refetch would.
- */
-function recomputeMeans() {
-  const grid = data.value
-  if (!grid) return
-
-  grid.row_means = grid.students.map((_, row) =>
-    mean(grid.assignments.map((_unused, column) => cellPercent(row, column))),
-  )
-  grid.column_means = grid.assignments.map((_, column) =>
-    mean(grid.students.map((_unused, row) => cellPercent(row, column))),
-  )
-}
-
-/** The cell's percent of its assignment's maximum, or null when unmarked. */
-function cellPercent(row: number, column: number): number | null {
-  const grid = data.value
-  if (!grid || grid.graded[row]?.[column] !== true) return null
-  return grid.matrix[row]?.[column] ?? null
-}
-
-function mean(values: (number | null)[]): number {
-  const marked = values.filter((value): value is number => value !== null)
-  if (!marked.length) return 0
-  return marked.reduce((total, value) => total + value, 0) / marked.length
 }
 
 watch(
   () => [
     props.offeringId,
+    props.classGroupId,
     props.category,
     props.dateFrom,
     props.dateTo,
     props.reloadToken,
-    props.teacherScoped,
   ],
   load,
   { immediate: true },

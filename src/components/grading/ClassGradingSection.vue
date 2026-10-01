@@ -82,11 +82,11 @@
         <GradebookTable
           v-if="selectedSubject && activeMode === 'assignments'"
           :offering-id="selectedSubject.offeringId"
+          :class-group-id="classGroupId"
           :subject-name="selectedSubject.subjectName"
           :class-group-name="selectedSubject.classGroupName"
           embedded
           read-only
-          teacher-scoped
         />
         <HomeworkGradebookTable
           v-else-if="selectedSubject"

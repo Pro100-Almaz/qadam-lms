@@ -1,37 +1,67 @@
 <template>
   <AdminLayout>
     <div class="space-y-6">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+      <div class="flex items-start justify-between gap-4 sm:items-center">
+        <div class="min-w-0">
           <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">{{ t('assignments.title') }}</h1>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('assignments.subtitle') }}</p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <!-- One offering's class against the assignments on this page — the
-               same record the table below lists, not the lesson-topic gradebook
-               a subject's own page charts. Teachers only: the grid names every
-               student in the class. -->
-          <StatisticsButton
-            v-if="isTeacher"
-            kind="assignments"
-            :offerings="statisticsOfferings"
-            :offerings-loading="offeringsLoading"
-          />
-          <!-- Whole class, or one student the teacher teaches. -->
-          <GradeReportButton
-            v-if="isTeacher"
-            :classes="reportClasses"
-            :classes-loading="offeringsLoading"
-            allow-student-scope
-          />
+        <!-- Every page action sits behind one menu. The statistics grid and
+             the report name every student in a class, so those are teachers
+             only. -->
+        <div v-if="hasActions" ref="actionsRoot" class="relative shrink-0">
           <button
-            v-if="canCreate"
             type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-700"
-            @click="openCreate"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-gray-300 text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+            :aria-label="t('common.actions')"
+            aria-haspopup="menu"
+            :aria-expanded="actionsOpen"
+            @click="actionsOpen = !actionsOpen"
           >
-            <Plus class="h-4 w-4" /> {{ t('assignments.create') }}
+            <MoreVertical class="h-5 w-5" />
           </button>
+          <div
+            v-if="actionsOpen"
+            class="absolute right-0 z-30 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-theme-md dark:border-gray-700 dark:bg-gray-900"
+            role="menu"
+          >
+            <button
+              v-if="canCreate"
+              type="button"
+              role="menuitem"
+              class="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-brand-600 hover:bg-gray-50 dark:text-brand-400 dark:hover:bg-white/5"
+              @click="runAction(openCreate)"
+            >
+              <Plus class="h-4 w-4" /> {{ t('assignments.create') }}
+            </button>
+            <div v-if="canCreate && isTeacher" class="my-1 border-t border-gray-100 dark:border-gray-800"></div>
+            <template v-if="isTeacher">
+              <button
+                type="button"
+                role="menuitem"
+                class="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                @click="runAction(() => (quarterGradesOpen = true))"
+              >
+                <GraduationCap class="h-4 w-4" /> {{ t('quarterGrades.button') }}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                class="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                @click="runAction(() => (statisticsOpen = true))"
+              >
+                <ChartColumnBig class="h-4 w-4" /> {{ t('statistics.button') }}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                class="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+                @click="runAction(() => (reportOpen = true))"
+              >
+                <Download class="h-4 w-4" /> {{ t('gradeReport.button') }}
+              </button>
+            </template>
+          </div>
         </div>
       </div>
 
@@ -150,6 +180,7 @@
           v-for="group in pagedGroups"
           :key="group.offeringId"
           :offering-id="group.offeringId"
+          :class-group-id="group.classGroupId"
           :subject-name="group.subjectName"
           :class-group-name="group.classGroupName"
           :assignments="group.assignments"
@@ -243,20 +274,57 @@
         </div>
       </Transition>
     </Teleport>
+
+    <template v-if="isTeacher">
+      <QuarterGradesModal
+        :open="quarterGradesOpen"
+        :offerings="assignmentOfferings"
+        :offerings-loading="offeringsLoading"
+        @close="quarterGradesOpen = false"
+      />
+      <!-- One offering's class against the assignments on this page — the same
+           record the table lists, not the lesson-topic gradebook a subject's own
+           page charts. -->
+      <AssignmentStatisticsModal
+        :open="statisticsOpen"
+        :offerings="statisticsOfferings"
+        :offerings-loading="offeringsLoading"
+        @close="statisticsOpen = false"
+      />
+      <!-- Whole class, or one student the teacher teaches. -->
+      <GradeReportModal
+        :open="reportOpen"
+        :classes="reportClasses"
+        :classes-loading="offeringsLoading"
+        allow-student-scope
+        @close="reportOpen = false"
+      />
+    </template>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { AlertTriangle, CircleAlert, Loader2, Plus, SearchX, X } from 'lucide-vue-next'
+import {
+  AlertTriangle,
+  ChartColumnBig,
+  CircleAlert,
+  Download,
+  GraduationCap,
+  Loader2,
+  MoreVertical,
+  Plus,
+  SearchX,
+  X,
+} from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import AssignmentFormModal from '@/components/grading/AssignmentFormModal.vue'
 import GradebookTable from '@/components/grading/GradebookTable.vue'
-import StatisticsButton from '@/components/analytics/StatisticsButton.vue'
+import AssignmentStatisticsModal from '@/components/analytics/AssignmentStatisticsModal.vue'
 import type { StatisticsOfferingOption } from '@/components/analytics/ClassStatisticsModal.vue'
-import GradeReportButton from '@/components/grading/GradeReportButton.vue'
-import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
+import QuarterGradesModal from '@/components/grading/QuarterGradesModal.vue'
+import GradeReportModal, { type GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
 import DatePicker from '@/components/ui/DatePicker.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
@@ -293,6 +361,7 @@ const {
 /** One gradebook: an offering's assignments, oldest first. */
 interface OfferingGroup {
   offeringId: number
+  classGroupId: number
   subjectName: string
   classGroupName: string
   assignments: SubjectAssignment[]
@@ -328,7 +397,7 @@ const pageSize = ref(5)
 const allGroups = computed<OfferingGroup[]>(() => {
   const grouped = new Map<number, OfferingGroup>()
   assignments.value.forEach(assignment => {
-    if (!heatmapOfferingIds.value.has(assignment.offering_id)) return
+    if (!offeringIds.value.has(assignment.offering_id)) return
     const existing = grouped.get(assignment.offering_id)
     if (existing) {
       existing.assignments.push(assignment)
@@ -336,6 +405,7 @@ const allGroups = computed<OfferingGroup[]>(() => {
     }
     grouped.set(assignment.offering_id, {
       offeringId: assignment.offering_id,
+      classGroupId: assignment.class_group_id,
       subjectName: assignment.subject_name,
       classGroupName: assignment.class_group_name,
       assignments: [assignment],
@@ -359,9 +429,7 @@ const allGroups = computed<OfferingGroup[]>(() => {
 /**
  * The tables actually shown. "Show inactive" only decides whether a table whose
  * assignments are *all* switched off appears; hiding inactive columns inside a
- * table is the table's job. Each table still gets every one of its offering's
- * assignments, inactive included — the heatmap it draws from does not say which
- * columns are inactive, so the table looks that up in this list.
+ * table is the table's job, using the `is_active` its own grades response carries.
  */
 const groups = computed<OfferingGroup[]>(() =>
   filters.value.showInactive
@@ -400,6 +468,39 @@ function reloadOffering(offeringId: number) {
 // ─── Create / edit ───────────────────────────────────────────────────────────
 
 const formOpen = ref(false)
+const quarterGradesOpen = ref(false)
+const statisticsOpen = ref(false)
+const reportOpen = ref(false)
+
+// ─── Page actions menu ───────────────────────────────────────────────────────
+
+const actionsOpen = ref(false)
+const actionsRoot = ref<HTMLElement | null>(null)
+const hasActions = computed(() => canCreate.value || isTeacher.value)
+
+function runAction(action: () => void) {
+  actionsOpen.value = false
+  action()
+}
+
+/** A click anywhere but the menu, or Escape, closes it. */
+function onDocumentPointer(event: MouseEvent) {
+  if (actionsOpen.value && !actionsRoot.value?.contains(event.target as Node)) actionsOpen.value = false
+}
+
+function onDocumentKey(event: KeyboardEvent) {
+  if (event.key === 'Escape') actionsOpen.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', onDocumentPointer)
+  document.addEventListener('keydown', onDocumentKey)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', onDocumentPointer)
+  document.removeEventListener('keydown', onDocumentKey)
+})
 /** `null` puts the shared modal into create mode. */
 const formTarget = ref<SubjectAssignment | null>(null)
 function openCreate() {
@@ -466,27 +567,27 @@ async function confirmDelete() {
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
 
-const heatmapOfferings = computed(() =>
-  assignmentOfferings.value.filter(offering => offering.can_heatmap),
-)
-
-const heatmapOfferingIds = computed(() =>
-  new Set(heatmapOfferings.value.map(offering => offering.id)),
-)
+/**
+ * The teacher's offerings, taught and homeroom alike. The tables read
+ * `/offerings/{id}/subject-grades/`, which scopes itself (a homeroom-only
+ * offering comes back read-only, an unrelated one empty), so every offering
+ * here may have a table and a filter entry.
+ */
+const offeringIds = computed(() => new Set(assignmentOfferings.value.map(offering => offering.id)))
 
 const subjectOptions = computed<SelectOption[]>(() =>
   [...new Map(
-    heatmapOfferings.value.map(offering => [
+    assignmentOfferings.value.map(offering => [
       offering.subject_id,
       { value: offering.subject_id, label: offering.subject },
     ]),
   ).values()].sort((a, b) => a.label.localeCompare(b.label)),
 )
 
-/** A teacher filters within heatmap-readable classes. */
+/** A teacher filters within the classes they teach or are homeroom of. */
 const classOptions = computed<SelectOption[]>(() =>
   [...new Map(
-    heatmapOfferings.value.map(offering => [
+    assignmentOfferings.value.map(offering => [
       offering.class_group_id,
       { value: offering.class_group_id, label: offering.class_group },
     ]),
@@ -495,7 +596,7 @@ const classOptions = computed<SelectOption[]>(() =>
 
 const subjects = computed<Subject[]>(() =>
   [...new Map(
-    heatmapOfferings.value.map(offering => [
+    assignmentOfferings.value.map(offering => [
       offering.subject_id,
       {
         id: offering.subject_id,
@@ -529,16 +630,13 @@ const reportClasses = computed<GradeReportClassOption[]>(() =>
     })),
 )
 
-/**
- * The offerings the heatmap may be asked for — the teacher's own, flattened out
- * of the subject → classes grouping. The API 403s any other offering, so this
- * list is the boundary, not just a convenience.
- */
+/** The same offerings as the tables, for the Statistics picker. */
 const statisticsOfferings = computed<StatisticsOfferingOption[]>(() =>
-  heatmapOfferings.value.map(offering => ({
+  assignmentOfferings.value.map(offering => ({
     offeringId: offering.id,
     label: offering.subject,
     sublabel: offering.class_group,
+    classGroupId: offering.class_group_id,
   })),
 )
 
@@ -648,8 +746,8 @@ onMounted(async () => {
 })
 
 /**
- * The analytics picker says which offerings can safely mount a heatmap table.
- * The teacher-offering helper still owns create/edit/delete permission checks.
+ * The analytics picker names the teacher's offerings. The teacher-offering
+ * helper still owns create/edit/delete permission checks.
  */
 async function loadFilterOptions() {
   const [pickerResult] = await Promise.all([

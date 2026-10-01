@@ -172,15 +172,64 @@ export interface SubjectGradeListParams {
   page_size?: number
 }
 
-/** The per-assignment grade sheet, ordered by student name. */
-export function getAssignmentGradesApi(
-  assignmentId: number | string,
-  params?: { student?: number; page?: number; page_size?: number },
-) {
-  return api.get<PaginatedResponse<SubjectGrade>>(
-    `/subject-assignments/${assignmentId}/grades/`,
-    { params },
+/** One stored grade row inside an assignment of `/offerings/{id}/subject-grades/`. */
+export interface OfferingGradeRow {
+  id: number
+  /** Student **profile** id. */
+  student: number
+  student_user_id: number
+  student_name: string
+  /** `null` on a comment-only row. */
+  grade: number | null
+  comments: string | null
+  created_at: string
+}
+
+/** An assignment with every grade stored on it — ungraded students are absent. */
+export interface OfferingGradesAssignment extends SubjectAssignment {
+  grades: OfferingGradeRow[]
+}
+
+/** The assignment filters of `/subject-assignments/`, scoped to one offering. */
+export interface OfferingGradesParams {
+  category?: SubjectAssignmentCategory
+  date?: string
+  date_from?: string
+  date_to?: string
+}
+
+/** Assignments per round trip; the server's maximum. */
+const OFFERING_GRADES_PAGE_SIZE = 200
+
+/**
+ * Every assignment of one offering with its stored grades, newest first, in one
+ * request for any offering of up to 200 assignments. Role-scoped like the
+ * per-assignment grade sheet: a homeroom teacher gets only published
+ * assignments, and a caller with no access gets an empty list, not a 403.
+ *
+ * Only students with a grade row appear, so a grid needs the class roster
+ * alongside it — see `useClassRoster`.
+ */
+export async function getAllOfferingGradesApi(offeringId: number, params?: OfferingGradesParams) {
+  const url = `/offerings/${offeringId}/subject-grades/`
+  const { data: first } = await api.get<PaginatedResponse<OfferingGradesAssignment>>(url, {
+    params: { ...params, page: 1, page_size: OFFERING_GRADES_PAGE_SIZE },
+  })
+
+  // Measured, not assumed, as in `getAllStudentsApi`: a lower server cap would
+  // otherwise make the page count too small and drop the oldest assignments.
+  const pageSize = first.results.length || OFFERING_GRADES_PAGE_SIZE
+  const pageCount = Math.ceil(first.count / pageSize)
+  if (pageCount <= 1) return first.results
+
+  const rest = await Promise.all(
+    Array.from({ length: pageCount - 1 }, (_, index) =>
+      api.get<PaginatedResponse<OfferingGradesAssignment>>(url, {
+        params: { ...params, page: index + 2, page_size: pageSize },
+      }),
+    ),
   )
+  return [...first.results, ...rest.flatMap(response => response.data.results)]
 }
 
 /**

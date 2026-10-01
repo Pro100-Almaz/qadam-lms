@@ -495,88 +495,23 @@ export function getAssignmentTrajectoryApi(
   )
 }
 
-// ─── 5. Assignment heatmap ────────────────────────────────────────────────────
-
-export interface AssignmentHeatmapParams {
-  /** Any `/assignment-categories/` code — the gradebook filters on admin-added ones too. */
-  category?: AssignmentCategory | (string & {})
-  date_from?: string
-  date_to?: string
-  missing?: MissingMode
-}
+// ─── 5. Assignment grid column ────────────────────────────────────────────────
+//
+// The analytics heatmap endpoint is no longer called: the gradebook and its
+// Statistics view build their grid in the browser (`utils/offeringGradeGrid.ts`)
+// from `/offerings/{id}/subject-grades/`. This is that grid's column shape.
 
 export interface HeatmapAssignment {
   id: number
   title: string
   /** Any `/assignment-categories/` code, `homework` included. */
   category: AssignmentCategory | (string & {})
-  /**
-   * Sent by `/analytics/offerings/{id}/assignment-heatmap/`, which returns
-   * inactive assignments too. Optional because the teacher-scoped route is not
-   * confirmed to send it; the gradebook then falls back to the list endpoint.
-   */
   is_active?: boolean
   /** `YYYY-MM-DD`. */
   date: string
   max_grade: number
   /** How many of the class have a mark on it. */
   graded_count: number
-}
-
-export interface AssignmentHeatmapResponse {
-  offering: AnalyticsOffering
-  filters: AssignmentFilterEcho
-  grading: AssignmentGradingNote
-  /** The colour scale's ends. */
-  scale: { min: number; max: number }
-  /** Row order. */
-  students: AnalyticsStudent[]
-  /** Column order. */
-  assignments: HeatmapAssignment[]
-  /** `matrix[i][j]` is `students[i]` on `assignments[j]`, as a percent. */
-  matrix: number[][]
-  /** Same indexing. `false` means no mark — `matrix` there is a filler `0.0`. */
-  graded: boolean[][]
-  /** Same indexing, in the assignment's own points. `null` where ungraded. */
-  raw_grades: (number | null)[][]
-  /**
-   * Under `missing=exclude` the divisor is the marks entered, **not** the column
-   * count — a row with one mark of 60% has a `row_mean` of 60, not 30.
-   */
-  row_means: number[]
-  column_means: number[]
-  coverage: AssignmentCoverage
-  class_size: number
-  assignment_count: number
-  /** Capped at 60 assignments, most recent kept. */
-  truncated: boolean
-}
-
-/**
- * The whole class against the assignments they were set.
- *
- * The grading page must check `/analytics/assignment-offerings/` first and
- * call this only for offerings with `can_heatmap: true`; homeroom-visible
- * offerings may still be rejected here when the caller is not the assigned
- * teacher.
- */
-export function getAssignmentHeatmapApi(offeringId: number, params?: AssignmentHeatmapParams) {
-  return api.get<AssignmentHeatmapResponse>(
-    `/analytics/offerings/${offeringId}/assignment-heatmap/`,
-    { params },
-  )
-}
-
-/**
- * Homeroom/teacher analytics view for assignment gradebooks. This route allows
- * the teacher-facing "My class" screen to read offerings in that class even
- * when the caller is not the subject teacher of the selected offering.
- */
-export function getTeacherAssignmentHeatmapApi(offeringId: number, params?: AssignmentHeatmapParams) {
-  return api.get<AssignmentHeatmapResponse>(
-    `/analytics/teacher/offerings/${offeringId}/assignment-heatmap/`,
-    { params },
-  )
 }
 
 // ─── 6. Assignment summary ────────────────────────────────────────────────────
@@ -693,7 +628,6 @@ export interface AssignmentOfferingPickerItem {
   access: AssignmentOfferingAccess
   teaching_role: string | null
   is_homeroom_class: boolean
-  can_heatmap: boolean
 }
 
 export interface AssignmentOfferingsResponse {
