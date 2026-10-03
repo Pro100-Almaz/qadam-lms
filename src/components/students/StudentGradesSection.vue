@@ -296,10 +296,10 @@ const categoryOptions = computed<SelectOption[]>(() =>
 const averagePercent = computed(() => {
   // Comment-only rows carry no mark, so they cannot pull the average either way.
   const scored = grades.value.filter(
-    grade => grade.assignment.max_grade > 0 && grade.grade !== null,
+    grade => (grade.assignment.max_grade ?? 0) > 0 && grade.grade !== null,
   )
   if (!scored.length) return 0
-  const sum = scored.reduce((acc, grade) => acc + (grade.grade! / grade.assignment.max_grade) * 100, 0)
+  const sum = scored.reduce((acc, grade) => acc + (grade.grade! / grade.assignment.max_grade!) * 100, 0)
   return Math.round(sum / scored.length)
 })
 

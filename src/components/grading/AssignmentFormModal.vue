@@ -172,7 +172,7 @@
               </div>
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  {{ t('assignments.maxGrade') }} <span class="text-error-500">*</span>
+                  {{ t('assignments.maxGrade') }} <span v-if="isHomework" class="text-error-500">*</span>
                 </label>
                 <input
                   v-model="form.maxGrade"
@@ -372,6 +372,16 @@ const quarterHint = computed(() => {
   return t('assignments.quarterKeptHint')
 })
 
+/**
+ * A blank field is sent as `null`, not left out, so clearing it on edit really
+ * does make the assignment unscored. `v-model` on a number input may hand back
+ * a number, hence the `String`.
+ */
+const maxGradeToSend = computed<number | null>(() => {
+  const raw = String(form.value.maxGrade ?? '').trim()
+  return raw === '' ? null : Number(raw)
+})
+
 const subjectOptions = computed<SelectOption[]>(() =>
   props.subjectGroups.map(group => ({
     value: group.subjectName,
@@ -451,7 +461,7 @@ watch(
         offering: editing.offering_id,
         title: editing.title,
         category: editing.category,
-        maxGrade: String(editing.max_grade),
+        maxGrade: editing.max_grade === null ? '' : String(editing.max_grade),
         date: editing.date,
         quarter: editing.quarter ?? null,
         isActive: editing.is_active ?? true,
@@ -482,10 +492,14 @@ function validate(): boolean {
   fieldErrors.value = {}
   if (!form.value.title.trim()) fieldErrors.value.title = t('validation.required')
 
-  const maxGrade = Number(form.value.maxGrade)
-  if (!String(form.value.maxGrade).trim() || !Number.isInteger(maxGrade)) {
+  // Blank is allowed: it makes the assignment unscored (comments only) —
+  // except on homework, which the backend always keeps gradable.
+  const maxGrade = maxGradeToSend.value
+  if (maxGrade === null && isHomework.value) {
+    fieldErrors.value.maxGrade = t('assignments.maxGradeRequiredForHomework')
+  } else if (maxGrade !== null && !Number.isInteger(maxGrade)) {
     fieldErrors.value.maxGrade = t('assignments.maxGradeInteger')
-  } else if (maxGrade < 1) {
+  } else if (maxGrade !== null && maxGrade < 1) {
     fieldErrors.value.maxGrade = t('assignments.maxGradeMin')
   }
 
@@ -510,7 +524,7 @@ async function submit() {
       ? await updateSubjectAssignmentApi(editing.id, {
           title: form.value.title.trim(),
           category: form.value.category,
-          max_grade: Number(form.value.maxGrade),
+          max_grade: maxGradeToSend.value,
           date: form.value.date,
           quarter: quarterToSend.value,
           is_active: form.value.isActive,
@@ -519,7 +533,7 @@ async function submit() {
           offering: Number(form.value.offering),
           title: form.value.title.trim(),
           category: form.value.category,
-          max_grade: Number(form.value.maxGrade),
+          max_grade: maxGradeToSend.value,
           date: form.value.date,
           quarter: quarterToSend.value,
           is_active: form.value.isActive,
@@ -550,7 +564,8 @@ function firstErrorMessage(value: unknown): string {
 
 /**
  * The API owns rules the form cannot check — most notably that `max_grade` may
- * not drop below a grade already recorded — so its messages land on the field.
+ * not drop below a grade already recorded, nor go blank while marks exist — so
+ * its messages land on the field.
  */
 function applyBackendErrors(error: unknown) {
   const fallback = t(isEditing.value ? 'assignments.updateFailed' : 'assignments.createFailed')

@@ -563,9 +563,11 @@
             "homework": "Homework"
         },
         "maxGrade": "Max grade",
-        "maxGradeHint": "The highest mark a student can earn.",
+        "maxGradeHint": "The highest mark a student can earn. Leave blank for an unscored assignment that takes comments only.",
+        "unscored": "Comments only",
         "maxGradeInteger": "Enter a whole number",
         "maxGradeMin": "Must be at least 1",
+        "maxGradeRequiredForHomework": "Homework needs a max grade",
         "classCount": "{count} class(es)",
         "selectSubject": "Select subject",
         "selectClass": "Select class",

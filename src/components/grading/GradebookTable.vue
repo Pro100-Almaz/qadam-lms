@@ -101,7 +101,7 @@
                   {{ column.assignment.title }}
                 </span>
                 <span class="block text-[10px] font-normal text-gray-400 dark:text-gray-500">
-                  / {{ column.assignment.max_grade }}
+                  {{ isScored(column.assignment) ? `/ ${column.assignment.max_grade}` : t('assignments.unscored') }}
                 </span>
                 <span
                   v-if="isInactive(column)"
@@ -162,6 +162,7 @@
                   :class="showsCommentPreview(student.id, column.assignment.id) ? 'w-[72px]' : 'w-14'"
                 >
                   <input
+                    v-if="isScored(column.assignment)"
                     :value="draftValue(student.id, column.assignment.id)"
                     type="text"
                     inputmode="numeric"
@@ -176,6 +177,16 @@
                     @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
                     @keydown.esc.prevent="revertCell(student.id, column.assignment.id, $event)"
                   />
+                  <!-- An unscored assignment takes no mark, so there is no input
+                       to show — just an empty cell that opens the comment box. -->
+                  <button
+                    v-else
+                    type="button"
+                    class="block h-8 w-full rounded-md border outline-none transition"
+                    :class="inputClass(student.id, column.assignment.id)"
+                    :aria-label="cellInputLabel(student.full_name, column.assignment.title)"
+                    @click="openCommentOnly(student.id, column.assignment.id, $event)"
+                  ></button>
                   <!-- A comment with no mark would otherwise be an empty box,
                        indistinguishable from a student nobody has looked at.
                        It stands in for the input — which is still there, just
@@ -282,7 +293,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, CircleAlert, ClipboardList, Loader2, Users } from 'lucide-vue-next'
 import type { AssignmentCategory, HeatmapAssignment } from '@/api/analytics'
@@ -301,6 +312,7 @@ import {
   buildGradeGrid,
   gradeCellKey,
   gridMeans,
+  isScored,
   type GradeCellRecord,
   type GradeGrid,
 } from '@/utils/offeringGradeGrid'
@@ -542,10 +554,11 @@ const validationErrors = computed<Record<string, string>>(() => {
     students.value.forEach(student => {
       const key = cellKey(column.assignment.id, student.id)
       const raw = (draftValues.value[key] ?? '').trim()
-      if (raw === '') return
+      const max = column.assignment.max_grade
+      if (raw === '' || max === null) return
       const parsed = Number(raw)
-      if (!Number.isInteger(parsed) || parsed < 0 || parsed > column.assignment.max_grade) {
-        errors[key] = t('assignments.gradeRange', { max: column.assignment.max_grade })
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > max) {
+        errors[key] = t('assignments.gradeRange', { max })
       }
     })
   })
@@ -600,6 +613,17 @@ function setDraftValue(studentId: number, assignmentId: number, value: string) {
 function setDraftComment(studentId: number, assignmentId: number, value: string) {
   const key = cellKey(assignmentId, studentId)
   draftComments.value = { ...draftComments.value, [key]: value }
+}
+
+/**
+ * An unscored cell has nothing to type into, so a click on it goes straight to
+ * the comment. Focus moves within the cell, so `onCellFocusOut` does not commit.
+ */
+async function openCommentOnly(studentId: number, assignmentId: number, event: MouseEvent) {
+  const cell = (event.currentTarget as HTMLElement).closest('td')
+  activeCellKey.value = cellKey(assignmentId, studentId)
+  await nextTick()
+  cell?.querySelector('textarea')?.focus()
 }
 
 function closeActiveCell() {
@@ -690,6 +714,8 @@ function rawGrade(rowIndex: number, column: Column): number | null {
 }
 
 function cellLabel(rowIndex: number, column: Column): string {
+  // Unscored: nothing could be marked, so a dash would read as "not yet".
+  if (!isScored(column.assignment)) return ''
   if (!isGraded(rowIndex, column)) return '—'
   return String(rawGrade(rowIndex, column) ?? '—')
 }
@@ -715,7 +741,9 @@ function cellTitle(rowIndex: number, column: Column): string {
   lines.push(
     isGraded(rowIndex, column)
       ? `${t('statistics.points')}: ${rawGrade(rowIndex, column)} / ${column.assignment.max_grade}`
-      : t('statistics.notGraded'),
+      : isScored(column.assignment)
+        ? t('statistics.notGraded')
+        : t('assignments.unscored'),
   )
   // Every cell has its comment now, read-only ones included.
   const comment = student ? draftComment(student.id, column.assignment.id).trim() : ''
@@ -728,7 +756,7 @@ function columnTitle(column: Column): string {
     column.assignment.title,
     `${t('assignments.date')}: ${column.assignment.date}`,
     `${t('assignments.category')}: ${t(`assignments.categories.${column.assignment.category}`)}`,
-    `${t('assignments.maxGrade')}: ${column.assignment.max_grade}`,
+    `${t('assignments.maxGrade')}: ${column.assignment.max_grade ?? t('assignments.unscored')}`,
     `${t('statistics.graded')}: ${column.assignment.graded_count} / ${studentCount.value}`,
   ].join('\n')
 }
@@ -746,7 +774,8 @@ function hasAnyGrade(rowIndex: number): boolean {
 function rowMeanTitle(rowIndex: number): string {
   const graded = columns.value.filter(column => isGraded(rowIndex, column)).length
   if (!graded) return t('statistics.notGraded')
-  return t('statistics.rowMeanHint', { graded, total: columns.value.length })
+  const total = columns.value.filter(column => isScored(column.assignment)).length
+  return t('statistics.rowMeanHint', { graded, total })
 }
 
 const roster = useClassRoster()
