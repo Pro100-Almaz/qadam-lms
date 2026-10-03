@@ -44,7 +44,7 @@
                 <span class="mx-auto mb-0.5 block h-1 w-6 rounded-full" :class="DOTS[assignment.category] ?? 'bg-gray-400'"></span>
                 <span class="block max-w-[120px] truncate">{{ assignment.title }}</span>
                 <span class="block text-[10px] font-normal text-gray-400 dark:text-gray-500">
-                  {{ assignment.max_grade }}
+                  {{ assignment.max_grade ?? '—' }}
                 </span>
                 <span
                   v-if="isInactive(assignment)"
@@ -289,7 +289,7 @@ function assignmentTitle(assignment: HeatmapAssignment): string {
     isInactive(assignment) ? `${assignment.title} (${t('assignments.inactive')})` : assignment.title,
     `${t('assignments.category')}: ${t(`assignments.categories.${assignment.category}`)}`,
     `${t('assignments.date')}: ${assignment.date}`,
-    `${t('assignments.maxGrade')}: ${assignment.max_grade}`,
+    `${t('assignments.maxGrade')}: ${assignment.max_grade ?? '—'}`,
     `${t('statistics.graded')}: ${assignment.graded_count} / ${props.data.class_size}`,
   ].join('\n')
 }

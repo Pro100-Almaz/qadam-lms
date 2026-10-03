@@ -102,7 +102,7 @@ import {
 } from '@/api/analytics'
 import { getAllOfferingGradesApi } from '@/api/subjectAssignments'
 import { useClassRoster } from '@/composables/useClassRoster'
-import { buildGradeGrid, type GradeGrid } from '@/utils/offeringGradeGrid'
+import { buildGradeGrid, isScored, type GradeGrid } from '@/utils/offeringGradeGrid'
 
 /**
  * A class against the **assignments** they were set — the record the grading
@@ -213,9 +213,10 @@ async function loadHeatmap() {
       classRoster.get(offering.classGroupId),
     ])
     if (token !== loadToken) return
-    // Oldest first, active only — the gradebook's default reading.
+    // Oldest first, active only — the gradebook's default reading. Unscored
+    // assignments hold comments only, so there is nothing for a score map to show.
     const active = assignments
-      .filter(assignment => assignment.is_active !== false)
+      .filter(assignment => assignment.is_active !== false && isScored(assignment))
       .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
     grid.value = buildGradeGrid(active, roster, missing.value).grid
   } catch (error) {

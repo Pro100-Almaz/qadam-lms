@@ -550,6 +550,7 @@ import { useClassRoster } from '@/composables/useClassRoster'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { useToast } from '@/composables/useToast'
 import { formatAcademicDay } from '@/utils/gradeDates'
+import { isScored } from '@/utils/offeringGradeGrid'
 import { flattenErrorMessage } from '@/utils/fileDownload'
 
 /**
@@ -651,6 +652,7 @@ interface SheetAssignment {
   title: string
   category: string
   date: string
+  /** Never `null` here: unscored assignments are left off the sheet. */
   max_grade: number
 }
 
@@ -780,8 +782,10 @@ async function loadSheet() {
     ])
     if (token !== loadToken) return
 
-    // Switched-off assignments come back too; they do not count here.
-    const columns = assignments.filter(assignment => assignment.is_active !== false)
+    // Switched-off assignments come back too; they do not count here. Nor do
+    // unscored ones, which hold no marks and would only thin out their
+    // category's weight.
+    const columns = assignments.filter(assignment => assignment.is_active !== false).filter(isScored)
     // Assignment id → student id → points, from the stored rows only.
     const points = new Map(
       columns.map(assignment => [assignment.id, new Map(assignment.grades.map(row => [row.student, row.grade]))]),

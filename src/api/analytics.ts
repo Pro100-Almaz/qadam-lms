@@ -509,7 +509,8 @@ export interface HeatmapAssignment {
   is_active?: boolean
   /** `YYYY-MM-DD`. */
   date: string
-  max_grade: number
+  /** `null` on an unscored assignment, which no one can have a mark on. */
+  max_grade: number | null
   /** How many of the class have a mark on it. */
   graded_count: number
 }

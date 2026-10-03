@@ -45,8 +45,13 @@ export interface SubjectAssignment {
   category: SubjectAssignmentCategory
   /** The category's name, localized by the request's `Accept-Language`. */
   category_name?: string
-  /** Upper bound of every grade on this assignment. Always ≥ 1. */
-  max_grade: number
+  /**
+   * Upper bound of every grade on this assignment, ≥ 1 — or `null` for an
+   * unscored (comment-only) one, whose grade rows always carry `grade: null`:
+   * sending a number there is a 400. A `homework` assignment is never unscored.
+   * Analytics leave unscored assignments out entirely.
+   */
+  max_grade: number | null
   /**
    * Id of the record behind the assignment, when there is one. For a
    * `homework` assignment it is the `/homeworks/<id>/` row the backend made.
@@ -100,7 +105,11 @@ export interface CreateSubjectAssignmentRequest {
   title: string
   /** Defaults to `lesson` server-side when omitted. */
   category?: SubjectAssignmentCategory
-  max_grade: number
+  /**
+   * Required on create, even when unscored: send `null` explicitly, since
+   * leaving it out is a 400. `null` with category `homework` is a 400 too.
+   */
+  max_grade: number | null
   /** Required, `YYYY-MM-DD`: omitting it is a 400, not a default of today. */
   date: string
   /** 1–4. Optional: the backend fills it from `date`. */
@@ -136,7 +145,8 @@ export function createSubjectAssignmentApi(data: CreateSubjectAssignmentRequest)
 
 /**
  * Lowering `max_grade` below a grade already recorded is a 400, so the API — not
- * the form — is the authority on how far it may drop.
+ * the form — is the authority on how far it may drop. Likewise `max_grade: null`
+ * is a 400 while any grade row holds a mark (comment-only rows do not count).
  */
 export function updateSubjectAssignmentApi(id: number | string, data: UpdateSubjectAssignmentRequest) {
   return api.patch<SubjectAssignment>(`/subject-assignments/${id}/`, data)
@@ -250,7 +260,7 @@ export async function getAllOfferingGradesApi(offeringId: number, params?: Offer
 /**
  * The assignment comes from the URL and is ignored in the body. One grade per
  * student per assignment: a second POST for the same student is a 400, so patch
- * the existing row instead.
+ * the existing row instead. On an unscored assignment `grade` must be `null`.
  */
 export function createAssignmentGradeApi(
   assignmentId: number | string,
@@ -273,7 +283,10 @@ export function getSubjectGradeApi(id: number | string) {
   return api.get<SubjectGrade>(`/subject-grades/${id}/`)
 }
 
-/** Teacher of the assignment's offering only. `student` cannot be moved. */
+/**
+ * Teacher of the assignment's offering only. `student` cannot be moved. On an
+ * unscored assignment a non-null `grade` is a 400.
+ */
 export function updateSubjectGradeApi(
   id: number,
   data: { grade?: number | null; comments?: string },

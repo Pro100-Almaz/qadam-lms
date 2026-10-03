@@ -34,6 +34,13 @@ export interface GradeCellRecord {
   comments: string
 }
 
+/** Whether marks can be entered on it at all; see `SubjectAssignment.max_grade`. */
+export function isScored<T extends { max_grade: number | null }>(
+  assignment: T | undefined,
+): assignment is T & { max_grade: number } {
+  return assignment?.max_grade != null
+}
+
 export function gradeCellKey(assignmentId: number, studentId: number): string {
   return `${assignmentId}:${studentId}`
 }
@@ -49,6 +56,9 @@ function meanOf(values: (number | null)[]): number {
  * shows. Under `exclude` an unmarked cell is left out (one mark of 60% means
  * 60); under `zero` it counts as 0 (what was earned of what was set).
  *
+ * An unscored column (`max_grade: null`) can never hold a mark, so it is left
+ * out entirely — under `zero` it would otherwise drag every row down.
+ *
  * `columnMeans` is indexed by the grid's column index, like the matrices.
  */
 export function gridMeans(
@@ -56,6 +66,7 @@ export function gridMeans(
   columns: number[],
   missing: MissingMode = 'exclude',
 ): { rowMeans: number[]; columnMeans: number[] } {
+  columns = columns.filter(column => isScored(grid.assignments[column]))
   const cell = (row: number, column: number): number | null =>
     grid.graded[row]?.[column] ? (grid.matrix[row]?.[column] ?? 0) : missing === 'zero' ? 0 : null
 
@@ -108,7 +119,8 @@ export function buildGradeGrid(
     }),
   )
   const gradedCount = graded.reduce((total, cells) => total + cells.filter(Boolean).length, 0)
-  const possibleCount = roster.length * assignments.length
+  // Unscored columns cannot be graded, so they are no gap in the coverage.
+  const possibleCount = roster.length * assignments.filter(isScored).length
 
   const shape = {
     students: roster,
