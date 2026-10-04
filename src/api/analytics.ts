@@ -641,6 +641,15 @@ export interface AssignmentOfferingsResponse {
 export interface AssignmentOfferingsParams {
   teacher?: number
   academic_year?: number
+  /**
+   * `false` leaves out offerings with no assignments under the filters below.
+   * Defaults to `true` on the server: every offering, assignments or not.
+   */
+  include_empty?: boolean
+  quarter?: number
+  category?: string
+  date_from?: string
+  date_to?: string
 }
 
 export function getAssignmentOfferingsApi(params?: AssignmentOfferingsParams) {

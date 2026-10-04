@@ -177,7 +177,7 @@
         <button
           type="button"
           class="mt-4 rounded-lg bg-error-500 px-4 py-2 text-sm font-medium text-white hover:bg-error-600"
-          @click="fetchGrades"
+          @click="fetchTables"
         >
           {{ t('assignments.tryAgain') }}
         </button>
@@ -186,22 +186,29 @@
       <!-- One gradebook per subject and class: assignments across in date order,
            the class down the rows. -->
       <div v-else-if="pagedGroups.length" class="space-y-6">
-        <GradebookTable
-          v-for="group in pagedGroups"
-          :key="group.offeringId"
-          :offering-id="group.offeringId"
-          :class-group-id="group.classGroupId"
-          :subject-name="group.subjectName"
-          :class-group-name="group.classGroupName"
-          :grades="group.assignments"
-          :quarter="filters.quarter"
-          :category="categoryFilter"
-          :date-from="filters.dateFrom"
-          :date-to="filters.dateTo"
-          :writable-assignment-ids="writableAssignmentIds(group)"
-          :show-inactive="filters.showInactive"
-          @edit-assignment="openEdit"
-        />
+        <template v-for="group in pagedGroups" :key="group.offeringId">
+          <GradebookTable
+            v-if="offeringGrades[group.offeringId]"
+            :offering-id="group.offeringId"
+            :class-group-id="group.classGroupId"
+            :subject-name="group.subjectName"
+            :class-group-name="group.classGroupName"
+            :grades="offeringGrades[group.offeringId]"
+            :quarter="filters.quarter"
+            :category="categoryFilter"
+            :date-from="filters.dateFrom"
+            :date-to="filters.dateTo"
+            :writable-assignment-ids="writableAssignmentIds(group.offeringId)"
+            :show-inactive="filters.showInactive"
+            @edit-assignment="openEdit"
+          />
+          <!-- Its grades are still on the way; without them the table would
+               fetch them itself, and then again when they arrive. -->
+          <div
+            v-else
+            class="h-64 animate-pulse rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+          ></div>
+        </template>
       </div>
 
       <!-- Empty -->
@@ -213,8 +220,8 @@
         <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ t('assignments.noResults') }}</p>
       </div>
 
-      <!-- Paginates the tables, not the assignments: every table loads its
-           class roster, so putting them all on one page would fan out a request each. -->
+      <!-- Paginates the tables, not the assignments: every table on the page
+           loads its grades and roster, so all of them at once would fan out. -->
       <Pagination
         v-if="!loading && !loadError && groups.length"
         v-model:current-page="currentPage"
@@ -369,21 +376,23 @@ const {
   teacherClasses,
 } = useAssignmentPermissions()
 
-/** One gradebook: an offering and its assignments, grades included. */
+/** One gradebook: an offering — one subject taught to one class. */
 interface OfferingGroup {
   offeringId: number
   classGroupId: number
   subjectName: string
   classGroupName: string
-  assignments: OfferingGradesAssignment[]
 }
 
+/** Every offering of the teacher's, for the filters and the modals. */
+const assignmentOfferings = ref<AssignmentOfferingPickerItem[]>([])
+/** Only the offerings with assignments under the current filters: the tables. */
+const tableOfferings = ref<AssignmentOfferingPickerItem[]>([])
 /**
- * Each shown offering's `/subject-grades/` under the current filters, keyed by
- * offering id. An offering with no matching assignments maps to `[]`.
+ * `/subject-grades/` of the offerings paged to so far under the current
+ * filters, keyed by offering id. Emptied whenever the filters change.
  */
 const offeringGrades = ref<Record<number, OfferingGradesAssignment[]>>({})
-const assignmentOfferings = ref<AssignmentOfferingPickerItem[]>([])
 const loading = ref(true)
 const loadError = ref(false)
 
@@ -399,7 +408,7 @@ const filters = ref({
   /** Both `YYYY-MM-DD`, matched against the assignment's academic date. */
   dateFrom: '',
   dateTo: '',
-  /** Client-side only: the grades endpoint returns both, flagged by `is_active`. */
+  /** Client-side only: the tables hide inactive columns themselves. */
   showInactive: false,
 })
 const currentPage = ref(1)
@@ -409,48 +418,28 @@ const pageSize = ref(5)
 // ─── Gradebooks ──────────────────────────────────────────────────────────────
 
 /**
- * The teacher's offerings the subject and class filters leave in — each one
- * subject taught to one class, and each a candidate table.
+ * One table per offering with assignments under the filters, narrowed by the
+ * subject and class filters. Sorted the way a teacher scans them: by subject,
+ * then by class.
  */
-const filteredOfferings = computed(() =>
-  assignmentOfferings.value.filter(
-    offering =>
-      (!filters.value.subject || offering.subject_id === Number(filters.value.subject)) &&
-      (!filters.value.classGroup || offering.class_group_id === Number(filters.value.classGroup)),
-  ),
-)
-
-/**
- * One table per offering that has assignments under the filters; an offering
- * whose grades came back empty has nothing to show. Sorted the way a teacher
- * scans them: by subject, then by class.
- */
-const allGroups = computed<OfferingGroup[]>(() =>
-  filteredOfferings.value
-    .filter(offering => offeringGrades.value[offering.id]?.length)
+const groups = computed<OfferingGroup[]>(() =>
+  tableOfferings.value
+    .filter(
+      offering =>
+        (!filters.value.subject || offering.subject_id === Number(filters.value.subject)) &&
+        (!filters.value.classGroup || offering.class_group_id === Number(filters.value.classGroup)),
+    )
     .map(offering => ({
       offeringId: offering.id,
       classGroupId: offering.class_group_id,
       subjectName: offering.subject,
       classGroupName: offering.class_group,
-      assignments: offeringGrades.value[offering.id]!,
     }))
     .sort(
       (a, b) =>
         a.subjectName.localeCompare(b.subjectName) ||
         a.classGroupName.localeCompare(b.classGroupName),
     ),
-)
-
-/**
- * The tables actually shown. "Show inactive" only decides whether a table whose
- * assignments are *all* switched off appears; hiding inactive columns inside a
- * table is the table's job, using the `is_active` its own grades response carries.
- */
-const groups = computed<OfferingGroup[]>(() =>
-  filters.value.showInactive
-    ? allGroups.value
-    : allGroups.value.filter(group => group.assignments.some(assignment => assignment.is_active !== false)),
 )
 
 /** The select stores its option value untyped; the grids take the union. */
@@ -462,24 +451,27 @@ const pagedGroups = computed(() =>
   groups.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value),
 )
 
-function writableAssignmentIds(group: OfferingGroup): number[] {
-  return group.assignments
+function writableAssignmentIds(offeringId: number): number[] {
+  return (offeringGrades.value[offeringId] ?? [])
     .filter(assignment => canManage(assignment))
     .map(assignment => assignment.id)
 }
 
 /**
- * Refetches one offering after its assignments changed — only that table
- * reloads, and it appears or disappears as its assignments come and go. An
- * offering the filters leave out has no table to update.
+ * Refetches after one offering's assignments changed: its grades, so only that
+ * table reloads, and the table list, since its first or last assignment under
+ * the filters makes the table appear or disappear.
  */
 async function reloadOffering(offeringId: number) {
-  if (!filteredOfferings.value.some(offering => offering.id === offeringId)) return
   const request = fetchSeq
   try {
-    const grades = await getAllOfferingGradesApi(offeringId, gradeParams())
+    const [{ data }, grades] = await Promise.all([
+      getAssignmentOfferingsApi(tableParams()),
+      getAllOfferingGradesApi(offeringId, gradeParams()),
+    ])
     // A filter change since then has refetched everything; this is stale.
     if (request !== fetchSeq) return
+    tableOfferings.value = data.offerings
     offeringGrades.value = { ...offeringGrades.value, [offeringId]: grades }
   } catch {
     // The API client's interceptor surfaces the failure; the table keeps its
@@ -704,49 +696,82 @@ function gradeParams() {
   }
 }
 
-/** Bumped per full fetch, so a slower response for old filters is dropped. */
+/** The same filters, for the offerings that have anything under them. */
+function tableParams() {
+  return { ...gradeParams(), include_empty: false }
+}
+
+/** Bumped per filter change, so a slower response for old filters is dropped. */
 let fetchSeq = 0
 
 /**
- * Every filtered offering's grades, in parallel — one request per offering,
- * which is also exactly what each table needs, so the tables fetch only their
- * rosters on top. Knowing which come back empty is what decides the tables.
+ * The offerings with assignments under the filters — one request, which is
+ * what decides the tables and the page count. Their grades come per page.
  */
-async function fetchGrades() {
+async function fetchTables() {
   const request = ++fetchSeq
   loading.value = true
   loadError.value = false
+  offeringGrades.value = {}
 
   try {
-    const params = gradeParams()
-    const entries = await Promise.all(
-      filteredOfferings.value.map(
-        async offering => [offering.id, await getAllOfferingGradesApi(offering.id, params)] as const,
-      ),
-    )
+    const { data } = await getAssignmentOfferingsApi(tableParams())
     if (request !== fetchSeq) return
-    offeringGrades.value = Object.fromEntries(entries)
+    tableOfferings.value = data.offerings
+    // Called, not left to the paging watch: a filter change can leave the
+    // same offerings on the page, which the watch would not see as a change.
+    loadPageGrades()
   } catch {
     if (request !== fetchSeq) return
-    offeringGrades.value = {}
+    tableOfferings.value = []
     loadError.value = true
   } finally {
     if (request === fetchSeq) loading.value = false
   }
 }
 
+/** Offering id → the `fetchSeq` its grades request was sent under. */
+const pendingGrades = new Map<number, number>()
+
+/**
+ * The grades of the tables on the current page that do not have them yet. Each
+ * offering's grades are fetched once per filter set, so paging back is free.
+ */
+function loadPageGrades() {
+  const request = fetchSeq
+  const params = gradeParams()
+  pagedGroups.value.forEach(({ offeringId }) => {
+    if (offeringId in offeringGrades.value || pendingGrades.get(offeringId) === request) return
+    pendingGrades.set(offeringId, request)
+    getAllOfferingGradesApi(offeringId, params)
+      .then(grades => {
+        if (request === fetchSeq) offeringGrades.value = { ...offeringGrades.value, [offeringId]: grades }
+      })
+      .catch(() => {
+        if (request === fetchSeq) loadError.value = true
+      })
+      .finally(() => {
+        if (pendingGrades.get(offeringId) === request) pendingGrades.delete(offeringId)
+      })
+  })
+}
+
+watch(() => pagedGroups.value.map(group => group.offeringId).join(), loadPageGrades)
+
 watch(
-  () => [
-    filters.value.quarter,
-    filters.value.subject,
-    filters.value.classGroup,
-    filters.value.category,
-    filters.value.dateFrom,
-    filters.value.dateTo,
-  ],
+  () => [filters.value.quarter, filters.value.category, filters.value.dateFrom, filters.value.dateTo],
   () => {
     currentPage.value = 1
-    fetchGrades()
+    fetchTables()
+  },
+)
+
+// Subject and class only narrow the tables already loaded; the paging watch
+// fetches whatever grades the new first page is missing.
+watch(
+  () => [filters.value.subject, filters.value.classGroup],
+  () => {
+    currentPage.value = 1
   },
 )
 
@@ -767,9 +792,9 @@ watch(
 onMounted(async () => {
   try {
     await loadFilterOptions()
-    await fetchGrades()
+    await fetchTables()
   } catch {
-    offeringGrades.value = {}
+    tableOfferings.value = []
     loadError.value = true
     loading.value = false
   }
