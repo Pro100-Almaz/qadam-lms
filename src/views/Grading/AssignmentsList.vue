@@ -177,7 +177,7 @@
         <button
           type="button"
           class="mt-4 rounded-lg bg-error-500 px-4 py-2 text-sm font-medium text-white hover:bg-error-600"
-          @click="fetchAssignments"
+          @click="fetchTables"
         >
           {{ t('assignments.tryAgain') }}
         </button>
@@ -186,23 +186,29 @@
       <!-- One gradebook per subject and class: assignments across in date order,
            the class down the rows. -->
       <div v-else-if="pagedGroups.length" class="space-y-6">
-        <GradebookTable
-          v-for="group in pagedGroups"
-          :key="group.offeringId"
-          :offering-id="group.offeringId"
-          :class-group-id="group.classGroupId"
-          :subject-name="group.subjectName"
-          :class-group-name="group.classGroupName"
-          :assignments="group.assignments"
-          :quarter="filters.quarter"
-          :category="categoryFilter"
-          :date-from="filters.dateFrom"
-          :date-to="filters.dateTo"
-          :reload-token="reloadTokens[group.offeringId] ?? 0"
-          :writable-assignment-ids="writableAssignmentIds(group)"
-          :show-inactive="filters.showInactive"
-          @edit-assignment="openEdit"
-        />
+        <template v-for="group in pagedGroups" :key="group.offeringId">
+          <GradebookTable
+            v-if="offeringGrades[group.offeringId]"
+            :offering-id="group.offeringId"
+            :class-group-id="group.classGroupId"
+            :subject-name="group.subjectName"
+            :class-group-name="group.classGroupName"
+            :grades="offeringGrades[group.offeringId]"
+            :quarter="filters.quarter"
+            :category="categoryFilter"
+            :date-from="filters.dateFrom"
+            :date-to="filters.dateTo"
+            :writable-assignment-ids="writableAssignmentIds(group.offeringId)"
+            :show-inactive="filters.showInactive"
+            @edit-assignment="openEdit"
+          />
+          <!-- Its grades are still on the way; without them the table would
+               fetch them itself, and then again when they arrive. -->
+          <div
+            v-else
+            class="h-64 animate-pulse rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+          ></div>
+        </template>
       </div>
 
       <!-- Empty -->
@@ -214,8 +220,8 @@
         <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ t('assignments.noResults') }}</p>
       </div>
 
-      <!-- Paginates the tables, not the assignments: every table loads its own
-           grid, so putting them all on one page would fan out a request each. -->
+      <!-- Paginates the tables, not the assignments: every table on the page
+           loads its grades and roster, so all of them at once would fan out. -->
       <Pagination
         v-if="!loading && !loadError && groups.length"
         v-model:current-page="currentPage"
@@ -345,7 +351,8 @@ import {
 } from '@/api/analytics'
 import {
   deleteSubjectAssignmentApi,
-  getSubjectAssignmentsApi,
+  getAllOfferingGradesApi,
+  type OfferingGradesAssignment,
   type SubjectAssignment,
   type SubjectAssignmentCategory,
 } from '@/api/subjectAssignments'
@@ -369,18 +376,23 @@ const {
   teacherClasses,
 } = useAssignmentPermissions()
 
-/** One gradebook: an offering's assignments, oldest first. */
+/** One gradebook: an offering — one subject taught to one class. */
 interface OfferingGroup {
   offeringId: number
   classGroupId: number
   subjectName: string
   classGroupName: string
-  assignments: SubjectAssignment[]
 }
 
-/** Every assignment matching the filters, across every page of the list. */
-const assignments = ref<SubjectAssignment[]>([])
+/** Every offering of the teacher's, for the filters and the modals. */
 const assignmentOfferings = ref<AssignmentOfferingPickerItem[]>([])
+/** Only the offerings with assignments under the current filters: the tables. */
+const tableOfferings = ref<AssignmentOfferingPickerItem[]>([])
+/**
+ * `/subject-grades/` of the offerings paged to so far under the current
+ * filters, keyed by offering id. Emptied whenever the filters change.
+ */
+const offeringGrades = ref<Record<number, OfferingGradesAssignment[]>>({})
 const loading = ref(true)
 const loadError = ref(false)
 
@@ -396,7 +408,7 @@ const filters = ref({
   /** Both `YYYY-MM-DD`, matched against the assignment's academic date. */
   dateFrom: '',
   dateTo: '',
-  /** Client-side only: the list endpoint returns both, flagged by `is_active`. */
+  /** Client-side only: the tables hide inactive columns themselves. */
   showInactive: false,
 })
 const currentPage = ref(1)
@@ -406,51 +418,28 @@ const pageSize = ref(5)
 // ─── Gradebooks ──────────────────────────────────────────────────────────────
 
 /**
- * The assignments regrouped into one table per offering — which is one subject
- * taught to one class. Sorted the way a teacher scans them: by subject, then by
- * class; columns within a table run oldest to newest.
+ * One table per offering with assignments under the filters, narrowed by the
+ * subject and class filters. Sorted the way a teacher scans them: by subject,
+ * then by class.
  */
-const allGroups = computed<OfferingGroup[]>(() => {
-  const grouped = new Map<number, OfferingGroup>()
-  assignments.value.forEach(assignment => {
-    if (!offeringIds.value.has(assignment.offering_id)) return
-    const existing = grouped.get(assignment.offering_id)
-    if (existing) {
-      existing.assignments.push(assignment)
-      return
-    }
-    grouped.set(assignment.offering_id, {
-      offeringId: assignment.offering_id,
-      classGroupId: assignment.class_group_id,
-      subjectName: assignment.subject_name,
-      classGroupName: assignment.class_group_name,
-      assignments: [assignment],
-    })
-  })
-
-  return [...grouped.values()]
-    .map(group => ({
-      ...group,
-      assignments: group.assignments
-        .slice()
-        .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id),
+const groups = computed<OfferingGroup[]>(() =>
+  tableOfferings.value
+    .filter(
+      offering =>
+        (!filters.value.subject || offering.subject_id === Number(filters.value.subject)) &&
+        (!filters.value.classGroup || offering.class_group_id === Number(filters.value.classGroup)),
+    )
+    .map(offering => ({
+      offeringId: offering.id,
+      classGroupId: offering.class_group_id,
+      subjectName: offering.subject,
+      classGroupName: offering.class_group,
     }))
     .sort(
       (a, b) =>
         a.subjectName.localeCompare(b.subjectName) ||
         a.classGroupName.localeCompare(b.classGroupName),
-    )
-})
-
-/**
- * The tables actually shown. "Show inactive" only decides whether a table whose
- * assignments are *all* switched off appears; hiding inactive columns inside a
- * table is the table's job, using the `is_active` its own grades response carries.
- */
-const groups = computed<OfferingGroup[]>(() =>
-  filters.value.showInactive
-    ? allGroups.value
-    : allGroups.value.filter(group => group.assignments.some(assignment => assignment.is_active !== false)),
+    ),
 )
 
 /** The select stores its option value untyped; the grids take the union. */
@@ -462,22 +451,31 @@ const pagedGroups = computed(() =>
   groups.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value),
 )
 
-function writableAssignmentIds(group: OfferingGroup): number[] {
-  return group.assignments
+function writableAssignmentIds(offeringId: number): number[] {
+  return (offeringGrades.value[offeringId] ?? [])
     .filter(assignment => canManage(assignment))
     .map(assignment => assignment.id)
 }
 
 /**
- * Per-offering reload counters. A table holds its own grid, so a save has to
- * tell it to refetch — but only the table whose marks actually changed.
+ * Refetches after one offering's assignments changed: its grades, so only that
+ * table reloads, and the table list, since its first or last assignment under
+ * the filters makes the table appear or disappear.
  */
-const reloadTokens = ref<Record<number, number>>({})
-
-function reloadOffering(offeringId: number) {
-  reloadTokens.value = {
-    ...reloadTokens.value,
-    [offeringId]: (reloadTokens.value[offeringId] ?? 0) + 1,
+async function reloadOffering(offeringId: number) {
+  const request = fetchSeq
+  try {
+    const [{ data }, grades] = await Promise.all([
+      getAssignmentOfferingsApi(tableParams()),
+      getAllOfferingGradesApi(offeringId, gradeParams()),
+    ])
+    // A filter change since then has refetched everything; this is stale.
+    if (request !== fetchSeq) return
+    tableOfferings.value = data.offerings
+    offeringGrades.value = { ...offeringGrades.value, [offeringId]: grades }
+  } catch {
+    // The API client's interceptor surfaces the failure; the table keeps its
+    // last good copy.
   }
 }
 
@@ -531,15 +529,10 @@ function openEdit(assignment: SubjectAssignment) {
 }
 
 function onSaved(saved: SubjectAssignment) {
-  // A new assignment may not match the active filters at all, so refetch rather
-  // than guessing it into a table. An edit is patched in place — it cannot
-  // change offering, and so cannot move to another table.
-  const index = assignments.value.findIndex(assignment => assignment.id === saved.id)
-  if (index === -1) fetchAssignments()
-  else assignments.value[index] = saved
-  // The grid holds its own copy of the columns; a new or retitled assignment
-  // only reaches it on a refetch.
-  reloadOffering(saved.offering_id)
+  // Refetched rather than patched in: a new or edited assignment may no longer
+  // match the filters, and an assignment cannot change offering, so its own
+  // offering is the only table it can touch.
+  void reloadOffering(saved.offering_id)
 }
 
 function onFormDelete(assignment: SubjectAssignment) {
@@ -566,14 +559,12 @@ async function confirmDelete() {
   deleting.value = true
   try {
     await deleteSubjectAssignmentApi(target.id)
-    assignments.value = assignments.value.filter(assignment => assignment.id !== target.id)
     deleteTarget.value = null
     success(t('assignments.deletedSuccess'))
     // The column goes with it, and so do the grades that were recorded on it.
-    reloadOffering(target.offering_id)
-    // Deleting an offering's last assignment takes its whole table away, which
-    // can empty a trailing page — step back rather than strand the user there.
-    if (!pagedGroups.value.length && currentPage.value > 1) currentPage.value -= 1
+    // Deleting an offering's last assignment takes its whole table away; the
+    // `groups.length` watch steps back off an emptied trailing page.
+    void reloadOffering(target.offering_id)
   } catch {
     // The API client's interceptor surfaces the failure; keep the dialog open.
   } finally {
@@ -584,13 +575,11 @@ async function confirmDelete() {
 // ─── Filters ─────────────────────────────────────────────────────────────────
 
 /**
- * The teacher's offerings, taught and homeroom alike. The tables read
- * `/offerings/{id}/subject-grades/`, which scopes itself (a homeroom-only
- * offering comes back read-only, an unrelated one empty), so every offering
- * here may have a table and a filter entry.
+ * Filter entries from the teacher's offerings, taught and homeroom alike. The
+ * tables read `/offerings/{id}/subject-grades/`, which scopes itself (a
+ * homeroom-only offering comes back read-only, an unrelated one empty), so
+ * every offering may have a table and a filter entry.
  */
-const offeringIds = computed(() => new Set(assignmentOfferings.value.map(offering => offering.id)))
-
 const subjectOptions = computed<SelectOption[]>(() =>
   [...new Map(
     assignmentOfferings.value.map(offering => [
@@ -697,59 +686,92 @@ function resetFilters() {
   }
 }
 
-/** Well past a term's assignments for one class, and under any sane API cap. */
-const LIST_PAGE_SIZE = 200
-/** A stop against a runaway `count`; 2000 assignments is already unreadable. */
-const MAX_LIST_PAGES = 10
-
-async function fetchAssignments() {
-  loading.value = true
-  loadError.value = false
-
-  try {
-    // Every page, not just the first: an offering's assignments are spread
-    // across the list by date, so a single page would leave columns out of the
-    // tables built from it.
-    //
-    // The endpoint scopes itself: a teacher gets the offerings they teach plus
-    // their homeroom class, so no teacher id is passed. Assignments from the
-    // homeroom widening are read-only — `canManage()` decides per assignment.
-    const collected: SubjectAssignment[] = []
-    for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
-      const { data } = await getSubjectAssignmentsApi({
-        quarter: filters.value.quarter,
-        subject: filters.value.subject ? Number(filters.value.subject) : undefined,
-        class_group: filters.value.classGroup ? Number(filters.value.classGroup) : undefined,
-        category: (filters.value.category as SubjectAssignmentCategory) || undefined,
-        date_from: filters.value.dateFrom || undefined,
-        date_to: filters.value.dateTo || undefined,
-        page,
-        page_size: LIST_PAGE_SIZE,
-      })
-      collected.push(...data.results)
-      if (!data.results.length || collected.length >= data.count) break
-    }
-    assignments.value = collected
-  } catch {
-    assignments.value = []
-    loadError.value = true
-  } finally {
-    loading.value = false
+/** The filters `/subject-grades/` applies itself; subject and class pick the offerings. */
+function gradeParams() {
+  return {
+    quarter: filters.value.quarter,
+    category: (filters.value.category as SubjectAssignmentCategory) || undefined,
+    date_from: filters.value.dateFrom || undefined,
+    date_to: filters.value.dateTo || undefined,
   }
 }
 
+/** The same filters, for the offerings that have anything under them. */
+function tableParams() {
+  return { ...gradeParams(), include_empty: false }
+}
+
+/** Bumped per filter change, so a slower response for old filters is dropped. */
+let fetchSeq = 0
+
+/**
+ * The offerings with assignments under the filters — one request, which is
+ * what decides the tables and the page count. Their grades come per page.
+ */
+async function fetchTables() {
+  const request = ++fetchSeq
+  loading.value = true
+  loadError.value = false
+  offeringGrades.value = {}
+
+  try {
+    const { data } = await getAssignmentOfferingsApi(tableParams())
+    if (request !== fetchSeq) return
+    tableOfferings.value = data.offerings
+    // Called, not left to the paging watch: a filter change can leave the
+    // same offerings on the page, which the watch would not see as a change.
+    loadPageGrades()
+  } catch {
+    if (request !== fetchSeq) return
+    tableOfferings.value = []
+    loadError.value = true
+  } finally {
+    if (request === fetchSeq) loading.value = false
+  }
+}
+
+/** Offering id → the `fetchSeq` its grades request was sent under. */
+const pendingGrades = new Map<number, number>()
+
+/**
+ * The grades of the tables on the current page that do not have them yet. Each
+ * offering's grades are fetched once per filter set, so paging back is free.
+ */
+function loadPageGrades() {
+  const request = fetchSeq
+  const params = gradeParams()
+  pagedGroups.value.forEach(({ offeringId }) => {
+    if (offeringId in offeringGrades.value || pendingGrades.get(offeringId) === request) return
+    pendingGrades.set(offeringId, request)
+    getAllOfferingGradesApi(offeringId, params)
+      .then(grades => {
+        if (request === fetchSeq) offeringGrades.value = { ...offeringGrades.value, [offeringId]: grades }
+      })
+      .catch(() => {
+        if (request === fetchSeq) loadError.value = true
+      })
+      .finally(() => {
+        if (pendingGrades.get(offeringId) === request) pendingGrades.delete(offeringId)
+      })
+  })
+}
+
+watch(() => pagedGroups.value.map(group => group.offeringId).join(), loadPageGrades)
+
 watch(
-  () => [
-    filters.value.quarter,
-    filters.value.subject,
-    filters.value.classGroup,
-    filters.value.category,
-    filters.value.dateFrom,
-    filters.value.dateTo,
-  ],
+  () => [filters.value.quarter, filters.value.category, filters.value.dateFrom, filters.value.dateTo],
   () => {
     currentPage.value = 1
-    fetchAssignments()
+    fetchTables()
+  },
+)
+
+// Subject and class only narrow the tables already loaded; the paging watch
+// fetches whatever grades the new first page is missing.
+watch(
+  () => [filters.value.subject, filters.value.classGroup],
+  () => {
+    currentPage.value = 1
   },
 )
 
@@ -770,9 +792,9 @@ watch(
 onMounted(async () => {
   try {
     await loadFilterOptions()
-    await fetchAssignments()
+    await fetchTables()
   } catch {
-    assignments.value = []
+    tableOfferings.value = []
     loadError.value = true
     loading.value = false
   }

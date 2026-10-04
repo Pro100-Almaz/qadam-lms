@@ -343,10 +343,11 @@ const props = defineProps<{
   subjectName: string
   classGroupName: string
   /**
-   * The offering's assignments as the list endpoint returned them. Only a
-   * fallback now: the grades response carries the full records itself.
+   * The offering's `/subject-grades/` response, when the caller has already
+   * loaded it. The table then fetches only the roster, and reloads whenever a
+   * new array is passed; without it, the table fetches the grades itself.
    */
-  assignments?: SubjectAssignment[]
+  grades?: OfferingGradesAssignment[]
   /** Suppresses column actions when the table is used as a read-only register. */
   readOnly?: boolean
   /** Removes the outer card frame when the table already lives inside a panel. */
@@ -363,11 +364,6 @@ const props = defineProps<{
    * dimmed so they still read as switched off.
    */
   showInactive?: boolean
-  /**
-   * Bumped by the parent when this offering's marks changed under it. Reloading
-   * on every save school-wide would refetch every visible table instead.
-   */
-  reloadToken?: number
 }>()
 
 const emit = defineEmits<{
@@ -523,16 +519,14 @@ const tableMinWidth = computed(
 
 const assignmentById = computed(
   () =>
-    new Map<number, SubjectAssignment>(
-      [...(props.assignments ?? []), ...loadedAssignments.value].map(assignment => [assignment.id, assignment]),
-    ),
+    new Map<number, SubjectAssignment>(loadedAssignments.value.map(assignment => [assignment.id, assignment])),
 )
 
 const writableIds = computed(() => new Set(props.writableAssignmentIds ?? []))
 
 /**
- * The grid's own flag, else the list endpoint's copy. A column neither knows
- * about counts as active, so nothing vanishes on a guess.
+ * The grid's own flag, else the full record's. A column neither knows about
+ * counts as active, so nothing vanishes on a guess.
  */
 function isInactive(column: Column): boolean {
   const flag = column.assignment.is_active ?? assignmentById.value.get(column.assignment.id)?.is_active
@@ -565,7 +559,7 @@ const validationErrors = computed<Record<string, string>>(() => {
   return errors
 })
 
-/** The full record behind a column, or null when the list did not carry it. */
+/** The full record behind a column, or null when the last load did not carry it. */
 function editTarget(assignmentId: number): SubjectAssignment | null {
   if (props.readOnly) return null
   return assignmentById.value.get(assignmentId) ?? null
@@ -785,12 +779,13 @@ async function load() {
   loadError.value = false
   try {
     const [assignments, students] = await Promise.all([
-      getAllOfferingGradesApi(props.offeringId, {
-        quarter: props.quarter,
-        category: props.category || undefined,
-        date_from: props.dateFrom || undefined,
-        date_to: props.dateTo || undefined,
-      }),
+      props.grades ??
+        getAllOfferingGradesApi(props.offeringId, {
+          quarter: props.quarter,
+          category: props.category || undefined,
+          date_from: props.dateFrom || undefined,
+          date_to: props.dateTo || undefined,
+        }),
       roster.get(props.classGroupId),
     ])
     const { grid, records } = buildGradeGrid(assignments, students)
@@ -945,16 +940,21 @@ function applyGradeToGrid(assignmentId: number, studentId: number, value: string
   }
 }
 
+// With preloaded grades the caller has already applied the filters, so only a
+// new response — or a new class — means a reload; watching the filters too
+// would load once on the old grades and again on the new.
 watch(
-  () => [
-    props.offeringId,
-    props.classGroupId,
-    props.quarter,
-    props.category,
-    props.dateFrom,
-    props.dateTo,
-    props.reloadToken,
-  ],
+  () =>
+    props.grades
+      ? [props.grades, props.classGroupId]
+      : [
+          props.offeringId,
+          props.classGroupId,
+          props.quarter,
+          props.category,
+          props.dateFrom,
+          props.dateTo,
+        ],
   load,
   { immediate: true },
 )
