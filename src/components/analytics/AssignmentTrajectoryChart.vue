@@ -20,13 +20,19 @@
          claims, and the line above blends them into one. -->
     <CategoryBreakdown :breakdown="data.summary.by_category" />
 
-    <VueApexCharts
-      v-if="points.length"
-      type="rangeArea"
-      height="340"
-      :options="chartOptions"
-      :series="series"
-    />
+    <!-- Scrolls sideways once the assignments outgrow the panel: each one has
+         a fixed-width column so its title can wrap there in full. -->
+    <div v-if="points.length" class="max-w-full overflow-x-auto custom-scrollbar">
+      <div :style="{ minWidth: `${chartMinWidth}px` }">
+        <VueApexCharts
+          type="rangeArea"
+          width="100%"
+          :height="chartHeight"
+          :options="chartOptions"
+          :series="series"
+        />
+      </div>
+    </div>
     <p v-else class="py-16 text-center text-sm text-gray-500 dark:text-gray-400">
       {{ t('common.noData') }}
     </p>
@@ -96,6 +102,51 @@ const ungradedIndices = computed(() =>
 
 const ungradedCount = computed(() => ungradedIndices.value.length)
 
+// ─── X-axis labels ───────────────────────────────────────────────────────────
+
+/** One assignment's column. Wide enough for a short title on one line. */
+const COLUMN_WIDTH = 112
+/** Characters per label line at 11px in that column. */
+const LINE_CHARS = 16
+const LINE_HEIGHT = 14
+/** The plot itself, before the labels below it. */
+const PLOT_HEIGHT = 300
+/** The y-axis labels and the grid's side padding. */
+const CHART_GUTTER = 72
+
+/**
+ * A title broken into lines that fit its column, words kept whole unless one
+ * is longer than a line by itself. Never trimmed: Apex draws an array label
+ * as one line per entry, so the whole title shows.
+ */
+function wrapTitle(title: string): string[] {
+  const lines: string[] = []
+  let current = ''
+  for (const word of title.trim().split(/\s+/)) {
+    for (let start = 0; start < word.length; start += LINE_CHARS) {
+      const piece = word.slice(start, start + LINE_CHARS)
+      const joined = current ? `${current} ${piece}` : piece
+      if (joined.length <= LINE_CHARS && start === 0) current = joined
+      else {
+        if (current) lines.push(current)
+        current = piece
+      }
+    }
+  }
+  if (current) lines.push(current)
+  return lines.length ? lines : ['']
+}
+
+const wrappedTitles = computed(() => points.value.map(point => wrapTitle(point.title)))
+
+const labelLines = computed(() => Math.max(1, ...wrappedTitles.value.map(lines => lines.length)))
+
+/** Grows with the longest title, so the labels never eat into the plot. */
+const chartHeight = computed(() => PLOT_HEIGHT + labelLines.value * LINE_HEIGHT + 16)
+
+/** Below this the chart scrolls instead of squeezing the columns. */
+const chartMinWidth = computed(() => points.value.length * COLUMN_WIDTH + CHART_GUTTER)
+
 const ungradedWarning = computed(() =>
   zeroFilled.value
     ? t('statistics.ungradedZeroWarning', { count: ungradedCount.value })
@@ -117,22 +168,25 @@ const series = computed(() => {
     built.push({
       name: t('statistics.classBand'),
       type: 'rangeArea',
-      data: points.value.map(point => ({
-        x: point.title,
+      data: points.value.map((point, index) => ({
+        x: wrappedTitles.value[index],
         y: [point.p25 ?? point.class_min ?? 0, point.p75 ?? point.class_max ?? 0],
       })),
     })
     built.push({
       name: t('statistics.classMean'),
       type: 'line',
-      data: points.value.map(point => ({ x: point.title, y: point.class_mean ?? null })),
+      data: points.value.map((point, index) => ({
+        x: wrappedTitles.value[index],
+        y: point.class_mean ?? null,
+      })),
     })
   }
 
   built.push({
     name: props.data.student.short_name,
     type: 'line',
-    data: points.value.map(point => ({ x: point.title, y: studentValue(point) })),
+    data: points.value.map((point, index) => ({ x: wrappedTitles.value[index], y: studentValue(point) })),
   })
 
   return built
@@ -198,21 +252,21 @@ const chartOptions = computed(() => ({
     borderColor: chrome.value.grid,
     strokeDashArray: 4,
     xaxis: { lines: { show: false } },
-    // An angled label runs down and to the left of its tick, so the first
-    // category overhangs the plot; without the left inset it gets clipped.
-    padding: { left: 34, right: 24, bottom: 0 },
+    padding: { left: 16, right: 24, bottom: 0 },
   },
   xaxis: {
     type: 'category' as const,
-    categories: points.value.map(point => point.title),
+    // Wrapped, not angled: an angled label had to be cut off at a fixed
+    // height, and a long title lost most of itself.
+    categories: wrappedTitles.value,
     axisBorder: { show: false },
     axisTicks: { show: false },
     labels: {
-      rotate: -40,
-      rotateAlways: true,
+      rotate: 0,
+      rotateAlways: false,
       hideOverlappingLabels: false,
       trim: false,
-      maxHeight: 110,
+      maxHeight: labelLines.value * LINE_HEIGHT + 16,
       style: { fontSize: '11px', colors: chrome.value.label },
     },
     tooltip: { enabled: false },

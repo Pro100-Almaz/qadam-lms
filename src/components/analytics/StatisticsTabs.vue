@@ -2,9 +2,11 @@
   <!-- Segmented: the record on offer — lesson marks, assignment marks, the
        register. A pill group, because the three are alternatives of equal
        standing rather than sections of one thing. -->
+  <!-- Full width with equal cells on a phone, where three labelled pills
+       would otherwise wrap into a ragged second line. -->
   <div
     v-if="variant === 'segmented'"
-    class="inline-flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1 dark:bg-white/5"
+    class="grid w-full auto-cols-fr grid-flow-col gap-1 rounded-lg bg-gray-100 p-1 sm:inline-flex sm:w-auto sm:flex-wrap dark:bg-white/5"
     role="tablist"
   >
     <button
@@ -13,7 +15,7 @@
       type="button"
       role="tab"
       :aria-selected="item.value === modelValue"
-      class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition"
+      class="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-center text-xs font-medium transition sm:px-3 sm:text-sm"
       :class="
         item.value === modelValue
           ? 'bg-white text-gray-800 shadow-theme-xs dark:bg-gray-900 dark:text-white/90'
@@ -21,7 +23,7 @@
       "
       @click="emit('update:modelValue', item.value)"
     >
-      <component :is="item.icon" v-if="item.icon" class="h-3.5 w-3.5" />
+      <component :is="item.icon" v-if="item.icon" class="h-3.5 w-3.5 shrink-0" />
       {{ item.label }}
     </button>
   </div>

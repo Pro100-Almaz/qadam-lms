@@ -12,7 +12,7 @@
     </template>
 
     <template #filters>
-      <div v-if="tab === 'register'" class="w-full sm:w-64">
+      <div v-if="tab === 'register'" class="col-span-2 w-full sm:w-64">
         <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
           {{ t('statistics.offering') }}
         </label>
@@ -25,7 +25,7 @@
         />
       </div>
 
-      <div v-else class="w-full sm:w-64">
+      <div v-else class="col-span-2 w-full sm:w-64">
         <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
           {{ t('statistics.classGroup') }}
         </label>

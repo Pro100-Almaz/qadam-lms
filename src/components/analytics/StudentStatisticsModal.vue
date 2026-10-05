@@ -41,7 +41,7 @@
 
       <!-- Subject picker: the trajectory tabs need an offering, and attendance
            can optionally be narrowed to one. -->
-      <div v-if="showSubjectPicker" class="w-full sm:w-56">
+      <div v-if="showSubjectPicker" class="col-span-2 w-full sm:w-56">
         <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
           {{ t('statistics.subject') }}
         </label>
@@ -79,7 +79,7 @@
 
       <label
         v-if="tab === 'trajectory'"
-        class="flex cursor-pointer items-center gap-2 py-2.5 text-sm text-gray-600 dark:text-gray-400"
+        class="col-span-2 flex cursor-pointer items-center gap-2 py-2.5 text-sm text-gray-600 dark:text-gray-400"
       >
         <input
           v-model="includeClassStats"
@@ -374,18 +374,27 @@ const missingModel = computed<number | string | null>({
   },
 })
 
+/** A radar axis with lessons behind it this quarter. A missing count is not taken for zero. */
+function hasLessons(axis: { lesson_count?: number | null }): boolean {
+  return axis.lesson_count == null || axis.lesson_count > 0
+}
+
 /**
  * The subjects on offer, taken from whichever overview this mode already loaded.
  *
- * For the grade records, axes with no work in them are left out: asking for a
- * trajectory there returns an empty series, which looks like a failure rather
- * than an empty timetable.
+ * Lesson grades list every radar axis: dropping the ones without lessons left
+ * the picker empty, and so disabled, for a student with nothing scheduled yet.
+ * Those axes stay pickable but say why their trajectory will be empty, and the
+ * default pick is the first subject that has lessons. Assignment axes with no
+ * work in them are still left out.
  */
 const offeringOptions = computed<SelectOption[]>(() => {
   if (mode.value === 'lessons') {
-    return (radar.value?.axes ?? [])
-      .filter(axis => axis.lesson_count > 0)
-      .map(axis => ({ value: axis.offering_id, label: axis.subject }))
+    return (radar.value?.axes ?? []).map(axis => ({
+      value: axis.offering_id,
+      label: axis.subject,
+      sublabel: hasLessons(axis) ? undefined : t('statistics.noLessonsInQuarter'),
+    }))
   }
   if (mode.value === 'assignments') {
     return (summary.value?.axes ?? [])
@@ -433,11 +442,10 @@ async function loadRadar() {
     })
     radar.value = data
     // Keep a subject the reader already chose if the new quarter still has it.
-    const stillOffered = data.axes.some(
-      axis => axis.offering_id === lessonOfferingId.value && axis.lesson_count > 0,
-    )
+    const stillOffered = data.axes.some(axis => axis.offering_id === lessonOfferingId.value)
     if (!stillOffered) {
-      lessonOfferingId.value = (offeringOptions.value[0]?.value as number | undefined) ?? null
+      const first = data.axes.find(hasLessons) ?? data.axes[0]
+      lessonOfferingId.value = first?.offering_id ?? null
     }
   } catch (error) {
     radar.value = null
@@ -576,32 +584,59 @@ watch(
       }
     })
   },
+  // Most callers mount the modal already open (`v-if` on the student, `open`
+  // derived from it), so there is no false → true flip to wait for.
+  { immediate: true },
 )
 
 /**
  * Each panel fetches only while it is the one on screen — the modal covers five
  * endpoints, and loading all of them on open would be four wasted requests for
  * the reader who never leaves the first chart.
+ *
+ * Immediate for the same reason as the reset above: a modal mounted open must
+ * load its first chart without waiting for a filter to change. They are set up
+ * after the reset, so they see its state.
  */
-watch([() => props.open, mode, quarter, source], () => {
-  if (props.open && mode.value === 'lessons') loadRadar()
-})
+watch(
+  [() => props.open, mode, quarter, source],
+  () => {
+    if (props.open && mode.value === 'lessons') loadRadar()
+  },
+  { immediate: true },
+)
 
-watch([() => props.open, mode, tab, lessonOfferingId, quarter, includeClassStats], () => {
-  if (props.open && mode.value === 'lessons' && tab.value === 'trajectory') loadTrajectory()
-})
+watch(
+  [() => props.open, mode, tab, lessonOfferingId, quarter, includeClassStats],
+  () => {
+    if (props.open && mode.value === 'lessons' && tab.value === 'trajectory') loadTrajectory()
+  },
+  { immediate: true },
+)
 
-watch([() => props.open, mode, quarter, category, missing], () => {
-  if (props.open && mode.value === 'assignments') loadSummary()
-})
+watch(
+  [() => props.open, mode, quarter, category, missing],
+  () => {
+    if (props.open && mode.value === 'assignments') loadSummary()
+  },
+  { immediate: true },
+)
 
-watch([() => props.open, mode, tab, assignmentOfferingId, category, missing, includeClassStats], () => {
-  if (props.open && mode.value === 'assignments' && tab.value === 'trajectory') {
-    loadAssignmentTrajectory()
-  }
-})
+watch(
+  [() => props.open, mode, tab, assignmentOfferingId, category, missing, includeClassStats],
+  () => {
+    if (props.open && mode.value === 'assignments' && tab.value === 'trajectory') {
+      loadAssignmentTrajectory()
+    }
+  },
+  { immediate: true },
+)
 
-watch([() => props.open, mode, quarter, attendanceOfferingId], () => {
-  if (props.open && mode.value === 'attendance') loadAttendance()
-})
+watch(
+  [() => props.open, mode, quarter, attendanceOfferingId],
+  () => {
+    if (props.open && mode.value === 'attendance') loadAttendance()
+  },
+  { immediate: true },
+)
 </script>
