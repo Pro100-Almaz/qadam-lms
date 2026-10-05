@@ -122,10 +122,18 @@ import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
 import HomeworkGradebookTable from '@/components/homeworks/HomeworkGradebookTable.vue'
 import { getAcademicYearsApi } from '@/api/academic'
 import { getTeachingAssignmentsApi } from '@/api/teachingAssignments'
+import type { HomeroomClassOffering } from '@/types/teacherDashboard'
 
 const props = defineProps<{
   /** The homeroom class whose active offerings are shown. */
   classGroupId: number
+  /**
+   * The class's offerings from `/homeroom/my-class/`, with the class name they
+   * belong to. Given both, nothing is fetched; without them the section looks
+   * the offerings up in `/teaching-assignments/` itself.
+   */
+  offerings?: HomeroomClassOffering[]
+  classGroupName?: string
 }>()
 
 interface ClassSubjectOption {
@@ -166,7 +174,32 @@ const selectedSubject = computed(
   () => subjectOptions.value.find(subject => subject.offeringId === selectedOfferingId.value) ?? null,
 )
 
+function keepSelection() {
+  const selectedStillExists = subjectOptions.value.some(
+    subject => subject.offeringId === selectedOfferingId.value,
+  )
+  if (!selectedStillExists) selectedOfferingId.value = subjectOptions.value[0]?.offeringId ?? null
+}
+
+/** Already sorted by subject name; one row per offering, its teachers joined. */
+function applyGivenOfferings(offerings: HomeroomClassOffering[]) {
+  subjectOptions.value = offerings.map(offering => ({
+    offeringId: offering.id,
+    subjectName: offering.subject_name,
+    classGroupName: props.classGroupName ?? '',
+    teacherName: offering.teachers.map(teacher => teacher.full_name).join(', '),
+  }))
+  keepSelection()
+  loadError.value = false
+  loading.value = false
+}
+
 async function fetchSubjects() {
+  if (props.offerings) {
+    applyGivenOfferings(props.offerings)
+    return
+  }
+
   if (!props.classGroupId) {
     subjectOptions.value = []
     selectedOfferingId.value = null
@@ -198,10 +231,7 @@ async function fetchSubjects() {
           a.teacherName.localeCompare(b.teacherName),
       )
 
-    const selectedStillExists = subjectOptions.value.some(
-      subject => subject.offeringId === selectedOfferingId.value,
-    )
-    if (!selectedStillExists) selectedOfferingId.value = subjectOptions.value[0]?.offeringId ?? null
+    keepSelection()
   } catch {
     subjectOptions.value = []
     selectedOfferingId.value = null
@@ -212,7 +242,7 @@ async function fetchSubjects() {
 }
 
 watch(
-  () => props.classGroupId,
+  () => [props.classGroupId, props.offerings, props.classGroupName],
   fetchSubjects,
   { immediate: true },
 )

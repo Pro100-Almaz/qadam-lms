@@ -1285,7 +1285,8 @@
         "ariaDialog": "Файлды қарау"
     },
     "myClass": {
-        "subjectsAndGrades": "Пәндер мен бағалар"
+        "subjectsAndGrades": "Пәндер мен бағалар",
+        "noHomeroomClass": "Бұл оқу жылында сізде сынып жетекшілігі жоқ."
     },
     "parentChildSubject": {
         "cumulative": "Жиынтық",

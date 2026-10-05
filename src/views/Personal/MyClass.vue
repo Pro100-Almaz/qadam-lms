@@ -16,6 +16,14 @@
       <p class="text-base font-medium text-gray-800 dark:text-white/90">{{ t('common.homeroomTeachersOnly') }}</p>
     </div>
 
+    <!-- No homeroom class this year (the API's 404) -->
+    <div v-else-if="noClass" class="flex flex-col items-center justify-center py-24 gap-4">
+      <div class="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5">
+        <Users class="h-8 w-8 text-gray-400" />
+      </div>
+      <p class="text-base font-medium text-gray-800 dark:text-white/90">{{ t('myClass.noHomeroomClass') }}</p>
+    </div>
+
     <!-- Error -->
     <div v-else-if="error" class="flex flex-col items-center justify-center py-24 gap-4">
       <div class="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/10">
@@ -44,7 +52,6 @@
               <GradeReportButton
                 :classes="reportClasses"
                 :default-class-group-id="myClass.class_group_id"
-                :classes-loading="subjectsLoading"
                 allow-student-scope
                 allow-layout-choice
               />
@@ -172,6 +179,8 @@
       <ClassGradingSection
         v-if="myClass && activeClassView === 'subjects'"
         :class-group-id="myClass.class_group_id"
+        :class-group-name="myClass.class_group"
+        :offerings="myClass.offerings"
       />
     </div>
 
@@ -187,6 +196,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import axios from 'axios'
 import {
   AlertCircle,
   ShieldAlert,
@@ -202,12 +212,11 @@ import StudentStatisticsModal, {
 } from '@/components/analytics/StudentStatisticsModal.vue'
 import GradeReportButton from '@/components/grading/GradeReportButton.vue'
 import type { GradeReportClassOption } from '@/components/grading/GradeReportModal.vue'
-import { useSubjectNameLookup } from '@/composables/useSubjectNameLookup'
 import { getStudentsApi } from '@/api/students'
 import { getHomeroomClassApi } from '@/api/teacherDashboard'
 import { useAuth } from '@/composables/useAuth'
 import type { Student } from '@/types/student'
-import type { HomeroomTeacherDashboard } from '@/types/teacherDashboard'
+import type { HomeroomClass } from '@/types/teacherDashboard'
 
 const { t } = useI18n()
 const { user: authUser } = useAuth()
@@ -217,8 +226,10 @@ const statsStudent = ref<StatisticsStudentTarget | null>(null)
 
 const loading = ref(true)
 const error = ref<string | null>(null)
+/** A homeroom teacher with no homeroom class this year: an empty state, not an error. */
+const noClass = ref(false)
 const students = ref<Student[]>([])
-const myClass = ref<HomeroomTeacherDashboard | null>(null)
+const myClass = ref<HomeroomClass | null>(null)
 
 const isHomeroomTeacher = computed(() => authUser.value?.roles.includes('homeroom_teacher'))
 
@@ -233,19 +244,17 @@ const classViewTabs = computed(() => [
 
 // ─── Grade report ───────────────────────────────────────────────────────────
 
-const {
-  loading: subjectsLoading,
-  load: loadSubjectNames,
-  toOptions: subjectOptionsFor,
-} = useSubjectNameLookup()
-
-/** Every subject the class is taught, whoever teaches it. */
-const classSubjectNames = computed(() => {
-  const names = new Set<string>()
-  myClass.value?.students.forEach(student => {
-    student.subjects.forEach(subject => names.add(subject.subject_name))
+/**
+ * Every subject the class is taught, whoever teaches it, by subject id. Two
+ * offerings of one subject collapse into one entry; the list is already sorted
+ * by subject name.
+ */
+const classSubjects = computed(() => {
+  const byId = new Map<number, { id: number, name: string }>()
+  myClass.value?.offerings.forEach(offering => {
+    if (!byId.has(offering.subject_id)) byId.set(offering.subject_id, { id: offering.subject_id, name: offering.subject_name })
   })
-  return [...names].sort()
+  return [...byId.values()]
 })
 
 const reportClasses = computed<GradeReportClassOption[]>(() => {
@@ -255,7 +264,7 @@ const reportClasses = computed<GradeReportClassOption[]>(() => {
     {
       classGroupId: homeroom.class_group_id,
       displayName: homeroom.class_group,
-      subjects: subjectOptionsFor(classSubjectNames.value),
+      subjects: classSubjects.value,
     },
   ]
 })
@@ -267,6 +276,7 @@ async function fetchData() {
   }
   loading.value = true
   error.value = null
+  noClass.value = false
   try {
     const { data: data } = await getHomeroomClassApi()
     myClass.value = data
@@ -275,16 +285,13 @@ async function fetchData() {
       const studentsRes = await getStudentsApi({ class_group: myClass.value.class_group_id })
       students.value = studentsRes.data
     }
-  } catch {
-    error.value = 'Failed to load class data.'
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 404) noClass.value = true
+    else error.value = 'Failed to load class data.'
   } finally {
     loading.value = false
   }
 }
 
-onMounted(() => {
-  fetchData()
-  // The dashboard names subjects; the report endpoint wants their ids.
-  loadSubjectNames()
-})
+onMounted(fetchData)
 </script>

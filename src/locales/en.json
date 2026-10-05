@@ -1285,7 +1285,8 @@
         "ariaDialog": "File preview"
     },
     "myClass": {
-        "subjectsAndGrades": "Subjects & grades"
+        "subjectsAndGrades": "Subjects & grades",
+        "noHomeroomClass": "You don't have a homeroom class this academic year."
     },
     "parentChildSubject": {
         "cumulative": "Cumulative",

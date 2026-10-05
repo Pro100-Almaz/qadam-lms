@@ -1285,7 +1285,8 @@
         "ariaDialog": "Просмотр файла"
     },
     "myClass": {
-        "subjectsAndGrades": "Предметы и оценки"
+        "subjectsAndGrades": "Предметы и оценки",
+        "noHomeroomClass": "В этом учебном году у вас нет классного руководства."
     },
     "parentChildSubject": {
         "cumulative": "Итоговая",
