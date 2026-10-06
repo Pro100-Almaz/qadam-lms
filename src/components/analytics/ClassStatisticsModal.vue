@@ -8,7 +8,7 @@
     @close="emit('close')"
   >
     <template #filters>
-      <div class="w-full sm:w-64">
+      <div class="col-span-2 w-full sm:w-64">
         <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
           {{ t('statistics.offering') }}
         </label>
@@ -42,7 +42,7 @@
         <SelectMenu v-model="groupByModel" :options="groupByOptions" :aria-label="t('statistics.groupBy')" />
       </div>
 
-      <label class="flex cursor-pointer items-center gap-2 py-2.5 text-sm text-gray-600 dark:text-gray-400">
+      <label class="col-span-2 flex cursor-pointer items-center gap-2 py-2.5 text-sm text-gray-600 dark:text-gray-400">
         <input
           v-model="includeSubtopics"
           type="checkbox"

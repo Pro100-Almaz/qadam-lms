@@ -51,6 +51,99 @@ export interface HomeroomTeacherDashboard {
   students: HomeroomStudent[]
 }
 
+export interface HomeroomClassOfferingTeacher {
+  /** Teacher profile id. */
+  id: number
+  user_id: number
+  full_name: string
+  role: string
+}
+
+/** One subject taught to the homeroom class, whoever teaches it. */
+export interface HomeroomClassOffering {
+  id: number
+  subject_id: number
+  subject_name: string
+  subject_language_group: string
+  subject_status: string
+  max_points: number
+  grading_strategy: string
+  teachers: HomeroomClassOfferingTeacher[]
+}
+
+export interface HomeroomClassStudentSubject extends HomeroomStudentSubject {
+  offering_id: number
+}
+
+export interface HomeroomClassStudent extends Omit<HomeroomStudent, 'subjects'> {
+  subjects: HomeroomClassStudentSubject[]
+}
+
+/**
+ * `/homeroom/my-class/`: the dashboard's homeroom section plus every offering
+ * of the class, sorted by subject name, and an `offering_id` on each grade.
+ */
+export interface HomeroomClass extends Omit<HomeroomTeacherDashboard, 'students'> {
+  offerings: HomeroomClassOffering[]
+  students: HomeroomClassStudent[]
+}
+
+// ─── /teacher/offerings/ ─────────────────────────────────────────────────────
+
+export interface TeacherOfferingsTeacher {
+  id: number
+  user_id: number
+  full_name: string
+  username: string
+}
+
+export interface TeacherOfferingsYear {
+  id: number
+  year: string
+}
+
+export interface TeacherOfferingClassGroupDetail {
+  id: number
+  name: string
+  grade_level: number
+  letter: string
+  academic_year: string
+}
+
+/** An offering the caller teaches. Homeroom-only offerings are never listed. */
+export interface TeacherOffering {
+  id: number
+  subject: string
+  subject_id: number
+  subject_language_group: string
+  class_group: string
+  class_group_id: number
+  class_group_detail: TeacherOfferingClassGroupDetail
+  academic_year: string
+  academic_year_id: number
+  max_points: number
+  grading_strategy: string
+  teaching_role: string | null
+}
+
+export interface TeacherOfferingsResponse {
+  teacher: TeacherOfferingsTeacher
+  /** `null` when there is no active year; `offerings` is then empty. */
+  academic_year: TeacherOfferingsYear | null
+  offerings: TeacherOffering[]
+  count: number
+}
+
+export interface TeacherOfferingsParams {
+  /** Academic year id. Defaults to the active year. */
+  academic_year?: number
+  /**
+   * `false` leaves out offerings with no assignments at all. Defaults to
+   * `true`. It takes no quarter, category or date filters.
+   */
+  include_empty?: boolean
+}
+
 export interface PsychologistStats {
   total_records: number
   average_score: number

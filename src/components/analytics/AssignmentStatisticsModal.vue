@@ -8,7 +8,7 @@
     @close="emit('close')"
   >
     <template #filters>
-      <div class="w-full sm:w-64">
+      <div class="col-span-2 w-full sm:w-64">
         <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
           {{ t('statistics.offering') }}
         </label>

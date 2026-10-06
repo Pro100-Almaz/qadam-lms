@@ -723,6 +723,7 @@
         "partialSaved": "Часть изменений сохранилась до ошибки — в таблице показано то, что сейчас записано."
     },
     "statistics": {
+        "noLessonsInQuarter": "Нет уроков в этой четверти",
         "button": "Статистика",
         "close": "Закрыть",
         "studentTitle": "Статистика ученика",
@@ -1285,7 +1286,8 @@
         "ariaDialog": "Просмотр файла"
     },
     "myClass": {
-        "subjectsAndGrades": "Предметы и оценки"
+        "subjectsAndGrades": "Предметы и оценки",
+        "noHomeroomClass": "В этом учебном году у вас нет классного руководства."
     },
     "parentChildSubject": {
         "cumulative": "Итоговая",

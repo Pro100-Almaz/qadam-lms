@@ -10,13 +10,21 @@
         @mousedown="backdrop.onMouseDown"
         @mouseup="backdrop.onMouseUp"
       >
+        <!-- Below `sm` the panel grows with its content and the backdrop
+             scrolls: a phone has no height to spare for a fixed header stack
+             above a body that would be left a sliver. From `sm` up only the
+             body scrolls. -->
         <div
-          class="flex max-h-[calc(100dvh-1.5rem)] w-full flex-col rounded-xl bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] dark:bg-gray-900"
+          class="flex w-full flex-col rounded-xl bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)] dark:bg-gray-900"
           :class="widthClass"
         >
           <!-- Header -->
+          <!-- Every row but the body is `shrink-0`: the body's flex basis is
+               its content, so a tall chart would otherwise squeeze them — the
+               tab row, whose sideways overflow lets it shrink to nothing,
+               first of all. -->
           <div
-            class="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-4 sm:px-6 dark:border-gray-800"
+            class="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 px-4 py-4 sm:px-6 dark:border-gray-800"
           >
             <div class="min-w-0">
               <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ title }}</h3>
@@ -36,7 +44,7 @@
                the view within it — filters below are always the third row. -->
           <div
             v-if="$slots.modes"
-            class="border-b border-gray-200 px-4 py-3 sm:px-6 dark:border-gray-800"
+            class="shrink-0 border-b border-gray-200 px-4 py-3 sm:px-6 dark:border-gray-800"
           >
             <slot name="modes" />
           </div>
@@ -45,27 +53,27 @@
                narrow screen reads as two rows of unrelated tabs. -->
           <div
             v-if="$slots.tabs"
-            class="flex gap-1 overflow-x-auto border-b border-gray-200 px-4 no-scrollbar sm:px-6 dark:border-gray-800"
+            class="flex shrink-0 gap-1 overflow-x-auto border-b border-gray-200 px-4 no-scrollbar sm:px-6 dark:border-gray-800"
           >
             <slot name="tabs" />
           </div>
 
           <div
             v-if="$slots.filters"
-            class="flex flex-wrap items-end gap-3 border-b border-gray-200 px-4 py-4 sm:px-6 dark:border-gray-800"
+            class="grid shrink-0 grid-cols-2 items-end gap-3 border-b border-gray-200 px-4 py-4 sm:flex sm:flex-wrap sm:px-6 dark:border-gray-800"
           >
             <slot name="filters" />
           </div>
 
           <!-- Body. The only scrolling region, so the filters stay reachable
                however tall a heatmap grows. -->
-          <div class="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+          <div class="px-4 py-5 sm:min-h-0 sm:flex-1 sm:overflow-y-auto sm:px-6">
             <slot />
           </div>
 
           <!-- Footer -->
           <div
-            class="flex items-center justify-between gap-3 border-t border-gray-200 px-4 py-3.5 sm:px-6 dark:border-gray-800"
+            class="flex shrink-0 flex-col items-stretch gap-3 border-t border-gray-200 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-gray-800"
           >
             <p class="text-[11px] text-gray-400 dark:text-gray-500">{{ note }}</p>
             <button

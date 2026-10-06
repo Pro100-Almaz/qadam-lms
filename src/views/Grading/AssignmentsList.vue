@@ -345,10 +345,7 @@ import GradeReportModal, { type GradeReportClassOption } from '@/components/grad
 import DatePicker from '@/components/ui/DatePicker.vue'
 import Pagination from '@/components/ui/Pagination.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
-import {
-  getAssignmentOfferingsApi,
-  type AssignmentOfferingPickerItem,
-} from '@/api/analytics'
+import { getTeacherOfferingsApi } from '@/api/teacherDashboard'
 import {
   deleteSubjectAssignmentApi,
   getAllOfferingGradesApi,
@@ -362,6 +359,7 @@ import { useBackdropClose } from '@/composables/useBackdropClose'
 import { matchSubjectNames } from '@/composables/useSubjectNameLookup'
 import { useToast } from '@/composables/useToast'
 import type { LanguageGroup, Subject } from '@/types/subject'
+import type { TeacherOffering } from '@/types/teacherDashboard'
 
 const { t } = useI18n()
 const { success } = useToast()
@@ -384,10 +382,14 @@ interface OfferingGroup {
   classGroupName: string
 }
 
-/** Every offering of the teacher's, for the filters and the modals. */
-const assignmentOfferings = ref<AssignmentOfferingPickerItem[]>([])
-/** Only the offerings with assignments under the current filters: the tables. */
-const tableOfferings = ref<AssignmentOfferingPickerItem[]>([])
+/** Every offering the teacher teaches, for the filters and the modals. */
+const assignmentOfferings = ref<TeacherOffering[]>([])
+/**
+ * Only the taught offerings with at least one assignment: the tables. Not
+ * narrowed by quarter, category or date — `/teacher/offerings/` takes none of
+ * them — so a table can come up empty under those filters.
+ */
+const tableOfferings = ref<TeacherOffering[]>([])
 /**
  * `/subject-grades/` of the offerings paged to so far under the current
  * filters, keyed by offering id. Emptied whenever the filters change.
@@ -418,7 +420,7 @@ const pageSize = ref(5)
 // ─── Gradebooks ──────────────────────────────────────────────────────────────
 
 /**
- * One table per offering with assignments under the filters, narrowed by the
+ * One table per offering with assignments, narrowed by the
  * subject and class filters. Sorted the way a teacher scans them: by subject,
  * then by class.
  */
@@ -459,14 +461,14 @@ function writableAssignmentIds(offeringId: number): number[] {
 
 /**
  * Refetches after one offering's assignments changed: its grades, so only that
- * table reloads, and the table list, since its first or last assignment under
- * the filters makes the table appear or disappear.
+ * table reloads, and the table list, since its first or last assignment makes
+ * the table appear or disappear.
  */
 async function reloadOffering(offeringId: number) {
   const request = fetchSeq
   try {
     const [{ data }, grades] = await Promise.all([
-      getAssignmentOfferingsApi(tableParams()),
+      getTeacherOfferingsApi(TABLE_PARAMS),
       getAllOfferingGradesApi(offeringId, gradeParams()),
     ])
     // A filter change since then has refetched everything; this is stale.
@@ -575,10 +577,8 @@ async function confirmDelete() {
 // ─── Filters ─────────────────────────────────────────────────────────────────
 
 /**
- * Filter entries from the teacher's offerings, taught and homeroom alike. The
- * tables read `/offerings/{id}/subject-grades/`, which scopes itself (a
- * homeroom-only offering comes back read-only, an unrelated one empty), so
- * every offering may have a table and a filter entry.
+ * Filter entries from the offerings the teacher teaches. Their homeroom class's
+ * other offerings live on the My Class page, never in this list.
  */
 const subjectOptions = computed<SelectOption[]>(() =>
   [...new Map(
@@ -589,7 +589,7 @@ const subjectOptions = computed<SelectOption[]>(() =>
   ).values()].sort((a, b) => a.label.localeCompare(b.label)),
 )
 
-/** A teacher filters within the classes they teach or are homeroom of. */
+/** A teacher filters within the classes they teach. */
 const classOptions = computed<SelectOption[]>(() =>
   [...new Map(
     assignmentOfferings.value.map(offering => [
@@ -696,17 +696,15 @@ function gradeParams() {
   }
 }
 
-/** The same filters, for the offerings that have anything under them. */
-function tableParams() {
-  return { ...gradeParams(), include_empty: false }
-}
+/** The offerings with any assignment at all; the filters are not sent. */
+const TABLE_PARAMS = { include_empty: false }
 
 /** Bumped per filter change, so a slower response for old filters is dropped. */
 let fetchSeq = 0
 
 /**
- * The offerings with assignments under the filters — one request, which is
- * what decides the tables and the page count. Their grades come per page.
+ * The offerings with assignments — one request, which is what decides the
+ * tables and the page count. Their grades come per page.
  */
 async function fetchTables() {
   const request = ++fetchSeq
@@ -715,7 +713,7 @@ async function fetchTables() {
   offeringGrades.value = {}
 
   try {
-    const { data } = await getAssignmentOfferingsApi(tableParams())
+    const { data } = await getTeacherOfferingsApi(TABLE_PARAMS)
     if (request !== fetchSeq) return
     tableOfferings.value = data.offerings
     // Called, not left to the paging watch: a filter change can leave the
@@ -758,11 +756,18 @@ function loadPageGrades() {
 
 watch(() => pagedGroups.value.map(group => group.offeringId).join(), loadPageGrades)
 
+/**
+ * The grade filters leave the table list alone — the endpoint does not take
+ * them — so only the grades are dropped and refetched for the page.
+ */
 watch(
   () => [filters.value.quarter, filters.value.category, filters.value.dateFrom, filters.value.dateTo],
   () => {
+    fetchSeq++
+    offeringGrades.value = {}
+    loadError.value = false
     currentPage.value = 1
-    fetchTables()
+    loadPageGrades()
   },
 )
 
@@ -801,12 +806,12 @@ onMounted(async () => {
 })
 
 /**
- * The analytics picker names the teacher's offerings. The teacher-offering
+ * `/teacher/offerings/` names the teacher's offerings. The teacher-offering
  * helper still owns create/edit/delete permission checks.
  */
 async function loadFilterOptions() {
   const [pickerResult] = await Promise.all([
-    getAssignmentOfferingsApi(),
+    getTeacherOfferingsApi(),
     loadOfferings(),
     loadCategories(),
   ])

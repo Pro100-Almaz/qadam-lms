@@ -535,7 +535,7 @@ import {
   X,
 } from 'lucide-vue-next'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
-import { readAnalyticsError, type AssignmentOfferingPickerItem } from '@/api/analytics'
+import { readAnalyticsError } from '@/api/analytics'
 import {
   createQuarterGradesApi,
   deleteQuarterGradesApi,
@@ -552,6 +552,7 @@ import { useToast } from '@/composables/useToast'
 import { formatAcademicDay } from '@/utils/gradeDates'
 import { isScored } from '@/utils/offeringGradeGrid'
 import { flattenErrorMessage } from '@/utils/fileDownload'
+import type { TeacherOffering } from '@/types/teacherDashboard'
 
 /**
  * Sets a class's quarter grades in one subject.
@@ -571,8 +572,11 @@ import { flattenErrorMessage } from '@/utils/fileDownload'
  */
 const props = defineProps<{
   open: boolean
-  /** The page's `/analytics/assignment-offerings/` picker. */
-  offerings: AssignmentOfferingPickerItem[]
+  /**
+   * The page's `/teacher/offerings/`: only offerings the caller teaches, which
+   * are the only ones they may write — the class's homeroom teacher included.
+   */
+  offerings: TeacherOffering[]
   offeringsLoading?: boolean
 }>()
 
@@ -604,29 +608,23 @@ const classGroupId = ref<number | string | null>(null)
 const offeringId = ref<number | string | null>(null)
 const quarter = ref<number | string | null>(null)
 
-/**
- * Only offerings the caller teaches: writing is refused to anyone else, the
- * class's homeroom teacher included.
- */
-const gradableOfferings = computed(() => props.offerings.filter(offering => offering.access !== 'homeroom'))
-
 const classOptions = computed<SelectOption[]>(() => {
   const seen = new Map<number, string>()
-  for (const offering of gradableOfferings.value) seen.set(offering.class_group_id, offering.class_group)
+  for (const offering of props.offerings) seen.set(offering.class_group_id, offering.class_group)
   return [...seen]
     .sort((a, b) => a[1].localeCompare(b[1], undefined, { numeric: true }))
     .map(([value, label]) => ({ value, label }))
 })
 
 const subjectOptions = computed<SelectOption[]>(() =>
-  gradableOfferings.value
+  props.offerings
     .filter(offering => offering.class_group_id === Number(classGroupId.value))
     .sort((a, b) => a.subject.localeCompare(b.subject))
     .map(offering => ({ value: offering.id, label: offering.subject })),
 )
 
 const selectedOffering = computed(
-  () => gradableOfferings.value.find(offering => offering.id === Number(offeringId.value)) ?? null,
+  () => props.offerings.find(offering => offering.id === Number(offeringId.value)) ?? null,
 )
 
 const quarterOptions = computed<SelectOption[]>(() =>

@@ -723,6 +723,7 @@
         "partialSaved": "Some changes were saved before the error — the table shows what is on record now."
     },
     "statistics": {
+        "noLessonsInQuarter": "No lessons this quarter",
         "button": "Statistics",
         "close": "Close",
         "studentTitle": "Student statistics",
@@ -1285,7 +1286,8 @@
         "ariaDialog": "File preview"
     },
     "myClass": {
-        "subjectsAndGrades": "Subjects & grades"
+        "subjectsAndGrades": "Subjects & grades",
+        "noHomeroomClass": "You don't have a homeroom class this academic year."
     },
     "parentChildSubject": {
         "cumulative": "Cumulative",
