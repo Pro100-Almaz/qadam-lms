@@ -37,8 +37,10 @@ export interface PsychologicalStateTemplate {
 export interface StudentDetail extends Student {
   parents: StudentParent[]
   offerings: SubjectOffering[]
+  /** Quarter ("1"–"4") → subject name → mark (2–5). */
   subject_quarter_grades: Record<string, Record<string, number>>
   total_quarter_grades: Record<string, number>
+  /** Subject name → average mark (2–5); 0 = not graded. */
   cumulative_subject_grades: Record<string, number>
   student_total_grade: number
   psychological_states: {

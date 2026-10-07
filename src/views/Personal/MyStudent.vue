@@ -111,7 +111,7 @@
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Q{{ q }}</p>
           <div class="mt-2 flex items-end justify-between">
             <span class="text-2xl font-bold text-gray-800 dark:text-white/90">
-              {{ student.total_quarter_grades[String(q)] ?? '—' }}
+              {{ student.total_quarter_grades[String(q)] || '—' }}
             </span>
             <span
               class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold"
@@ -171,6 +171,13 @@
                 </td>
                 <td class="px-5 py-3.5">
                   <span
+                    v-if="score === 0"
+                    class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                  >
+                    {{ t('students.notGraded') }}
+                  </span>
+                  <span
+                    v-else
                     class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold"
                     :class="gradeCircleClass(score)"
                   >
@@ -304,7 +311,7 @@ function gradeCircleClass(score: number): string {
 }
 
 function quarterBadgeClass(grade: number | undefined): string {
-  if (grade === undefined) return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+  if (grade === undefined || grade === 0) return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
   if (grade >= 5) return 'bg-success-100 text-success-700 dark:bg-success-500/10 dark:text-success-400'
   if (grade >= 4) return 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'
   if (grade >= 3) return 'bg-warning-100 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400'
@@ -313,6 +320,7 @@ function quarterBadgeClass(grade: number | undefined): string {
 
 function quarterLabel(grade: number | undefined): string {
   if (grade === undefined) return '—'
+  if (grade === 0) return t('students.notGraded')
   if (grade >= 5) return 'Excellent'
   if (grade >= 4) return 'Good'
   if (grade >= 3) return 'Average'

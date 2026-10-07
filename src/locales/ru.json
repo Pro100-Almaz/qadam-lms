@@ -1124,6 +1124,7 @@
         "scorePercent": "Балл (%)",
         "noHistory": "История отсутствует",
         "belowAvg": "Ниже среднего",
+        "notGraded": "Не оценено",
         "stateNamePlaceholder": "например, Тревожность, Мотивированность...",
         "stateCommentPlaceholder": "Необязательные заметки о состоянии ученика...",
         "awardTypePlaceholder": "например, Золотая медаль",

@@ -131,15 +131,24 @@
       <div v-show="activeTab === 'subjects'" class="space-y-6">
         <!-- Quarter indicator cards -->
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div
+          <button
             v-for="q in [1, 2, 3, 4]"
             :key="q"
-            class="rounded-xl border border-gray-200 bg-white px-5 py-4 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs"
+            type="button"
+            :aria-pressed="selectedQuarter === q"
+            @click="toggleQuarter(q)"
+            class="rounded-xl border bg-white px-5 py-4 text-left shadow-theme-xs transition-colors dark:bg-gray-900"
+            :class="selectedQuarter === q
+              ? 'border-brand-500 ring-2 ring-brand-500/20 dark:border-brand-400'
+              : 'border-gray-200 hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-700'"
           >
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Q{{ q }}</p>
+            <p
+              class="text-xs font-medium"
+              :class="selectedQuarter === q ? 'text-brand-600 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400'"
+            >Q{{ q }}</p>
             <div class="mt-2 flex items-end justify-between">
               <span class="text-2xl font-bold text-gray-800 dark:text-white/90">
-                {{ student.total_quarter_grades[String(q)] ?? '—' }}
+                {{ student.total_quarter_grades[String(q)] || '—' }}
               </span>
               <span
                 class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold"
@@ -148,14 +157,14 @@
                 {{ quarterLabel(student.total_quarter_grades[String(q)]) }}
               </span>
             </div>
-          </div>
+          </button>
         </div>
 
         <!-- Subjects table -->
         <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
           <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
             <h2 class="text-base font-semibold text-gray-800 dark:text-white/90">
-              {{ t('subjects.title') }}
+              {{ t('subjects.title') }}<template v-if="selectedQuarter"> · Q{{ selectedQuarter }}</template>
             </h2>
           </div>
           <div class="max-w-full overflow-x-auto custom-scrollbar">
@@ -178,7 +187,7 @@
               </thead>
               <tbody>
                 <tr
-                  v-for="(score, subject) in student.cumulative_subject_grades"
+                  v-for="(score, subject) in subjectScores"
                   :key="subject"
                   class="border-b border-gray-100 last:border-0 dark:border-gray-800"
                 >
@@ -186,19 +195,26 @@
                     <span class="text-sm font-medium text-gray-800 dark:text-white/90">{{ subject }}</span>
                   </td>
                   <td class="px-5 py-3.5">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ score.toFixed(1) }}%</span>
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ score ? score.toFixed(1) : '—' }}</span>
                   </td>
                   <td class="px-5 py-3.5">
                     <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                       <div
                         class="h-full rounded-full transition-all duration-500"
                         :class="progressBarColor(score)"
-                        :style="{ width: `${Math.min(score, 100)}%` }"
+                        :style="{ width: `${Math.min(score / 5, 1) * 100}%` }"
                       ></div>
                     </div>
                   </td>
                   <td class="px-5 py-3.5">
                     <span
+                      v-if="score === 0"
+                      class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                    >
+                      {{ t('students.notGraded') }}
+                    </span>
+                    <span
+                      v-else
                       class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold"
                       :class="gradeCircleClass(score)"
                     >
@@ -206,7 +222,7 @@
                     </span>
                   </td>
                 </tr>
-                <tr v-if="Object.keys(student.cumulative_subject_grades).length === 0">
+                <tr v-if="Object.keys(subjectScores).length === 0">
                   <td colspan="4" class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                     {{ t('common.noData') }}
                   </td>
@@ -217,7 +233,7 @@
         </div>
 
         <!-- Charts -->
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-6">
           <!-- Line chart: Quarter Performance -->
           <div class="rounded-xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
             <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ t('students.quarterGrade') }}</h3>
@@ -234,7 +250,7 @@
             <VueApexCharts
               v-if="radarChartSeries[0].data.length > 0"
               type="radar"
-              height="300"
+              height="600"
               :options="radarChartOptions"
               :series="radarChartSeries"
             />
@@ -1358,27 +1374,25 @@ function adjustColor(hex: string, amount: number): string {
 }
 
 // ─── Grade helpers ───────────────────────────────────────────────────────────
-function scoreToGrade(score: number): number {
-  if (score > 80) return 5
-  if (score > 60) return 4
-  if (score > 40) return 3
-  return 2
+// Subject marks are on the 2–5 scale (an average across quarters for "all").
+function scoreToGrade(mark: number): number {
+  return Math.round(mark)
 }
 
-function progressBarColor(score: number): string {
-  if (score > 80) return 'bg-success-500'
-  if (score > 60) return 'bg-warning-500'
+function progressBarColor(mark: number): string {
+  const grade = scoreToGrade(mark)
+  if (grade >= 5) return 'bg-success-500'
+  if (grade >= 4) return 'bg-brand-500'
+  if (grade >= 3) return 'bg-warning-500'
   return 'bg-error-500'
 }
 
-function gradeCircleClass(score: number): string {
-  if (score > 80) return 'bg-success-100 text-success-700 dark:bg-success-500/10 dark:text-success-400'
-  if (score > 60) return 'bg-warning-100 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400'
-  return 'bg-error-100 text-error-700 dark:bg-error-500/10 dark:text-error-400'
+function gradeCircleClass(mark: number): string {
+  return quarterBadgeClass(scoreToGrade(mark))
 }
 
 function quarterBadgeClass(grade: number | undefined): string {
-  if (grade === undefined) return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+  if (grade === undefined || grade === 0) return 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
   if (grade >= 5) return 'bg-success-100 text-success-700 dark:bg-success-500/10 dark:text-success-400'
   if (grade >= 4) return 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'
   if (grade >= 3) return 'bg-warning-100 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400'
@@ -1387,6 +1401,7 @@ function quarterBadgeClass(grade: number | undefined): string {
 
 function quarterLabel(grade: number | undefined): string {
   if (grade === undefined) return '—'
+  if (grade === 0) return t('students.notGraded')
   if (grade >= 5) return t('students.excellent')
   if (grade >= 4) return t('students.good')
   if (grade >= 3) return t('students.average')
@@ -1435,6 +1450,24 @@ function formatDate(dateStr: string): string {
   }
 }
 
+// ─── Quarter filter ──────────────────────────────────────────────────────────
+// null = all quarters. Clicking the selected quarter card again resets to all.
+const selectedQuarter = ref<number | null>(null)
+
+function toggleQuarter(q: number) {
+  selectedQuarter.value = selectedQuarter.value === q ? null : q
+}
+
+// Subject → score for the subjects table and radar. Keeps every subject in
+// the list for a quarter, so one with no marks yet reads as "not graded".
+const subjectScores = computed<Record<string, number>>(() => {
+  if (!student.value) return {}
+  const cumulative = student.value.cumulative_subject_grades
+  if (selectedQuarter.value === null) return cumulative
+  const quarter = student.value.subject_quarter_grades[String(selectedQuarter.value)] ?? {}
+  return Object.fromEntries(Object.keys(cumulative).map((subject) => [subject, quarter[subject] ?? 0]))
+})
+
 // ─── Charts ──────────────────────────────────────────────────────────────────
 const lineChartSeries = computed(() => {
   if (!student.value) return []
@@ -1458,6 +1491,20 @@ const lineChartOptions = computed(() => ({
     strokeWidth: 3,
     strokeColors: '#fff',
     hover: { sizeOffset: 3 },
+    discrete: selectedQuarter.value === null ? [] : [{
+      seriesIndex: 0,
+      dataPointIndex: selectedQuarter.value - 1,
+      size: 10,
+      fillColor: SERIES_STUDENT,
+      strokeColor: '#fff',
+    }],
+  },
+  annotations: {
+    xaxis: selectedQuarter.value === null ? [] : [{
+      x: `Q${selectedQuarter.value}`,
+      borderColor: SERIES_STUDENT,
+      strokeDashArray: 4,
+    }],
   },
   dataLabels: {
     enabled: true,
@@ -1495,13 +1542,13 @@ const lineChartOptions = computed(() => ({
 
 const radarChartSeries = computed(() => {
   if (!student.value) return [{ name: t('students.score'), data: [] }]
-  const entries = Object.entries(student.value.cumulative_subject_grades)
-  return [{ name: t('students.scorePercent'), data: entries.map(([, v]) => Math.round(v)) }]
+  const entries = Object.entries(subjectScores.value)
+  return [{ name: t('students.score'), data: entries.map(([, v]) => Math.round(v * 10) / 10) }]
 })
 
 const radarChartOptions = computed(() => {
   if (!student.value) return {}
-  const labels = Object.keys(student.value.cumulative_subject_grades)
+  const labels = Object.keys(subjectScores.value)
   return {
     chart: {
       fontFamily: 'Manrope, sans-serif',
@@ -1522,28 +1569,30 @@ const radarChartOptions = computed(() => {
     xaxis: {
       categories: labels,
       labels: {
-        style: { fontSize: '12px', fontWeight: 500, colors: Array(labels.length).fill('#6B7280') },
+        style: { fontSize: '11px', fontWeight: 500, colors: Array(labels.length).fill('#6B7280') },
+        // Long subject names eat the space the web is drawn in.
+        formatter: (name: string) => (name.length > 18 ? `${name.slice(0, 17)}…` : name),
       },
     },
     yaxis: {
       show: true,
       min: 0,
-      max: 100,
-      tickAmount: 4,
+      max: 5,
+      tickAmount: 5,
       labels: {
         style: { fontSize: '10px', colors: ['#9CA3AF'] },
-        formatter: (v: number) => `${v}%`,
+        formatter: (v: number) => `${v}`,
       },
     },
     dataLabels: {
       enabled: true,
       style: { fontSize: '11px', fontWeight: 600, colors: [SERIES_STUDENT] },
       background: { enabled: true, borderRadius: 2, padding: 3, borderColor: 'transparent', foreColor: SERIES_STUDENT, dropShadow: { enabled: false } },
-      formatter: (v: number) => `${v}%`,
+      formatter: (v: number) => (v ? `${v}` : ''),
     },
     tooltip: {
       theme: 'light',
-      y: { formatter: (v: number) => `${v}%` },
+      y: { formatter: (v: number) => (v ? `${v} / 5` : t('students.notGraded')) },
     },
     plotOptions: {
       radar: {

@@ -1124,6 +1124,7 @@
         "scorePercent": "Балл (%)",
         "noHistory": "Тарих жоқ",
         "belowAvg": "Орташадан төмен",
+        "notGraded": "Бағаланбаған",
         "stateNamePlaceholder": "мысалы, Мазасыздық, Ынталылық...",
         "stateCommentPlaceholder": "Оқушының жағдайы туралы қосымша ескертпелер...",
         "awardTypePlaceholder": "мысалы, Алтын медаль",
