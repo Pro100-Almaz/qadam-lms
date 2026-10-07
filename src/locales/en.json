@@ -1124,6 +1124,7 @@
         "scorePercent": "Score (%)",
         "noHistory": "No history available",
         "belowAvg": "Below avg",
+        "notGraded": "Not graded",
         "stateNamePlaceholder": "e.g. Anxious, Motivated...",
         "stateCommentPlaceholder": "Optional notes about the student's state...",
         "awardTypePlaceholder": "e.g. Gold Medal",
