@@ -43,10 +43,8 @@
             :model-value="classGroupId"
             :options="classGroupOptions"
             :disabled="!classGroups.length"
-            :placeholder="t('timetable.allClasses')"
+            :placeholder="t('common.noData')"
             :aria-label="t('scheduleBuilder.classGroup')"
-            clearable
-            :clear-label="t('timetable.allClasses')"
             @update:model-value="classGroupId = $event === null ? null : Number($event)"
           />
         </div>
@@ -172,7 +170,7 @@ import {
   type ScheduleSession,
   type SubjectSchedule,
 } from '@/api/schedule'
-import { getMyChildrenApi } from '@/api/parentSelf'
+import { getMyChildDetailApi, getMyChildrenApi } from '@/api/parentSelf'
 import type { UserRole } from '@/types/auth'
 import type { ClassGroup } from '@/types/academic'
 import type { ParentChild } from '@/types/parentSelf'
@@ -251,8 +249,8 @@ const events = computed<ScheduleEvent[]>(() =>
       start: timeToMinutes(session.time_start),
       end: timeToMinutes(session.time_end),
       title: schedule.title || schedule.description || '',
-      // Every entry names its class now, so a break is no longer anonymous on
-      // an all-classes week.
+      // Every entry names its class, so a subgroup's lesson is not mistaken for
+      // the whole class's.
       subtitle: schedule.class_group?.name,
       tone: schedule.type === 'other' ? 'other' : 'subject',
       colorKey: String(schedule.offering_id ?? `other-${schedule.id}`),
@@ -282,7 +280,10 @@ async function loadChildren(): Promise<void> {
   }
 }
 
-/** Optional: without a year the class filter simply lists nothing. */
+/**
+ * Optional: without a year the class filter simply lists nothing. Staff look at
+ * one class's week at a time, so the list opens on the first.
+ */
 async function loadFilters(): Promise<void> {
   if (isParent.value) await loadChildren()
   if (!showClassFilter.value) return
@@ -293,15 +294,39 @@ async function loadFilters(): Promise<void> {
     quarter.value = activeYear?.current_quarter ?? quarter.value
     const { data } = await getClassGroupsApi(activeYear ? { year: activeYear.id } : undefined)
     classGroups.value = data
+    classGroupId.value = data[0]?.id ?? null
   } catch {
     classGroups.value = []
+    classGroupId.value = null
   }
+}
+
+/** Child id → its class group id; the children list only carries the name. */
+const childClassGroups = new Map<number, number | null>()
+
+/**
+ * `student` alone does not narrow a parent's week, so the child's own class
+ * group scopes it as well — fetched once per child from its detail.
+ */
+async function childClassGroupId(id: number): Promise<number | null> {
+  if (!childClassGroups.has(id)) {
+    try {
+      const { data } = await getMyChildDetailApi(id)
+      childClassGroups.set(id, data.current_class_group?.id ?? null)
+    } catch {
+      return null
+    }
+  }
+  return childClassGroups.get(id) ?? null
 }
 
 async function loadSchedules(): Promise<void> {
   loading.value = true
   loadError.value = null
   try {
+    const classGroup = isParent.value && childId.value !== null
+      ? await childClassGroupId(childId.value)
+      : classGroupId.value
     // Free entries belong to a class group, so the class filter keeps them —
     // the one request is the whole week, breaks and clubs included. Picking a
     // class also pulls in its subgroups' lessons; each block names its own
@@ -310,8 +335,8 @@ async function loadSchedules(): Promise<void> {
       quarter: quarter.value,
       // A parent's week is one child's, so the chosen child scopes the request.
       student: childId.value ?? undefined,
-      class_group: classGroupId.value ?? undefined,
-      include_minor_groups: classGroupId.value !== null ? true : undefined,
+      class_group: classGroup ?? undefined,
+      include_minor_groups: classGroup !== null ? true : undefined,
       academic_year: academicYearId.value ?? undefined,
       page_size: PAGE_SIZE,
     })

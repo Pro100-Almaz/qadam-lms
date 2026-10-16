@@ -28,7 +28,7 @@
           :disabled="loadingTeachers || teachers.length === 0"
           class="min-w-56 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:border-gray-400 focus:border-brand-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600"
         >
-          <option :value="null" disabled>
+          <option v-if="!teachers.length" :value="null" disabled>
             {{ loadingTeachers ? $t('common.loading') : $t('lessons.noTeachers') }}
           </option>
           <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
@@ -184,35 +184,61 @@
                 </div>
               </div>
             </div>
-            <div class="relative">
-              <div
-                v-for="hour in timeSlots"
-                :key="hour"
-                class="grid grid-cols-[60px_repeat(6,1fr)] border-b border-gray-100 dark:border-gray-800"
-              >
-                <div class="flex h-16 items-start justify-end border-r border-gray-200 pr-2 pt-1 text-[10px] text-gray-400 dark:border-gray-800 dark:text-gray-500">
-                  {{ formatHour(hour) }}
-                </div>
-                <div
-                  v-for="day in weekDays"
-                  :key="day.date.toISOString() + hour"
-                  class="relative h-16 border-r border-gray-100 last:border-r-0 dark:border-gray-800"
-                  :class="{ 'bg-brand-50/20 dark:bg-brand-500/[0.03]': isToday(day.date) }"
+            <!-- One positioned column per day, the way the timetable draws it, so a
+                 lesson is never cut off by the hour row below it. -->
+            <div class="grid grid-cols-[60px_repeat(6,1fr)]">
+              <div class="relative border-r border-gray-200 dark:border-gray-800" :style="{ height: `${weekGridHeight}px` }">
+                <span
+                  v-for="hour in timeSlots"
+                  :key="hour"
+                  class="absolute right-2 pt-1 text-[10px] text-gray-400 dark:text-gray-500"
+                  :style="{ top: `${(hour - timeSlots[0]) * HOUR_HEIGHT}px` }"
                 >
-                  <button
-                    v-for="event in getEventsForHour(day.date, hour)"
-                    :key="event.id"
-                    type="button"
-                    @click="selectedEvent = event"
-                    class="absolute inset-x-0.5 z-10 cursor-pointer overflow-hidden rounded px-1.5 py-1 text-left"
-                    :class="subjectColorClasses(event.subjectColor)"
-                    :style="eventPositionStyle(event, hour)"
+                  {{ formatHour(hour) }}
+                </span>
+              </div>
+              <div
+                v-for="day in weekDays"
+                :key="day.date.toISOString()"
+                class="relative border-r border-gray-100 last:border-r-0 dark:border-gray-800"
+                :class="{ 'bg-brand-50/20 dark:bg-brand-500/[0.03]': isToday(day.date) }"
+                :style="{ height: `${weekGridHeight}px` }"
+              >
+                <div
+                  v-for="hour in timeSlots"
+                  :key="`h-${hour}`"
+                  class="pointer-events-none absolute inset-x-0 border-t border-gray-100 dark:border-gray-800"
+                  :style="{ top: `${(hour - timeSlots[0]) * HOUR_HEIGHT}px` }"
+                ></div>
+                <button
+                  v-for="block in weekBlocksFor(day.date)"
+                  :key="block.event.id"
+                  type="button"
+                  @click="selectedEvent = block.event"
+                  class="absolute z-10 flex cursor-pointer flex-col overflow-hidden rounded text-left"
+                  :class="[
+                    subjectColorClasses(block.event.subjectColor),
+                    textLines(block.event) === 1 ? 'justify-center px-1.5' : 'justify-start px-1.5 py-1',
+                  ]"
+                  :style="{ ...eventPositionStyle(block.event), ...laneStyle(block) }"
+                  :title="eventTooltip(block.event)"
+                >
+                  <span
+                    class="block truncate font-semibold"
+                    :class="textLines(block.event) === 1 ? 'text-[10px] leading-none' : 'text-[10px] leading-tight sm:text-xs'"
                   >
-                    <div class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ formatTime(event.startTime) }}</div>
-                    <div class="text-[10px] font-semibold leading-tight sm:text-xs">{{ event.title }}</div>
-                    <div v-if="event.className" class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ event.className }}</div>
-                  </button>
-                </div>
+                    {{ block.event.title }}
+                  </span>
+                  <span v-if="textLines(block.event) >= 2" class="block truncate text-[9px] leading-tight opacity-80 sm:text-[10px]">
+                    {{ formatTime(block.event.startTime) }} - {{ formatTime(block.event.endTime) }}
+                  </span>
+                  <span
+                    v-if="textLines(block.event) >= 3 && block.event.className"
+                    class="block truncate text-[9px] leading-tight opacity-80 sm:text-[10px]"
+                  >
+                    {{ block.event.className }}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
@@ -917,11 +943,75 @@ function goToToday() {
   currentDate.value = new Date()
 }
 
-function eventPositionStyle(event: CalendarEvent, hour: number) {
-  const hourStart = hour * 60
-  const top = ((event.startTime - hourStart) / 60) * 64
-  const height = ((event.endTime - event.startTime) / 60) * 64 - 2
-  return { top: `${Math.max(0, top)}px`, height: `${Math.max(18, height)}px` }
+const HOUR_HEIGHT = 64
+
+const weekGridHeight = computed(() => timeSlots.value.length * HOUR_HEIGHT)
+
+function eventHeight(event: CalendarEvent): number {
+  return Math.max(16, ((event.endTime - event.startTime) / 60) * HOUR_HEIGHT - 2)
+}
+
+function eventPositionStyle(event: CalendarEvent) {
+  const top = ((event.startTime - timeSlots.value[0] * 60) / 60) * HOUR_HEIGHT
+  return { top: `${Math.max(0, top)}px`, height: `${eventHeight(event)}px` }
+}
+
+/**
+ * A short lesson has room for its name and nothing else. Rather than clip the
+ * lines that do not fit, they are dropped — the tooltip still carries them.
+ */
+function textLines(event: CalendarEvent): 1 | 2 | 3 {
+  const height = eventHeight(event)
+  if (height < 32) return 1
+  if (height < 48) return 2
+  return 3
+}
+
+function eventTooltip(event: CalendarEvent): string {
+  return [event.title, `${formatTime(event.startTime)} - ${formatTime(event.endTime)}`, event.className]
+    .filter(Boolean)
+    .join('\n')
+}
+
+interface PositionedEvent {
+  event: CalendarEvent
+  lane: number
+  lanes: number
+}
+
+/** Overlapping lessons sit side by side, as on the timetable, so neither hides the other. */
+function weekBlocksFor(date: Date): PositionedEvent[] {
+  const day = getEventsForDate(date).sort((a, b) => a.startTime - b.startTime || a.endTime - b.endTime)
+  const positioned: PositionedEvent[] = []
+  let cluster: PositionedEvent[] = []
+  let clusterEnd = -1
+
+  const flush = () => {
+    const lanes = cluster.reduce((max, block) => Math.max(max, block.lane + 1), 0)
+    for (const block of cluster) block.lanes = lanes
+    positioned.push(...cluster)
+    cluster = []
+    clusterEnd = -1
+  }
+
+  for (const event of day) {
+    if (cluster.length && event.startTime >= clusterEnd) flush()
+    const taken = new Set(
+      cluster.filter(block => block.event.endTime > event.startTime).map(block => block.lane),
+    )
+    let lane = 0
+    while (taken.has(lane)) lane += 1
+    cluster.push({ event, lane, lanes: lane + 1 })
+    clusterEnd = Math.max(clusterEnd, event.endTime)
+  }
+  if (cluster.length) flush()
+
+  return positioned
+}
+
+function laneStyle(block: PositionedEvent) {
+  const width = 100 / block.lanes
+  return { left: `calc(${block.lane * width}% + 2px)`, width: `calc(${width}% - 4px)` }
 }
 
 function subjectColorClasses(color: string): string {
