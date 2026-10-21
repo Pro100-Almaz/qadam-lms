@@ -45,7 +45,7 @@
         <colgroup>
           <col :style="nameColumnStyle" />
           <col v-for="index in displayColumnCount" :key="index" :style="gradeColumnStyle" />
-          <col :style="averageColumnStyle" />
+          <col :style="quarterColumnStyle" />
           <col />
         </colgroup>
         <thead>
@@ -120,9 +120,9 @@
             ></th>
             <th
               scope="col"
-              class="border-b border-l border-gray-200 px-3 py-2.5 text-center text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:text-gray-400"
+              class="border-b border-l border-gray-200 px-2 py-2.5 text-center text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:text-gray-400"
             >
-              {{ t('assignments.averageShort') }}
+              {{ t('quarterGrades.quarterGrade') }}
             </th>
             <!-- Takes the card's leftover width so the columns keep theirs. -->
             <th aria-hidden="true" class="border-b border-gray-200 dark:border-gray-800"></th>
@@ -248,14 +248,16 @@
               aria-hidden="true"
               class="border-b border-l border-gray-100 dark:border-gray-800"
             ></td>
-            <td
-              class="border-b border-l border-gray-100 px-3 py-2.5 text-center text-sm font-semibold tabular-nums dark:border-gray-800"
-              :class="hasAnyGrade(rowIndex)
-                ? 'text-gray-700 dark:text-gray-300'
-                : 'text-gray-400 dark:text-gray-500'"
-              :title="rowMeanTitle(rowIndex)"
-            >
-              {{ hasAnyGrade(rowIndex) ? `${Math.round(rowMeans[rowIndex] ?? 0)}%` : '—' }}
+            <!-- The quarter grade on record, set in the quarter grades modal. -->
+            <td class="border-b border-l border-gray-100 px-2 py-2 text-center dark:border-gray-800">
+              <span
+                v-if="quarterGrades[student.id] != null"
+                class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm font-semibold tabular-nums"
+                :class="GRADE_BADGES[quarterGrades[student.id]] ?? 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300'"
+              >
+                {{ quarterGrades[student.id] }}
+              </span>
+              <span v-else class="text-sm text-gray-300 dark:text-gray-600">—</span>
             </td>
             <td aria-hidden="true" class="border-b border-gray-100 dark:border-gray-800"></td>
           </tr>
@@ -282,7 +284,12 @@
               aria-hidden="true"
               class="border-l border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-white/5"
             ></td>
-            <td class="border-l border-gray-100 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-white/5"></td>
+            <td
+              class="border-l border-gray-100 bg-gray-50 px-2 py-2.5 text-center text-xs font-semibold tabular-nums text-gray-700 dark:border-gray-800 dark:bg-white/5 dark:text-gray-300"
+              :title="t('quarterGrades.gradedCount', { graded: quarterGradeValues.length, total: students.length })"
+            >
+              {{ quarterGradeMean }}
+            </td>
             <td aria-hidden="true" class="bg-gray-50 dark:bg-white/5"></td>
           </tr>
         </tfoot>
@@ -306,6 +313,7 @@ import {
   type SubjectAssignment,
   type SubjectAssignmentCategory,
 } from '@/api/subjectAssignments'
+import { getQuarterGradesApi } from '@/api/quarterGrades'
 import { useClassRoster } from '@/composables/useClassRoster'
 import { formatAcademicDay } from '@/utils/gradeDates'
 import {
@@ -330,6 +338,11 @@ import {
  * Cells show the mark in the assignment's own points, not the percentage the
  * heatmap chart paints: this is a register to check a student's mark in, and
  * the points are what was written down.
+ *
+ * The last column is each student's quarter grade on record, from
+ * `/offerings/{id}/quarter-grades/?quarter=` — read-only here; it is set in the
+ * quarter grades modal. A percentage mean would only be a second, competing
+ * answer to the question the quarter grade already answers.
  *
  * It is also where marks are *entered*. A cell the caller says is writable is
  * an input, saved on its own the moment the teacher leaves it — see "Saving one
@@ -364,6 +377,8 @@ const props = defineProps<{
    * dimmed so they still read as switched off.
    */
   showInactive?: boolean
+  /** Bumped by the caller after quarter grades were saved, to refetch only them. */
+  quarterGradesVersion?: number
 }>()
 
 const emit = defineEmits<{
@@ -389,7 +404,17 @@ const CATEGORY_DOTS: Record<AssignmentCategory | (string & {}), string> = {
   homework: 'bg-purple-500',
 }
 
+/** Same hues as the quarter grades modal, so a grade keeps one colour. */
+const GRADE_BADGES: Record<number, string> = {
+  5: 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400',
+  4: 'bg-blue-light-50 text-blue-light-700 dark:bg-blue-light-500/10 dark:text-blue-light-400',
+  3: 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400',
+  2: 'bg-error-50 text-error-700 dark:bg-error-500/10 dark:text-error-400',
+}
+
 const data = ref<GradeGrid | null>(null)
+/** Student profile id → quarter grade on record. */
+const quarterGrades = ref<Record<number, number>>({})
 /** The full assignment records of the last load, for the edit modal. */
 const loadedAssignments = ref<OfferingGradesAssignment[]>([])
 const loading = ref(true)
@@ -408,17 +433,30 @@ const savedTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const students = computed(() => data.value?.students ?? [])
 /**
  * Over the columns on screen only: with "Show inactive" off, a hidden
- * assignment's marks do not move anyone's average. Computed, so a saved mark
+ * assignment's marks do not move the class average. Computed, so a saved mark
  * (written into the grid by `applyGradeToGrid`) updates them with no refetch.
  * Unmarked cells are left out, so one mark of 60% averages 60, not 6.
  */
-const means = computed(() =>
+const columnMeans = computed(() =>
   data.value
-    ? gridMeans(data.value, columns.value.map(column => column.index))
-    : { rowMeans: [] as number[], columnMeans: [] as number[] },
+    ? gridMeans(data.value, columns.value.map(column => column.index)).columnMeans
+    : ([] as number[]),
 )
-const rowMeans = computed(() => means.value.rowMeans)
-const columnMeans = computed(() => means.value.columnMeans)
+
+/** The roster's quarter grades only — a grade for someone no longer listed does not count. */
+const quarterGradeValues = computed(() =>
+  students.value
+    .map(student => quarterGrades.value[student.id])
+    .filter((grade): grade is number => grade != null),
+)
+
+/** The class's mean quarter grade, to one decimal; a dash before any is set. */
+const quarterGradeMean = computed(() => {
+  const values = quarterGradeValues.value
+  if (!values.length) return '—'
+  const mean = values.reduce((sum, grade) => sum + grade, 0) / values.length
+  return (Math.round(mean * 10) / 10).toLocaleString(undefined, { maximumFractionDigits: 1 })
+})
 const studentCount = computed(() => data.value?.class_size ?? students.value.length)
 
 /**
@@ -444,7 +482,7 @@ const columns = computed<Column[]>(() =>
  * gradebook rules its columns in the same places.
  */
 const NAME_COLUMN_WIDTH = 200
-const AVERAGE_COLUMN_WIDTH = 72
+const QUARTER_COLUMN_WIDTH = 96
 /** The narrowest a grade column is allowed to get; see `gradeColumnWidth`. */
 const MIN_GRADE_COLUMN_WIDTH = 80
 /** Held to on a card too narrow to fit that many columns, which then scrolls. */
@@ -473,7 +511,7 @@ onBeforeUnmount(() => {
 
 /** What the grade columns have to share, once the fixed two have taken theirs. */
 const gradeSpace = computed(() =>
-  Math.max(0, cardWidth.value - NAME_COLUMN_WIDTH - AVERAGE_COLUMN_WIDTH),
+  Math.max(0, cardWidth.value - NAME_COLUMN_WIDTH - QUARTER_COLUMN_WIDTH),
 )
 
 /**
@@ -502,7 +540,7 @@ const displayColumnCount = computed(() =>
 const fillerColumns = computed(() => displayColumnCount.value - columns.value.length)
 
 const nameColumnStyle = { width: `${NAME_COLUMN_WIDTH}px` }
-const averageColumnStyle = { width: `${AVERAGE_COLUMN_WIDTH}px` }
+const quarterColumnStyle = { width: `${QUARTER_COLUMN_WIDTH}px` }
 const gradeColumnStyle = computed(() => ({ width: `${gradeColumnWidth.value}px` }))
 
 /**
@@ -514,7 +552,7 @@ const gradeColumnStyle = computed(() => ({ width: `${gradeColumnWidth.value}px` 
  */
 const tableMinWidth = computed(
   () =>
-    `${NAME_COLUMN_WIDTH + displayColumnCount.value * gradeColumnWidth.value + AVERAGE_COLUMN_WIDTH}px`,
+    `${NAME_COLUMN_WIDTH + displayColumnCount.value * gradeColumnWidth.value + QUARTER_COLUMN_WIDTH}px`,
 )
 
 const assignmentById = computed(
@@ -755,30 +793,18 @@ function columnTitle(column: Column): string {
   ].join('\n')
 }
 
-/** A row of dashes has a mean of `0.0` that would read as a class of zeroes. */
-function hasAnyGrade(rowIndex: number): boolean {
-  return columns.value.some(column => isGraded(rowIndex, column))
-}
-
-/**
- * The mean's divisor is the marks entered, not the columns shown — a single
- * mark of 60% averages 60, not 60 spread over the term. Said out loud here,
- * because the number alone hides how much is behind it.
- */
-function rowMeanTitle(rowIndex: number): string {
-  const graded = columns.value.filter(column => isGraded(rowIndex, column)).length
-  if (!graded) return t('statistics.notGraded')
-  const total = columns.value.filter(column => isScored(column.assignment)).length
-  return t('statistics.rowMeanHint', { graded, total })
-}
-
 const roster = useClassRoster()
+
+async function fetchQuarterGrades(): Promise<Record<number, number>> {
+  const { data: rows } = await getQuarterGradesApi(props.offeringId, props.quarter)
+  return Object.fromEntries(rows.map(row => [row.student, row.grade]))
+}
 
 async function load() {
   loading.value = true
   loadError.value = false
   try {
-    const [assignments, students] = await Promise.all([
+    const [assignments, students, savedQuarterGrades] = await Promise.all([
       props.grades ??
         getAllOfferingGradesApi(props.offeringId, {
           quarter: props.quarter,
@@ -787,16 +813,19 @@ async function load() {
           date_to: props.dateTo || undefined,
         }),
       roster.get(props.classGroupId),
+      fetchQuarterGrades(),
     ])
     const { grid, records } = buildGradeGrid(assignments, students)
     loadedAssignments.value = assignments
     data.value = grid
     gradeRecords.value = records
+    quarterGrades.value = savedQuarterGrades
     resetDrafts()
   } catch {
     data.value = null
     loadedAssignments.value = []
     gradeRecords.value = {}
+    quarterGrades.value = {}
     resetDrafts()
     loadError.value = true
   } finally {
@@ -957,5 +986,18 @@ watch(
         ],
   load,
   { immediate: true },
+)
+
+// Saved quarter grades touch only the last column, so only it is refetched —
+// a full reload would throw away the teacher's place in the grid.
+watch(
+  () => props.quarterGradesVersion,
+  async () => {
+    try {
+      quarterGrades.value = await fetchQuarterGrades()
+    } catch {
+      // The column keeps its last good copy; the interceptor reports the failure.
+    }
+  },
 )
 </script>

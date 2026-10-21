@@ -200,6 +200,7 @@
             :date-to="filters.dateTo"
             :writable-assignment-ids="writableAssignmentIds(group.offeringId)"
             :show-inactive="filters.showInactive"
+            :quarter-grades-version="quarterGradesVersions[group.offeringId]"
             @edit-assignment="openEdit"
           />
           <!-- Its grades are still on the way; without them the table would
@@ -298,6 +299,7 @@
         :offerings="assignmentOfferings"
         :offerings-loading="offeringsLoading"
         @close="quarterGradesOpen = false"
+        @saved="onQuarterGradesSaved"
       />
       <!-- One offering's class against the assignments on this page — the same
            record the table lists, not the lesson-topic gradebook a subject's own
@@ -485,6 +487,15 @@ async function reloadOffering(offeringId: number) {
 
 const formOpen = ref(false)
 const quarterGradesOpen = ref(false)
+/** Offering id → bumped per quarter-grade save, so that table refetches its column. */
+const quarterGradesVersions = ref<Record<number, number>>({})
+
+function onQuarterGradesSaved(offeringId: number) {
+  quarterGradesVersions.value = {
+    ...quarterGradesVersions.value,
+    [offeringId]: (quarterGradesVersions.value[offeringId] ?? 0) + 1,
+  }
+}
 const statisticsOpen = ref(false)
 const reportOpen = ref(false)
 
