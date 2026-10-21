@@ -580,7 +580,11 @@ const props = defineProps<{
   offeringsLoading?: boolean
 }>()
 
-const emit = defineEmits<{ (e: 'close'): void }>()
+const emit = defineEmits<{
+  (e: 'close'): void
+  /** Some quarter grades of this offering were written, even if not all. */
+  (e: 'saved', offeringId: number): void
+}>()
 
 const { t } = useI18n()
 const { success } = useToast()
@@ -1248,8 +1252,10 @@ async function submit() {
       await deleteQuarterGradesApi(id, quarterNumber, remove)
     }
     success(t('quarterGrades.submitted'))
+    emit('saved', id)
     emit('close')
   } catch (error) {
+    if (savedSomething) emit('saved', id)
     const { perStudent, general } = readSubmitError(error)
     studentErrors.value = perStudent
     submitError.value = [general, savedSomething ? t('quarterGrades.partialSaved') : '']
