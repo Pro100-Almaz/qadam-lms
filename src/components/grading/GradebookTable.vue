@@ -33,13 +33,9 @@
       <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ t('assignments.noStudentsInClass') }}</p>
     </div>
 
-    <!-- No columns -->
-    <div v-else-if="!columns.length" class="px-5 py-12 text-center">
-      <ClipboardList class="mx-auto h-8 w-8 text-gray-400" />
-      <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ t('assignments.noGradebookColumns') }}</p>
-    </div>
-
-    <!-- The gradebook: students down, assignments across in academic-date order. -->
+    <!-- The gradebook: students down, assignments across in academic-date order.
+         Drawn even with no assignments: an offering can still carry quarter
+         grades, and the filler columns keep the grid's shape around them. -->
     <div v-else class="max-w-full overflow-x-auto custom-scrollbar">
       <table class="w-full table-fixed border-collapse" :style="{ minWidth: tableMinWidth }">
         <colgroup>
@@ -302,7 +298,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, CircleAlert, ClipboardList, Loader2, Users } from 'lucide-vue-next'
+import { Check, CircleAlert, Loader2, Users } from 'lucide-vue-next'
 import type { AssignmentCategory, HeatmapAssignment } from '@/api/analytics'
 import {
   createAssignmentGradeApi,
