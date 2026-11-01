@@ -189,6 +189,7 @@
         "signIn": "Войти",
         "signUp": "Регистрация",
         "signOut": "Выйти",
+        "enterAs": "Войти как",
         "email": "Электронная почта",
         "password": "Пароль",
         "enterCredentials": "Введите почту и пароль для входа",
@@ -271,7 +272,9 @@
             "student": "Ученик",
             "supervisor": "Супервайзер",
             "principal": "Директор",
-            "parent": "Родитель"
+            "parent": "Родитель",
+            "clubManager": "Руководитель кружка",
+            "psychologist": "Психолог"
         }
     },
     "dashboard": {

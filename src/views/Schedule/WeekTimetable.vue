@@ -178,9 +178,7 @@ import type { ClassGroup } from '@/types/academic'
 import type { ParentChild } from '@/types/parentSelf'
 
 const { t } = useI18n()
-const { user } = useAuth()
-
-const roles = computed(() => user.value?.roles)
+const { activeRoles: roles } = useAuth()
 const isAdmin = computed(() =>
   (['admin', 'supervisor', 'principal'] as UserRole[]).some(role => roles.value?.includes(role)),
 )

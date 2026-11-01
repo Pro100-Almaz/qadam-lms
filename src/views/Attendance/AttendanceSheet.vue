@@ -420,10 +420,9 @@ import {
 } from '@/utils/attendanceWeeks'
 
 const { t, locale } = useI18n()
-const { user } = useAuth()
+const { activeRoles: roles } = useAuth()
 const toast = useToast()
 
-const roles = computed(() => user.value?.roles)
 const canView = computed(() =>
   (['teacher', 'homeroom_teacher'] as UserRole[]).some(role => roles.value?.includes(role)),
 )

@@ -219,7 +219,7 @@ import type { Student } from '@/types/student'
 import type { HomeroomClass } from '@/types/teacherDashboard'
 
 const { t } = useI18n()
-const { user: authUser } = useAuth()
+const { activeRoles } = useAuth()
 
 /** The row whose statistics the shared modal is showing, or `null` when closed. */
 const statsStudent = ref<StatisticsStudentTarget | null>(null)
@@ -231,7 +231,7 @@ const noClass = ref(false)
 const students = ref<Student[]>([])
 const myClass = ref<HomeroomClass | null>(null)
 
-const isHomeroomTeacher = computed(() => authUser.value?.roles.includes('homeroom_teacher'))
+const isHomeroomTeacher = computed(() => activeRoles.value.includes('homeroom_teacher'))
 
 type ClassView = 'students' | 'subjects'
 

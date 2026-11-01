@@ -564,7 +564,7 @@ import { currentIntlLocale } from '@/i18n'
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const { user: authUser } = useAuth()
+const { activeRoles } = useAuth()
 
 const subjectId = computed(() => Number(route.params.id))
 
@@ -604,11 +604,11 @@ const activeOfferingId = computed<number | null>(() => {
 })
 
 const canAddLesson = computed(() =>
-  authUser.value?.roles.some((role) => ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'].includes(role))
+  activeRoles.value.some((role) => ['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'].includes(role))
 )
 // `/homeworks/create` is gated to teachers, so admins/supervisors must not see the button.
 const canAddHomework = computed(() =>
-  authUser.value?.roles.some((role) => ['teacher', 'homeroom_teacher'].includes(role))
+  activeRoles.value.some((role) => ['teacher', 'homeroom_teacher'].includes(role))
 )
 
 /** Opens the homework form with this subject preselected. */

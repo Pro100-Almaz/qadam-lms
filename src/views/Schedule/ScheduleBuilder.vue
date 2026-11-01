@@ -370,10 +370,9 @@ import type { ClassGroup } from '@/types/academic'
 import type { TeachingAssignment } from '@/types/teachingAssignment'
 
 const { t } = useI18n()
-const { user } = useAuth()
+const { activeRoles: roles } = useAuth()
 const toast = useToast()
 
-const roles = computed(() => user.value?.roles)
 const isAdmin = computed(() =>
   (['admin', 'supervisor', 'principal'] as UserRole[]).some(role => roles.value?.includes(role)),
 )

@@ -29,7 +29,7 @@
           </h1>
           <div class="mt-2 flex flex-wrap gap-2">
             <span
-              v-for="role in dashboard.roles"
+              v-for="role in visibleDashboardRoles"
               :key="role"
               class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
               :class="roleBadgeClass(role)"
@@ -189,21 +189,40 @@ import PsychologistTab from './PsychologistTab.vue'
 import MyStudentsTab from './MyStudentsTab.vue'
 import { getTeacherDashboardApi } from '@/api/teacherDashboard'
 import type { TeacherDashboardResponse } from '@/types/teacherDashboard'
+import { useAuth } from '@/composables/useAuth'
 
 const { t } = useI18n()
+const { activeRoles } = useAuth()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
 const dashboard = ref<TeacherDashboardResponse | null>(null)
 const activeTab = ref('lessons')
+const teacherIsActive = computed(() => activeRoles.value.includes('teacher'))
+const psychologistIsActive = computed(() => activeRoles.value.includes('psychologist'))
+
+const visibleDashboardRoles = computed(() => {
+  if (!dashboard.value) return []
+  return dashboard.value.roles.filter(role => {
+    if (role === 'Psychologist') return psychologistIsActive.value
+    if (role === 'Teacher' || role === 'HomeroomTeacher') return teacherIsActive.value
+    return false
+  })
+})
 
 const tabs = computed(() => {
   if (!dashboard.value) return []
   const result: { key: string; label: string }[] = []
-  if (dashboard.value.dashboards.lesson_teacher) result.push({ key: 'lessons', label: t('teacherDashboard.mySubjects') })
-  result.push({ key: 'my-students', label: t('teacherDashboard.myStudentsTab') })
-  if (dashboard.value.dashboards.homeroom_teacher) result.push({ key: 'my-class', label: t('teacherDashboard.myClass') })
-  if (dashboard.value.dashboards.psychologist) result.push({ key: 'psychologist', label: t('teacherDashboard.psychStates') })
+  if (teacherIsActive.value && dashboard.value.dashboards.lesson_teacher) {
+    result.push({ key: 'lessons', label: t('teacherDashboard.mySubjects') })
+  }
+  if (teacherIsActive.value) result.push({ key: 'my-students', label: t('teacherDashboard.myStudentsTab') })
+  if (teacherIsActive.value && dashboard.value.dashboards.homeroom_teacher) {
+    result.push({ key: 'my-class', label: t('teacherDashboard.myClass') })
+  }
+  if (psychologistIsActive.value && dashboard.value.dashboards.psychologist) {
+    result.push({ key: 'psychologist', label: t('teacherDashboard.psychStates') })
+  }
   return result
 })
 
@@ -231,9 +250,9 @@ async function fetchDashboard() {
   try {
     const { data } = await getTeacherDashboardApi()
     dashboard.value = data
-    if (data.dashboards.lesson_teacher) activeTab.value = 'lessons'
-    else if (data.dashboards.homeroom_teacher) activeTab.value = 'my-class'
-    else if (data.dashboards.psychologist) activeTab.value = 'psychologist'
+    if (teacherIsActive.value && data.dashboards.lesson_teacher) activeTab.value = 'lessons'
+    else if (teacherIsActive.value && data.dashboards.homeroom_teacher) activeTab.value = 'my-class'
+    else if (psychologistIsActive.value && data.dashboards.psychologist) activeTab.value = 'psychologist'
   } catch {
     error.value = t('teacherDashboard.loadError')
   } finally {

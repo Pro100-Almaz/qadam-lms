@@ -271,13 +271,13 @@ import type { StudentDetail } from '@/types/student'
 import { currentIntlLocale } from '@/i18n'
 
 const { t } = useI18n()
-const { user: authUser } = useAuth()
+const { user: authUser, activeRoles } = useAuth()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
 const student = ref<StudentDetail | null>(null)
 
-const isParent = computed(() => authUser.value?.roles.includes('parent'))
+const isParent = computed(() => activeRoles.value.includes('parent'))
 
 const fullName = computed(() => {
   if (!student.value) return ''

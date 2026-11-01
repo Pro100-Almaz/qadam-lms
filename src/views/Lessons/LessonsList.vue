@@ -481,9 +481,9 @@ import { currentIntlLocale } from '@/i18n'
 
 const { t } = useI18n()
 const router = useRouter()
-const { user: authUser } = useAuth()
+const { activeRoles } = useAuth()
 const { quarter: currentQuarter, load: loadCurrentQuarter } = useCurrentQuarter()
-const canAddLesson = computed(() => !authUser.value?.roles.includes('parent'))
+const canAddLesson = computed(() => !activeRoles.value.includes('parent'))
 
 type ViewType = 'month' | 'week' | 'day'
 const views: ViewType[] = ['month', 'week', 'day']

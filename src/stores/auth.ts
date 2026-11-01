@@ -3,41 +3,108 @@ import { ref, computed } from 'vue'
 import { loginApi, logoutApi, getMeApi, updateProfileApi, uploadAvatarApi } from '@/api/auth'
 import { setAccessToken, refreshAccessToken } from '@/api/client'
 import type { User, UserRole } from '@/types/auth'
+import type { SelectableUserRole } from '@/types/auth'
+import { getActiveRoles, getAvailableRoles, normalizeSelectableRole } from '@/utils/roles'
 import axios from 'axios'
+
+const ACTIVE_ROLE_STORAGE_KEY = 'qadam-lms.active-role'
+
+interface StoredActiveRole {
+  userId: number
+  role: SelectableUserRole
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const isSessionLoading = ref(true)
+  const activeRole = ref<SelectableUserRole | null>(null)
 
   const isAuthenticated = computed(() => !!user.value)
-  const userRoles = computed(() => user.value?.roles ?? null)
+  const assignedRoles = computed<UserRole[]>(() => user.value?.roles ?? [])
+  const availableRoles = computed(() => getAvailableRoles(assignedRoles.value))
+  const activeRoles = computed(() => getActiveRoles(activeRole.value, assignedRoles.value))
+  // Keep the established store property as the permission-oriented role list.
+  const userRoles = computed(() => activeRoles.value)
 
   const isAdmin = computed(() =>
-    userRoles.value?.some(role => (['admin', 'supervisor', 'principal'] as UserRole[]).includes(role))
+    userRoles.value.some(role => (['admin', 'supervisor', 'principal'] as UserRole[]).includes(role))
   )
   const isStaff = computed(() =>
-    userRoles.value?.some(role => (['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'] as UserRole[]).includes(role))
+    userRoles.value.some(role => (['admin', 'teacher', 'homeroom_teacher', 'supervisor', 'principal'] as UserRole[]).includes(role))
   )
-  const isStudent = computed(() => userRoles.value?.includes('student'))
-  const isParent = computed(() => userRoles.value?.includes('parent'))
+  const isStudent = computed(() => userRoles.value.includes('student'))
+  const isParent = computed(() => userRoles.value.includes('parent'))
   const isTeacher = computed(() =>
-    userRoles.value?.some(role => (['teacher', 'homeroom_teacher'] as UserRole[]).includes(role))
+    userRoles.value.some(role => (['teacher', 'homeroom_teacher'] as UserRole[]).includes(role))
   )
+
+  function readStoredActiveRole(): StoredActiveRole | null {
+    try {
+      const value = sessionStorage.getItem(ACTIVE_ROLE_STORAGE_KEY)
+      return value ? JSON.parse(value) as StoredActiveRole : null
+    } catch {
+      return null
+    }
+  }
+
+  function persistActiveRole() {
+    if (!user.value || !activeRole.value) {
+      sessionStorage.removeItem(ACTIVE_ROLE_STORAGE_KEY)
+      return
+    }
+    sessionStorage.setItem(ACTIVE_ROLE_STORAGE_KEY, JSON.stringify({
+      userId: user.value.id,
+      role: activeRole.value,
+    } satisfies StoredActiveRole))
+  }
+
+  function reconcileActiveRole() {
+    if (!user.value) {
+      activeRole.value = null
+      sessionStorage.removeItem(ACTIVE_ROLE_STORAGE_KEY)
+      return
+    }
+
+    const roles = availableRoles.value
+    const stored = readStoredActiveRole()
+    const primaryRole = normalizeSelectableRole(user.value.primary_group)
+    activeRole.value =
+      (stored?.userId === user.value.id && roles.includes(stored.role) ? stored.role : null)
+      ?? (primaryRole && roles.includes(primaryRole) ? primaryRole : null)
+      ?? roles[0]
+      ?? null
+    persistActiveRole()
+  }
+
+  function setActiveRole(role: SelectableUserRole): boolean {
+    if (!availableRoles.value.includes(role)) return false
+    activeRole.value = role
+    persistActiveRole()
+    return true
+  }
+
+  function clearAuthState() {
+    user.value = null
+    activeRole.value = null
+    sessionStorage.removeItem(ACTIVE_ROLE_STORAGE_KEY)
+    setAccessToken(null)
+    localStorage.removeItem('refresh_token')
+  }
 
   async function fetchCurrentUser() {
     try {
       const { data } = await getMeApi()
       user.value = data
+      reconcileActiveRole()
     } catch {
-      user.value = null
-      localStorage.removeItem('refresh_token')
-      setAccessToken(null)
+      clearAuthState()
     }
   }
 
   async function initSession() {
     const refreshToken = localStorage.getItem('refresh_token')
     if (!refreshToken) {
+      clearAuthState()
       isSessionLoading.value = false
       return
     }
@@ -60,6 +127,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await loginApi({ username, password })
       user.value = data.user
+      reconcileActiveRole()
       setAccessToken(data.tokens.access)
       localStorage.setItem('refresh_token', data.tokens.refresh)
       return { success: true }
@@ -76,9 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (refresh) {
       logoutApi(refresh).catch(() => {})
     }
-    user.value = null
-    setAccessToken(null)
-    localStorage.removeItem('refresh_token')
+    clearAuthState()
   }
 
   async function updateProfile(
@@ -87,6 +153,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data: updated } = await updateProfileApi(data)
       user.value = updated
+      reconcileActiveRole()
       return { success: true }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 400) {
@@ -115,15 +182,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Listen for forced logout from 401 interceptor
   window.addEventListener('auth:logout', () => {
-    user.value = null
-    setAccessToken(null)
-    localStorage.removeItem('refresh_token')
+    clearAuthState()
     window.location.href = '/signin'
   })
 
   return {
     user, isSessionLoading, isAuthenticated,
-    userRoles, isAdmin, isStaff, isStudent, isParent, isTeacher,
+    assignedRoles, availableRoles, activeRole, activeRoles, userRoles,
+    isAdmin, isStaff, isStudent, isParent, isTeacher,
+    setActiveRole,
     login, logout, initSession, fetchCurrentUser,
     updateProfile, uploadAvatar,
   }
