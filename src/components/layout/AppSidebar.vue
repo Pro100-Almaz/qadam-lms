@@ -266,11 +266,9 @@ interface MenuGroup {
 
 const route = useRoute();
 const { t } = useI18n();
-const { user } = useAuth();
+const { activeRoles: roles } = useAuth();
 
 const { isExpanded, isMobileOpen, isHovered, openSubmenu, toggleMobileSidebar } = useSidebar();
-
-const roles = computed(() => user.value?.roles);
 
 const isStudent = computed(() => roles.value?.includes('student'));
 const isParent = computed(() => roles.value?.includes('parent'));

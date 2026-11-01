@@ -135,7 +135,7 @@ import { useAuth } from '@/composables/useAuth'
 import type { MySubject } from '@/types/studentSelf'
 
 const { t } = useI18n()
-const { user } = useAuth()
+const { user, activeRoles } = useAuth()
 
 const subjects = ref<MySubject[]>([])
 const loading = ref(false)
@@ -144,7 +144,9 @@ const loading = ref(false)
  * `profile_id` is the Student pk for a student — the id `/grade/student/<id>/`
  * expects, and a different number from `user.id`.
  */
-const myStudentId = computed(() => user.value?.profile_id ?? null)
+const myStudentId = computed(() =>
+  activeRoles.value.includes('student') ? user.value?.profile_id ?? null : null,
+)
 
 const reportSubjects = computed<GradeReportSubjectOption[]>(() =>
   subjects.value.map(subject => ({ id: subject.subject_id, name: subject.subject_name })),
@@ -161,8 +163,9 @@ function teacherInitials(name?: string | null): string {
 
 function gradeColor(grade: number | null | undefined): string {
   if (grade == null) return 'text-gray-400 dark:text-gray-500'
-  if (grade > 80) return 'text-success-600 dark:text-success-400'
-  if (grade > 60) return 'text-warning-600 dark:text-warning-400'
+  if (grade >= 5) return 'text-success-600 dark:text-success-400'
+  if (grade >= 4) return 'text-brand-600 dark:text-brand-400'
+  if (grade >= 3) return 'text-warning-600 dark:text-warning-400'
   return 'text-error-600 dark:text-error-400'
 }
 

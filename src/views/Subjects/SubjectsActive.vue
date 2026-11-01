@@ -439,8 +439,8 @@ import { formatUserName } from '@/utils/userName'
 import { formatLanguageGroup } from '@/utils/subjectLanguage'
 
 const { t } = useI18n()
-const { user: authUser } = useAuth()
-const isAdmin = computed(() => authUser.value?.roles.some(role => ['admin', 'supervisor', 'principal'].includes(role)))
+const { activeRoles } = useAuth()
+const isAdmin = computed(() => activeRoles.value.some(role => ['admin', 'supervisor', 'principal'].includes(role)))
 const router = useRouter()
 
 const subjects = ref<Subject[]>([])

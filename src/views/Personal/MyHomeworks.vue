@@ -22,7 +22,7 @@ import { getMySubjectsApi } from '@/api/studentSelf'
 import { useAuth } from '@/composables/useAuth'
 
 const { t } = useI18n()
-const { user } = useAuth()
+const { user, activeRoles } = useAuth()
 
 const subjects = ref<HomeworkSubjectOption[]>([])
 
@@ -32,7 +32,7 @@ const subjects = ref<HomeworkSubjectOption[]>([])
  * means "student" once the role confirms it.
  */
 const studentId = computed(() =>
-  user.value?.roles.includes('student') ? user.value.profile_id ?? 0 : 0,
+  activeRoles.value.includes('student') ? user.value?.profile_id ?? 0 : 0,
 )
 
 onMounted(() => {

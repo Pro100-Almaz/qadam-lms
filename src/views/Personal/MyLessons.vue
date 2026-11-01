@@ -147,7 +147,7 @@ import { currentIntlLocale } from '@/i18n'
 import type { Lesson } from '@/types/lesson'
 
 const { t } = useI18n()
-const { user: authUser } = useAuth()
+const { activeRoles } = useAuth()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -155,8 +155,7 @@ const lessons = ref<Lesson[]>([])
 const selectedQuarter = ref(0)
 
 const isTeacher = computed(() => {
-  const roles = authUser.value?.roles
-  return roles?.includes('teacher') || roles?.includes('homeroom_teacher')
+  return activeRoles.value.includes('teacher') || activeRoles.value.includes('homeroom_teacher')
 })
 
 const filteredLessons = computed(() => {

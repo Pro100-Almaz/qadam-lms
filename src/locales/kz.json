@@ -189,6 +189,7 @@
         "signIn": "Кіру",
         "signUp": "Тіркелу",
         "signOut": "Шығу",
+        "enterAs": "Рөлмен кіру",
         "email": "Электрондық пошта",
         "password": "Құпия сөз",
         "enterCredentials": "Кіру үшін поштаңыз бен құпия сөзіңізді енгізіңіз",
@@ -271,7 +272,9 @@
             "student": "Оқушы",
             "supervisor": "Супервайзер",
             "principal": "Директор",
-            "parent": "Ата-ана"
+            "parent": "Ата-ана",
+            "clubManager": "Үйірме жетекшісі",
+            "psychologist": "Психолог"
         }
     },
     "dashboard": {

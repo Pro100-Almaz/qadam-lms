@@ -9,6 +9,9 @@ export type UserRole =
   | 'clubmanager'
   | 'psychologist'
 
+/** Roles a user can explicitly enter in the UI. Homeroom is part of Teacher. */
+export type SelectableUserRole = Exclude<UserRole, 'homeroom_teacher'>
+
 export interface User {
   id: number
   username: string

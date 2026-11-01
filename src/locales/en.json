@@ -189,6 +189,7 @@
         "signIn": "Sign In",
         "signUp": "Sign Up",
         "signOut": "Sign Out",
+        "enterAs": "Enter as",
         "email": "Email",
         "password": "Password",
         "enterCredentials": "Enter your email and password to sign in",
@@ -271,7 +272,9 @@
             "student": "Student",
             "supervisor": "Supervisor",
             "principal": "Principal",
-            "parent": "Parent"
+            "parent": "Parent",
+            "clubManager": "Club Manager",
+            "psychologist": "Psychologist"
         }
     },
     "dashboard": {

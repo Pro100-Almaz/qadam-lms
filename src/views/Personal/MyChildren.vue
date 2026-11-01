@@ -120,8 +120,9 @@ function initials(name: string): string {
 
 function gradeColor(grade: number | null | undefined): string {
   if (grade == null) return 'text-gray-400 dark:text-gray-500'
-  if (grade > 80) return 'text-success-600 dark:text-success-400'
-  if (grade > 60) return 'text-warning-600 dark:text-warning-400'
+  if (grade >= 5) return 'text-success-600 dark:text-success-400'
+  if (grade >= 4) return 'text-brand-600 dark:text-brand-400'
+  if (grade >= 3) return 'text-warning-600 dark:text-warning-400'
   return 'text-error-600 dark:text-error-400'
 }
 

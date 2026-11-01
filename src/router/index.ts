@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { UserRole } from '@/types/auth'
 import { useAuthStore } from '@/stores/auth'
 import i18n from '@/i18n'
+import { getRoleHome } from '@/utils/roles'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -348,15 +349,6 @@ const router = createRouter({
   ],
 })
 
-function getDefaultRoute(roles: UserRole[]): string {
-  if (roles.length === 0) return '/'
-  if (roles.includes('student')) return '/my-subjects'
-  if (roles.includes('parent')) return '/my-children'
-  if (roles.includes('clubmanager')) return '/clubs'
-  if (roles.includes('psychologist')) return '/students'
-  return '/subjects/active'
-}
-
 /** `titleKey` resolved in the current locale, suffixed with the app name. */
 function resolvePageTitle(titleKey?: string): string {
   const { t } = i18n.global
@@ -383,11 +375,11 @@ router.beforeEach(async (to, from, next) => {
   }
 
   const isAuthenticated = authStore.isAuthenticated
-  const roles = authStore.user?.roles || []
+  const roles = authStore.activeRoles
 
   if (to.meta.guest) {
     if (isAuthenticated && to.name === 'Signin') {
-      return next(getDefaultRoute(roles))
+      return next(getRoleHome(authStore.activeRole))
     }
     return next()
   }
@@ -398,12 +390,12 @@ router.beforeEach(async (to, from, next) => {
 
   // Role-based home redirect
   if (to.name === 'Home') {
-    return next(getDefaultRoute(roles))
+    return next(getRoleHome(authStore.activeRole))
   }
 
   // Role-based route guard
   if (to.meta.roles && roles && !to.meta.roles.some((role) => roles.includes(role))) {
-    return next(getDefaultRoute(roles))
+    return next(getRoleHome(authStore.activeRole))
   }
 
   next()

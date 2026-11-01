@@ -19,10 +19,9 @@ const TEACHER_ROLES: UserRole[] = ['teacher', 'homeroom_teacher']
  * a row being visible is *not* proof it is writable — always ask `canManage()`.
  */
 export function useAssignmentPermissions() {
-  const { user } = useAuth()
+  const { activeRoles: roles } = useAuth()
   const offerings = useTeacherOfferings()
 
-  const roles = computed(() => user.value?.roles ?? [])
   const isTeacher = computed(() => TEACHER_ROLES.some(role => roles.value.includes(role)))
 
   const taughtOfferingIds = computed(

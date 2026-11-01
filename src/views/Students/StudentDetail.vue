@@ -1187,15 +1187,15 @@ import { currentIntlLocale } from '@/i18n'
 // ─── i18n / route ────────────────────────────────────────────────────────────
 const { t } = useI18n()
 const route = useRoute()
-const { user: authUser } = useAuth()
+const { activeRoles } = useAuth()
 const isAdmin = computed(() =>
-  authUser.value?.roles.some(role => ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal', 'psychologist'].includes(role))
+  activeRoles.value.some(role => ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal', 'psychologist'].includes(role))
 )
 
-const isHomeroomTeacher = computed(() => authUser.value?.roles.includes('homeroom_teacher') ?? false)
+const isHomeroomTeacher = computed(() => activeRoles.value.includes('homeroom_teacher'))
 
 const canGenerateReport = computed(() =>
-  authUser.value?.roles.some(role => ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(role))
+  activeRoles.value.some(role => ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(role))
 )
 
 const showReportModal = ref(false)
@@ -1222,9 +1222,9 @@ const activeTab = ref<'subjects' | 'grades' | 'homeworks' | 'clubs' | 'psych' | 
  * grades through the homework list instead.
  */
 const canViewHomeworks = computed(() =>
-  authUser.value?.roles.some(role =>
+  activeRoles.value.some(role =>
     ['homeroom_teacher', 'psychologist', 'admin', 'principal', 'supervisor'].includes(role),
-  ) ?? false,
+  ),
 )
 
 const tabs = computed(() => [

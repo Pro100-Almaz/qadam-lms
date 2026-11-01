@@ -19,10 +19,9 @@ const TEACHER_ROLES: UserRole[] = ['teacher', 'homeroom_teacher']
  * homework but may only touch the offerings they personally teach.
  */
 export function useHomeworkPermissions() {
-  const { user } = useAuth()
+  const { user, activeRoles: roles } = useAuth()
   const offerings = useTeacherOfferings()
 
-  const roles = computed(() => user.value?.roles ?? [])
   const isTeacher = computed(() => TEACHER_ROLES.some(role => roles.value.includes(role)))
   const isReadOnlyStaff = computed(() => READ_ONLY_STAFF_ROLES.some(role => roles.value.includes(role)))
 
