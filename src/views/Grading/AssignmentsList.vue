@@ -235,6 +235,7 @@
     <AssignmentFormModal
       :open="formOpen"
       :assignment="formTarget"
+      :default-quarter="filters.quarter"
       :subject-groups="subjectGroups"
       :offerings-loading="offeringsLoading"
       @close="formOpen = false"
@@ -362,6 +363,7 @@ import { matchSubjectNames } from '@/composables/useSubjectNameLookup'
 import { useToast } from '@/composables/useToast'
 import type { LanguageGroup, Subject } from '@/types/subject'
 import type { TeacherOffering } from '@/types/teacherDashboard'
+import type { Quarter } from '@/types/teachingAssignment'
 
 const { t } = useI18n()
 const { success } = useToast()
@@ -405,7 +407,7 @@ const DEFAULT_QUARTER = 1
 
 const filters = ref({
   /** 1–4, always set: the assignment's own `quarter`, not its date. */
-  quarter: DEFAULT_QUARTER,
+  quarter: DEFAULT_QUARTER as Quarter,
   subject: null as number | string | null,
   classGroup: null as number | string | null,
   category: null as number | string | null,
@@ -470,7 +472,7 @@ async function reloadOffering(offeringId: number) {
   const request = fetchSeq
   try {
     const [{ data }, grades] = await Promise.all([
-      getTeacherOfferingsApi(TABLE_PARAMS),
+      getTeacherOfferingsApi({ ...TABLE_PARAMS, quarter: filters.value.quarter }),
       getAllOfferingGradesApi(offeringId, gradeParams()),
     ])
     // A filter change since then has refetched everything; this is stale.
@@ -537,6 +539,7 @@ function openCreate() {
 
 /** The gradebook's column header is the only way in: a click opens this. */
 function openEdit(assignment: SubjectAssignment) {
+  if (!canManage(assignment)) return
   formTarget.value = assignment
   formOpen.value = true
 }
@@ -562,12 +565,13 @@ const deleteBackdrop = useBackdropClose(() => {
 })
 
 function askDelete(assignment: SubjectAssignment) {
+  if (!canManage(assignment)) return
   deleteTarget.value = assignment
 }
 
 async function confirmDelete() {
   const target = deleteTarget.value
-  if (!target) return
+  if (!target || !canManage(target)) return
 
   deleting.value = true
   try {
@@ -670,7 +674,7 @@ const quarterModel = computed<number | string | null>({
   get: () => filters.value.quarter,
   set: value => {
     const picked = Number(value)
-    if (picked >= 1 && picked <= 4) filters.value.quarter = picked
+    if (picked >= 1 && picked <= 4) filters.value.quarter = picked as Quarter
   },
 })
 
@@ -724,7 +728,10 @@ async function fetchTables() {
   offeringGrades.value = {}
 
   try {
-    const { data } = await getTeacherOfferingsApi(TABLE_PARAMS)
+    const { data } = await getTeacherOfferingsApi({
+      ...TABLE_PARAMS,
+      quarter: filters.value.quarter,
+    })
     if (request !== fetchSeq) return
     tableOfferings.value = data.offerings
     // Called, not left to the paging watch: a filter change can leave the
@@ -768,11 +775,22 @@ function loadPageGrades() {
 watch(() => pagedGroups.value.map(group => group.offeringId).join(), loadPageGrades)
 
 /**
- * The grade filters leave the table list alone — the endpoint does not take
- * them — so only the grades are dropped and refetched for the page.
+ * Quarter changes invalidate offerings, picker options, and grades together.
+ * The remaining grade filters only invalidate the grade payloads.
  */
 watch(
-  () => [filters.value.quarter, filters.value.category, filters.value.dateFrom, filters.value.dateTo],
+  () => filters.value.quarter,
+  () => {
+    currentPage.value = 1
+    assignmentOfferings.value = []
+    tableOfferings.value = []
+    offeringGrades.value = {}
+    void Promise.all([loadFilterOptions(), fetchTables()])
+  },
+)
+
+watch(
+  () => [filters.value.category, filters.value.dateFrom, filters.value.dateTo],
   () => {
     fetchSeq++
     offeringGrades.value = {}
@@ -822,8 +840,8 @@ onMounted(async () => {
  */
 async function loadFilterOptions() {
   const [pickerResult] = await Promise.all([
-    getTeacherOfferingsApi(),
-    loadOfferings(),
+    getTeacherOfferingsApi({ quarter: filters.value.quarter }),
+    loadOfferings(filters.value.quarter),
     loadCategories(),
   ])
   assignmentOfferings.value = pickerResult.data.offerings

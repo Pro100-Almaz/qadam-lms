@@ -19,8 +19,8 @@ export function getTeacherDashboardApi() {
  * The caller's homeroom class. Homeroom teachers only: anyone else gets a 403,
  * admins included, and a 404 means no homeroom class this year.
  */
-export function getHomeroomClassApi() {
-  return api.get<HomeroomClass>('/homeroom/my-class/')
+export function getHomeroomClassApi(params?: { quarter?: number }) {
+  return api.get<HomeroomClass>('/homeroom/my-class/', { params })
 }
 
 export function getPsychologistDashboardApi() {
@@ -35,8 +35,8 @@ export function getTeacherWorkloadApi(params?: { teacher_id?: number; week_start
   return api.get<TeacherWorkload>('/dashboard/teacher-workload/', { params })
 }
 
-export function getTeacherMyClassesApi() {
-  return api.get<TeacherClassGroup[]>('/teacher/my-classes/')
+export function getTeacherMyClassesApi(params?: { quarter?: number }) {
+  return api.get<TeacherClassGroup[]>('/teacher/my-classes/', { params })
 }
 
 export function getClassStudentsApi(classGroupId: number, allSubjects = false) {

@@ -2,18 +2,48 @@
   <div class="space-y-5">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <h2 v-if="heading" class="text-base font-semibold text-gray-800 dark:text-white/90">{{ heading }}</h2>
-      <div class="w-full sm:ml-auto sm:w-56">
-        <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
-          {{ t('studentHomeworks.subject') }}
-        </label>
-        <SelectMenu
-          v-model="selectedSubject"
-          :options="subjectOptions"
-          :placeholder="t('studentHomeworks.allSubjects')"
-          :aria-label="t('studentHomeworks.subject')"
-          clearable
-          :clear-label="t('studentHomeworks.allSubjects')"
-        />
+      <div class="flex w-full flex-col gap-3 sm:ml-auto sm:w-auto sm:flex-row sm:items-end">
+        <div class="w-full sm:w-auto">
+          <span
+            id="homework-deadline-filter-label"
+            class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400"
+          >
+            {{ t('studentHomeworks.deadline') }}
+          </span>
+          <div
+            class="grid h-10 grid-cols-2 rounded-lg border border-gray-300 bg-white p-1 shadow-theme-xs dark:border-gray-700 dark:bg-gray-900"
+            role="group"
+            aria-labelledby="homework-deadline-filter-label"
+          >
+            <button
+              v-for="option in deadlineOptions"
+              :key="option.value"
+              type="button"
+              class="rounded-md px-3 text-sm font-medium transition"
+              :class="deadlineFilter === option.value
+                ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300'"
+              :aria-pressed="deadlineFilter === option.value"
+              @click="toggleDeadlineFilter(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="w-full sm:w-56">
+          <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">
+            {{ t('studentHomeworks.subject') }}
+          </label>
+          <SelectMenu
+            v-model="selectedSubject"
+            :options="subjectOptions"
+            :placeholder="t('studentHomeworks.allSubjects')"
+            :aria-label="t('studentHomeworks.subject')"
+            clearable
+            :clear-label="t('studentHomeworks.allSubjects')"
+          />
+        </div>
       </div>
     </div>
 
@@ -48,22 +78,17 @@
         v-for="homework in homeworks"
         :key="homework.id"
         class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs transition dark:border-gray-800 dark:bg-gray-900"
-        :class="{ 'opacity-60': isPast(homework) }"
       >
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div class="flex min-w-0 items-start gap-3">
             <div
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-              :class="isPast(homework) ? 'bg-gray-100 dark:bg-gray-800' : 'bg-brand-50 dark:bg-brand-500/10'"
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-500/10"
             >
-              <NotebookPen class="h-5 w-5" :class="isPast(homework) ? 'text-gray-400' : 'text-brand-500'" />
+              <NotebookPen class="h-5 w-5 text-brand-500" />
             </div>
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
-                <h3
-                  class="text-base font-semibold"
-                  :class="isPast(homework) ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-white/90'"
-                >
+                <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">
                   {{ homework.offering.subject_name || '—' }}
                 </h3>
                 <span
@@ -73,10 +98,7 @@
                   {{ t('studentHomeworks.past') }}
                 </span>
               </div>
-              <p
-                class="mt-1.5 whitespace-pre-line text-sm"
-                :class="isPast(homework) ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'"
-              >
+              <p class="mt-1.5 whitespace-pre-line text-sm text-gray-600 dark:text-gray-300">
                 {{ homework.description || '—' }}
               </p>
               <!-- Read-only: students and parents never upload or delete. -->
@@ -186,6 +208,8 @@ const total = ref(0)
 const loading = ref(true)
 const loadError = ref(false)
 const selectedSubject = ref<number | string | null>(null)
+type DeadlineFilter = 'upcoming' | 'passed'
+const deadlineFilter = ref<DeadlineFilter | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(20)
 
@@ -196,6 +220,32 @@ const subjectOptions = computed<SelectOption[]>(() => {
     .map(([value, label]) => ({ value, label }))
     .sort((a, b) => a.label.localeCompare(b.label))
 })
+
+const deadlineOptions = computed<{ value: DeadlineFilter; label: string }[]>(() => [
+  { value: 'upcoming', label: t('studentHomeworks.upcoming') },
+  { value: 'passed', label: t('studentHomeworks.passed') },
+])
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function deadlineRange(): { due_from?: string; due_to?: string } {
+  const today = new Date()
+  if (deadlineFilter.value === 'upcoming') return { due_from: formatLocalDate(today) }
+  if (deadlineFilter.value === 'passed') {
+    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
+    return { due_to: formatLocalDate(yesterday) }
+  }
+  return {}
+}
+
+function toggleDeadlineFilter(value: DeadlineFilter): void {
+  deadlineFilter.value = deadlineFilter.value === value ? null : value
+}
 
 async function fetchHomeworks() {
   // Both hosts only render this once they hold a student, so a missing id here
@@ -211,8 +261,10 @@ async function fetchHomeworks() {
   loading.value = true
   loadError.value = false
   try {
+    const deadline = deadlineRange()
     const { data } = await getStudentHomeworksApi(props.studentId, {
       subject: selectedSubject.value ? Number(selectedSubject.value) : undefined,
+      ...deadline,
       page: currentPage.value,
       page_size: pageSize.value,
     })
@@ -227,7 +279,7 @@ async function fetchHomeworks() {
   }
 }
 
-watch([selectedSubject, pageSize], () => {
+watch([selectedSubject, deadlineFilter, pageSize], () => {
   if (currentPage.value === 1) fetchHomeworks()
   else currentPage.value = 1
 })
@@ -239,15 +291,16 @@ watch(
   () => {
     currentPage.value = 1
     selectedSubject.value = null
+    deadlineFilter.value = null
     fetchHomeworks()
   },
   { immediate: true },
 )
 
-/** Past its due date — rendered muted so upcoming work stands out. */
+/** Past its due date — used for the status badge when all homework is shown. */
 function isPast(homework: StudentHomework): boolean {
   if (!homework.due_date) return false
-  return homework.due_date.slice(0, 10) < new Date().toISOString().slice(0, 10)
+  return homework.due_date.slice(0, 10) < formatLocalDate(new Date())
 }
 
 function gradeColor(homework: StudentHomework): string {

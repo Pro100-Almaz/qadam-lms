@@ -1,9 +1,10 @@
 import type { Topic, LessonStudent } from './lesson'
+import type { EditableResource, Quarter } from './teachingAssignment'
 
-export interface GradingData {
+export interface GradingData extends EditableResource {
   id: number
   title: string
-  quarter: number
+  quarter: Quarter
   unit: number
   status: string
   topics: Topic[]

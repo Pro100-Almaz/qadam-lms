@@ -513,6 +513,8 @@ export interface HeatmapAssignment {
   max_grade: number | null
   /** How many of the class have a mark on it. */
   graded_count: number
+  /** Copied from the parent SubjectAssignment when this grid is built locally. */
+  can_edit?: boolean
 }
 
 // ─── 6. Assignment summary ────────────────────────────────────────────────────

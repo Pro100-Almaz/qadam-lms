@@ -29,11 +29,11 @@ export function useTeacherOfferings() {
   const loading = ref(false)
   const loadError = ref(false)
 
-  async function load(): Promise<void> {
+  async function load(quarter?: number): Promise<void> {
     loading.value = true
     loadError.value = false
     try {
-      const { data } = await getTeacherMyClassesApi()
+      const { data } = await getTeacherMyClassesApi(quarter ? { quarter } : undefined)
       classes.value = Array.isArray(data) ? data : []
     } catch {
       classes.value = []

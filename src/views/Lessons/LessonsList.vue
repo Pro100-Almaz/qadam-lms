@@ -508,10 +508,15 @@ const lessonForm = ref({
 })
 
 watch(showAddModal, async (val) => {
-  if (val && teacherOfferings.value.length === 0) {
+  if (val) {
+    lessonForm.value.quarter = filterQuarter.value
+    teacherOfferings.value = []
     loadingOfferings.value = true
     try {
-      const { data } = await getMySubjectsApi({ status: 'active' })
+      const { data } = await getMySubjectsApi({
+        status: 'active',
+        quarter: filterQuarter.value,
+      })
       const offerings: SubjectOffering[] = []
       for (const subj of data) {
         const subjectWithOfferings = subj as typeof subj & SubjectWithOfferings
@@ -746,6 +751,8 @@ onBeforeMount(() => {
 
 watch([filterTeacher, filterQuarter], () => {
   if (!ready.value) return
+  subjectSchedules.value = []
+  teacherOfferings.value = []
   fetchSubjects()
 })
 

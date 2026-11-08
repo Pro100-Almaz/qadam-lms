@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { currentIntlLocale } from '@/i18n'
-import type { AuthTokens } from '@/types/auth'
+import i18n, { currentIntlLocale } from '@/i18n'
+import type { AuthTokens, SelectableUserRole } from '@/types/auth'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
@@ -10,6 +10,7 @@ const api = axios.create({
 // ─── In-memory access token (never stored in localStorage) ────────────────────
 
 let accessToken: string | null = null
+let activeRole: SelectableUserRole | null = null
 
 export function setAccessToken(token: string | null) {
   accessToken = token
@@ -17,6 +18,10 @@ export function setAccessToken(token: string | null) {
 
 export function getAccessToken(): string | null {
   return accessToken
+}
+
+export function setActiveRoleHeader(role: SelectableUserRole | null) {
+  activeRole = role
 }
 
 // ─── Generic list response helpers ────────────────────────────────────────────
@@ -49,6 +54,9 @@ api.interceptors.request.use((config) => {
   config.headers['Accept-Language'] = currentIntlLocale()
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
+    if (activeRole) {
+      config.headers['X-Active-Role'] = activeRole
+    }
   }
   return config
 })
@@ -126,7 +134,7 @@ api.interceptors.response.use(
         if (status === 429) {
           showError('Too many requests', 'Please wait and try again')
         } else if (status === 403) {
-          showError('Access denied')
+          showError(String(i18n.global.t('permissions.outsideTeachingPeriod')))
         } else if (status >= 500) {
           showError('Server error', 'Please try again later')
         }

@@ -211,3 +211,46 @@ export function baseChartOptions() {
     animations: { enabled: true, easing: 'easeinout' as const, speed: 500 },
   }
 }
+
+/**
+ * A radar with fewer than five axes is a line or a triangle, not a web, so
+ * every radar is drawn on at least this many. The extra axes are padding:
+ * blank labels, no value, no marker.
+ */
+export const RADAR_MIN_AXES = 5
+
+/**
+ * Where the padding goes among `axisCount` real axes. One pad comes first: Apex
+ * prints the scale's ticks along the first spoke, and a lone subject drawn
+ * there is a line hidden under them. The rest trail the real axes.
+ */
+function radarPaddingIndices(axisCount: number): number[] {
+  if (axisCount >= RADAR_MIN_AXES) return []
+  const trailing = Array.from({ length: RADAR_MIN_AXES - axisCount - 1 }, (_, k) => axisCount + 1 + k)
+  return [0, ...trailing]
+}
+
+/** `values` padded with `filler` up to {@link RADAR_MIN_AXES}. */
+export function padRadar<T>(values: T[], filler: T): T[] {
+  if (values.length >= RADAR_MIN_AXES) return values
+  return [filler, ...values, ...Array<T>(RADAR_MIN_AXES - values.length - 1).fill(filler)]
+}
+
+/**
+ * `markers.discrete` entries that hide the markers on the padding axes.
+ *
+ * Apex has no gap in a radar: a `null` is plotted at the centre, so the
+ * polygon still dips there, but no dot or tooltip claims a value.
+ */
+export function radarPaddingMarkers(axisCount: number, seriesCount: number) {
+  return Array.from({ length: seriesCount }, (_, seriesIndex) =>
+    radarPaddingIndices(axisCount).map(dataPointIndex => ({
+      seriesIndex,
+      dataPointIndex,
+      size: 0,
+      fillColor: 'transparent',
+      strokeColor: 'transparent',
+      shape: 'circle',
+    })),
+  ).flat()
+}

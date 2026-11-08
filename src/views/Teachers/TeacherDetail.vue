@@ -210,7 +210,13 @@
                         {{ t('teachers.role') }}
                       </th>
                       <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {{ t('teachers.quarter') }}
+                      </th>
+                      <th class="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                         {{ t('teachers.gradingStrategy') }}
+                      </th>
+                      <th class="px-5 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {{ t('common.actions') }}
                       </th>
                     </tr>
                   </thead>
@@ -239,9 +245,24 @@
                         </span>
                       </td>
                       <td class="px-5 py-4">
+                        <span class="whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                          {{ formatTeachingAssignmentQuarter(assignment, t('teachers.noQuarterAssigned')) }}
+                        </span>
+                      </td>
+                      <td class="px-5 py-4">
                         <span class="text-sm text-gray-600 dark:text-gray-400">
                           {{ assignment.offering.grading_strategy || '—' }}
                         </span>
+                      </td>
+                      <td class="px-5 py-4 text-right">
+                        <button
+                          type="button"
+                          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-brand-600 dark:hover:bg-white/5"
+                          :aria-label="t('common.edit')"
+                          @click="openAssignmentEditor(assignment)"
+                        >
+                          <Pencil class="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   </tbody>
@@ -341,6 +362,48 @@
         </div>
       </template>
 
+      <Teleport to="body">
+        <div
+          v-if="assignmentTarget"
+          class="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4"
+          @click.self="assignmentTarget = null"
+        >
+          <form
+            class="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
+            @submit.prevent="saveAssignment"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ t('teachers.assignments') }}</h3>
+                <p class="mt-1 text-sm text-warning-700 dark:text-warning-400">{{ t('teachers.replaceTeacherWarning') }}</p>
+              </div>
+              <button type="button" class="text-gray-400" @click="assignmentTarget = null">×</button>
+            </div>
+
+            <label class="block text-sm text-gray-700 dark:text-gray-300">
+              {{ t('teachers.title') }}
+              <select v-model.number="assignmentDraft.teacher" class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900">
+                <option v-for="option in teacherOptions" :key="option.id" :value="option.id">{{ teacherOptionName(option) }}</option>
+              </select>
+            </label>
+
+            <label class="block text-sm text-gray-700 dark:text-gray-300">
+              {{ t('teachers.quarter') }}
+              <select v-model="assignmentDraft.quarter" class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900">
+                <option value="">{{ t('teachers.noQuarterAssigned') }}</option>
+                <option v-for="value in [1, 2, 3, 4]" :key="value" :value="String(value)">Q{{ value }}</option>
+              </select>
+            </label>
+
+            <p v-if="assignmentError" class="text-sm text-error-600 dark:text-error-400">{{ assignmentError }}</p>
+            <div class="flex justify-end gap-3">
+              <button type="button" class="rounded-lg border border-gray-300 px-4 py-2 text-sm" @click="assignmentTarget = null">{{ t('common.cancel') }}</button>
+              <button type="submit" :disabled="assignmentSaving" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{{ t('common.save') }}</button>
+            </div>
+          </form>
+        </div>
+      </Teleport>
+
     </div>
   </AdminLayout>
 </template>
@@ -350,6 +413,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { formatLanguageGroup } from '@/utils/subjectLanguage'
+import { formatTeachingAssignmentQuarter } from '@/utils/teachingAssignments'
 import {
   BookOpen,
   ClipboardList,
@@ -359,21 +423,32 @@ import {
   ChevronRight,
   AlertCircle,
   RefreshCw,
+  Pencil,
 } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import Breadcrumb from '@/components/ui/Breadcrumb.vue'
-import { getTeacherDetailApi } from '@/api/teachers'
-import type { TeacherDetail } from '@/types/teacher'
+import { getTeacherDetailApi, getTeachersApi } from '@/api/teachers'
+import { getTeachingAssignmentsApi, updateTeachingAssignmentApi } from '@/api/teachingAssignments'
+import type { Teacher, TeacherAssignment, TeacherDetail } from '@/types/teacher'
+import type { Quarter } from '@/types/teachingAssignment'
+import { isForbiddenError } from '@/utils/apiErrors'
+import { useToast } from '@/composables/useToast'
 import type { LanguageGroup, SubjectStatus } from '@/types/subject'
 import { currentIntlLocale } from '@/i18n'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 
 const teacher = ref<TeacherDetail | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const teacherOptions = ref<Teacher[]>([])
+const assignmentTarget = ref<TeacherAssignment | null>(null)
+const assignmentSaving = ref(false)
+const assignmentError = ref('')
+const assignmentDraft = ref({ teacher: 0, quarter: '' })
 
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 
@@ -391,7 +466,63 @@ async function fetchTeacher() {
   }
 }
 
-onMounted(fetchTeacher)
+onMounted(async () => {
+  await Promise.all([
+    fetchTeacher(),
+    getTeachersApi().then(({ data }) => { teacherOptions.value = data }).catch(() => { teacherOptions.value = [] }),
+  ])
+})
+
+function teacherOptionName(option: Teacher): string {
+  return `${option.user.last_name} ${option.user.first_name}`.trim() || option.user.username
+}
+
+function openAssignmentEditor(assignment: TeacherAssignment) {
+  assignmentTarget.value = assignment
+  assignmentDraft.value = {
+    teacher: assignment.teacher,
+    quarter: assignment.quarter === null ? '' : String(assignment.quarter),
+  }
+  assignmentError.value = ''
+}
+
+async function saveAssignment() {
+  const target = assignmentTarget.value
+  if (!target || assignmentSaving.value) return
+  assignmentSaving.value = true
+  assignmentError.value = ''
+  const quarter = assignmentDraft.value.quarter === ''
+    ? null
+    : Number(assignmentDraft.value.quarter) as Quarter
+  try {
+    const quarterChanged = quarter !== target.quarter
+    if (quarter !== null && quarterChanged) {
+      const { data } = await getTeachingAssignmentsApi({
+        academic_year: target.offering.academic_year.id,
+        class_group: target.offering.class_group.id,
+        subject: target.offering.subject.id,
+        quarter,
+      })
+      if (data.some(row => row.id === target.offering.id && row.quarter === quarter)) {
+        assignmentError.value = t('teachers.duplicateOfferingQuarter')
+        return
+      }
+    }
+    await updateTeachingAssignmentApi(target.id, {
+      teacher: assignmentDraft.value.teacher,
+      quarter,
+    })
+    assignmentTarget.value = null
+    toast.success(t('teachers.assignmentUpdated'))
+    await fetchTeacher()
+  } catch (saveError) {
+    assignmentError.value = isForbiddenError(saveError)
+      ? t('permissions.outsideTeachingPeriod')
+      : t('common.noData')
+  } finally {
+    assignmentSaving.value = false
+  }
+}
 
 // ─── Computed helpers ─────────────────────────────────────────────────────────
 

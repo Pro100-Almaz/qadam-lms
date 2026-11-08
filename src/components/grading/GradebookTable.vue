@@ -36,7 +36,14 @@
     <!-- The gradebook: students down, assignments across in academic-date order.
          Drawn even with no assignments: an offering can still carry quarter
          grades, and the filler columns keep the grid's shape around them. -->
-    <div v-else class="max-w-full overflow-x-auto custom-scrollbar">
+    <div v-else>
+      <p
+        v-if="columns.length && allAssignmentsReadOnly"
+        class="border-b border-warning-200 bg-warning-50 px-5 py-2.5 text-xs text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-400"
+      >
+        {{ t('permissions.gradebookReadOnly') }}
+      </p>
+      <div class="max-w-full overflow-x-auto custom-scrollbar">
       <table class="w-full table-fixed border-collapse" :style="{ minWidth: tableMinWidth }">
         <colgroup>
           <col :style="nameColumnStyle" />
@@ -290,6 +297,7 @@
           </tr>
         </tfoot>
       </table>
+      </div>
     </div>
 
   </div>
@@ -312,6 +320,7 @@ import {
 import { getQuarterGradesApi } from '@/api/quarterGrades'
 import { useClassRoster } from '@/composables/useClassRoster'
 import { formatAcademicDay } from '@/utils/gradeDates'
+import { isTeachingPeriodPermissionError } from '@/utils/apiErrors'
 import {
   buildGradeGrid,
   gradeCellKey,
@@ -557,6 +566,9 @@ const assignmentById = computed(
 )
 
 const writableIds = computed(() => new Set(props.writableAssignmentIds ?? []))
+const allAssignmentsReadOnly = computed(() =>
+  columns.value.every(column => !writableIds.value.has(column.assignment.id)),
+)
 
 /**
  * The grid's own flag, else the full record's. A column neither knows about
@@ -595,7 +607,7 @@ const validationErrors = computed<Record<string, string>>(() => {
 
 /** The full record behind a column, or null when the last load did not carry it. */
 function editTarget(assignmentId: number): SubjectAssignment | null {
-  if (props.readOnly) return null
+  if (props.readOnly || !writableIds.value.has(assignmentId)) return null
   return assignmentById.value.get(assignmentId) ?? null
 }
 
@@ -878,6 +890,7 @@ function revertCell(studentId: number, assignmentId: number, event: KeyboardEven
 
 async function commitCell(studentId: number, assignmentId: number) {
   const key = cellKey(assignmentId, studentId)
+  if (!writableIds.value.has(assignmentId)) return
   if (key in savingKeys.value || validationErrors.value[key]) return
 
   const original = gradeRecords.value[key] ?? { gradeId: null, value: '', comments: '' }
@@ -911,10 +924,16 @@ async function commitCell(studentId: number, assignmentId: number) {
     }
     applyGradeToGrid(assignmentId, studentId, value)
     flashSaved(key)
-  } catch {
-    // The draft keeps what was typed, so the teacher can fix it and leave the
-    // cell again rather than retyping a mark the server rejected.
-    saveErrors.value = { ...saveErrors.value, [key]: t('assignments.gradeSaveFailed') }
+  } catch (error) {
+    // A failed request must never leave a successful-looking grade in the grid.
+    draftValues.value = { ...draftValues.value, [key]: original.value }
+    draftComments.value = { ...draftComments.value, [key]: original.comments }
+    saveErrors.value = {
+      ...saveErrors.value,
+      [key]: isTeachingPeriodPermissionError(error)
+        ? t('permissions.outsideTeachingPeriod')
+        : t('assignments.gradeSaveFailed'),
+    }
   } finally {
     const { [key]: _done, ...rest } = savingKeys.value
     savingKeys.value = rest

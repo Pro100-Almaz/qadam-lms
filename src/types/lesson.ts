@@ -1,9 +1,11 @@
-export interface CalendarLesson {
+import type { EditableResource, Quarter } from './teachingAssignment'
+
+export interface CalendarLesson extends EditableResource {
   id: number
   title: string
   date: string
   status: string
-  quarter: number
+  quarter: Quarter
   unit: number
   order: number
   subject_name: string
@@ -38,14 +40,14 @@ export interface Topic {
   subtopics: Subtopic[]
 }
 
-export interface Lesson {
+export interface Lesson extends EditableResource {
   id: number
   title: string
   description: string
   date: string
   order: number
   status: string
-  quarter: number
+  quarter: Quarter
   unit: number
   offering: LessonOffering
   graded_percent: number
@@ -71,14 +73,14 @@ export interface StudentGrades {
   [topicId: string]: number | TopicGrade
 }
 
-export interface LessonDetail {
+export interface LessonDetail extends EditableResource {
   id: number
   title: string
   description: string
   date: string
   order: number
   status: string
-  quarter: number
+  quarter: Quarter
   unit: number
   offering: LessonOffering
   topics: Topic[]

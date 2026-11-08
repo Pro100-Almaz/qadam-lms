@@ -1,5 +1,6 @@
 import type { User } from './auth'
-import type { Subject, SubjectOffering } from './subject'
+import type { Subject } from './subject'
+import type { TeachingAssignment } from './teachingAssignment'
 
 export interface Teacher {
   id: number
@@ -11,12 +12,7 @@ export interface Teacher {
   working_hours: number
 }
 
-export interface TeacherAssignment {
-  id: number
-  offering: SubjectOffering
-  teacher: number
-  role: string
-}
+export type TeacherAssignment = TeachingAssignment
 
 export interface TeacherDetail extends Teacher {
   assignments: TeacherAssignment[]

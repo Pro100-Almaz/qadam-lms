@@ -180,7 +180,6 @@
         v-if="myClass && activeClassView === 'subjects'"
         :class-group-id="myClass.class_group_id"
         :class-group-name="myClass.class_group"
-        :offerings="myClass.offerings"
       />
     </div>
 

@@ -34,11 +34,18 @@ export interface PsychologicalStateTemplate {
   comment: string
 }
 
+export interface SubjectQuarterGrade {
+  /** Mark (2–5); null = not graded this quarter. */
+  grade: number | null
+  /** The class's mean mark for the subject; null/absent when there is none. */
+  class_mean?: number | null
+}
+
 export interface StudentDetail extends Student {
   parents: StudentParent[]
   offerings: SubjectOffering[]
-  /** Quarter ("1"–"4") → subject name → mark (2–5). */
-  subject_quarter_grades: Record<string, Record<string, number>>
+  /** Quarter ("1"–"4") → subject name → the student's mark and the class's mean. */
+  subject_quarter_grades: Record<string, Record<string, SubjectQuarterGrade>>
   total_quarter_grades: Record<string, number>
   /** Subject name → average mark (2–5); 0 = not graded. */
   cumulative_subject_grades: Record<string, number>

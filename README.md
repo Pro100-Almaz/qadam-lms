@@ -124,10 +124,13 @@ All API calls go through `src/api/client.ts` which configures:
 
 - Base URL from `VITE_API_BASE_URL` environment variable
 - Bearer token auth via request interceptor
+- Active role via the `X-Active-Role` header on authenticated requests
 - Automatic token refresh on 401 responses
 - Global error handling with toast notifications
 
 API modules export typed async functions. Paginated responses are handled via `unwrapList()` and `unwrapPaginated()` helpers.
+
+The active-role header uses the lowercase `SelectableUserRole` value selected in the UI. The backend must verify that the authenticated user owns the requested role rather than trusting the header by itself. Cross-origin deployments must also allow `X-Active-Role` in their CORS configuration.
 
 ## Deployment
 

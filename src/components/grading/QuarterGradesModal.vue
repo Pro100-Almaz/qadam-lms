@@ -108,6 +108,12 @@
             </div>
 
             <template v-else>
+              <p
+                v-if="!quarterEditable"
+                class="mb-3 rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-400"
+              >
+                {{ t('permissions.quarterReadOnly') }}
+              </p>
               <!-- Save failures: what is wrong with whom, from the server's 400. -->
               <div
                 v-if="submitError || studentErrorList.length"
@@ -161,7 +167,7 @@
                   <button
                     type="button"
                     class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium sm:py-1.5 text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
-                    :disabled="submitting"
+                    :disabled="submitting || !quarterEditable"
                     @click="resetWeights"
                   >
                     <RotateCcw class="h-3.5 w-3.5" />
@@ -170,7 +176,7 @@
                   <button
                     type="button"
                     class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium sm:py-1.5 text-gray-700 transition hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
-                    :disabled="submitting || !weightsValid"
+                    :disabled="submitting || !quarterEditable || !weightsValid"
                     @click="openFillDialog"
                   >
                     <Wand2 class="h-3.5 w-3.5" />
@@ -234,7 +240,7 @@
                               autocomplete="off"
                               maxlength="6"
                               @input="weights[group.category.code] = keepPercent($event)"
-                              :disabled="submitting"
+                              :disabled="submitting || !quarterEditable"
                               class="h-9 w-full rounded-md border bg-white py-1 pl-1.5 pr-5 text-right text-base font-medium sm:h-8 sm:text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-2 focus:ring-brand-500/10 dark:bg-gray-900 dark:text-white/90"
                               :class="
                                 weightInvalid(group.category.code)
@@ -351,7 +357,7 @@
                           maxlength="1"
                           @input="finalGrades[student.id] = keepWholeNumber($event)"
                           :placeholder="hasEstimate ? String(suggestedGrade(estimate(student)) ?? '—') : '—'"
-                          :disabled="submitting"
+                          :disabled="submitting || !quarterEditable"
                           :aria-label="t('quarterGrades.gradeFor', { student: student.full_name })"
                           :title="
                             studentErrors[student.id] ||
@@ -552,7 +558,9 @@ import { useToast } from '@/composables/useToast'
 import { formatAcademicDay } from '@/utils/gradeDates'
 import { isScored } from '@/utils/offeringGradeGrid'
 import { flattenErrorMessage } from '@/utils/fileDownload'
+import { isTeachingPeriodPermissionError } from '@/utils/apiErrors'
 import type { TeacherOffering } from '@/types/teacherDashboard'
+import { getTeacherOfferingsApi } from '@/api/teacherDashboard'
 
 /**
  * Sets a class's quarter grades in one subject.
@@ -611,24 +619,26 @@ const classGroupId = ref<number | string | null>(null)
 /** The subject picker's value is the offering itself — class + subject is one. */
 const offeringId = ref<number | string | null>(null)
 const quarter = ref<number | string | null>(null)
+const availableOfferings = ref<TeacherOffering[]>(props.offerings)
+let offeringsToken = 0
 
 const classOptions = computed<SelectOption[]>(() => {
   const seen = new Map<number, string>()
-  for (const offering of props.offerings) seen.set(offering.class_group_id, offering.class_group)
+  for (const offering of availableOfferings.value) seen.set(offering.class_group_id, offering.class_group)
   return [...seen]
     .sort((a, b) => a[1].localeCompare(b[1], undefined, { numeric: true }))
     .map(([value, label]) => ({ value, label }))
 })
 
 const subjectOptions = computed<SelectOption[]>(() =>
-  props.offerings
+  availableOfferings.value
     .filter(offering => offering.class_group_id === Number(classGroupId.value))
     .sort((a, b) => a.subject.localeCompare(b.subject))
     .map(offering => ({ value: offering.id, label: offering.subject })),
 )
 
 const selectedOffering = computed(
-  () => props.offerings.find(offering => offering.id === Number(offeringId.value)) ?? null,
+  () => availableOfferings.value.find(offering => offering.id === Number(offeringId.value)) ?? null,
 )
 
 const quarterOptions = computed<SelectOption[]>(() =>
@@ -677,6 +687,8 @@ const classRoster = useClassRoster()
 const sheet = ref<Sheet | null>(null)
 const loading = ref(false)
 const loadError = ref('')
+/** Derived only from QuarterGrade.can_edit; missing flags are read-only. */
+const quarterEditable = ref(false)
 /** Drops a response that lands after the filters moved on. */
 let loadToken = 0
 
@@ -783,6 +795,9 @@ async function loadSheet() {
       loadCategories(),
     ])
     if (token !== loadToken) return
+    quarterEditable.value = saved.length > 0
+      ? saved.every(row => row.can_edit === true)
+      : assignments.some(row => row.can_edit === true)
 
     // Switched-off assignments come back too; they do not count here. Nor do
     // unscored ones, which hold no marks and would only thin out their
@@ -819,13 +834,49 @@ async function loadSheet() {
   } catch (error) {
     if (token !== loadToken) return
     sheet.value = null
+    quarterEditable.value = false
     loadError.value = readAnalyticsError(error) || t('quarterGrades.loadError')
   } finally {
     if (token === loadToken) loading.value = false
   }
 }
 
-watch([offeringId, quarter], loadSheet)
+watch(offeringId, loadSheet)
+
+watch(
+  () => props.offerings,
+  offerings => {
+    if (!quarter.value) availableOfferings.value = offerings
+  },
+)
+
+watch(quarter, async value => {
+  const selected = Number(value)
+  sheet.value = null
+  if (selected < 1 || selected > 4) {
+    availableOfferings.value = props.offerings
+    return
+  }
+  const token = ++offeringsToken
+  try {
+    const { data } = await getTeacherOfferingsApi({ quarter: selected })
+    if (token !== offeringsToken) return
+    availableOfferings.value = data.offerings
+    if (!classOptions.value.some(option => option.value === classGroupId.value)) {
+      classGroupId.value = null
+    }
+    if (!availableOfferings.value.some(offering => offering.id === Number(offeringId.value))) {
+      offeringId.value = null
+    }
+    await loadSheet()
+  } catch {
+    if (token === offeringsToken) {
+      availableOfferings.value = []
+      classGroupId.value = null
+      offeringId.value = null
+    }
+  }
+})
 
 // ─── Typed numbers ───────────────────────────────────────────────────────────
 
@@ -1109,7 +1160,7 @@ const fillBackdrop = useBackdropClose(() => {
 })
 
 function openFillDialog() {
-  if (!weightsValid.value) return
+  if (!quarterEditable.value || !weightsValid.value) return
   thresholdDraft.value = { ...thresholds.value }
   fillOpen.value = true
 }
@@ -1185,6 +1236,7 @@ const sheetReady = computed(
 /** Why a loaded sheet cannot be submitted yet, or what submitting would do. */
 const submitHint = computed(() => {
   if (!sheetReady.value) return ''
+  if (!quarterEditable.value) return t('permissions.quarterReadOnly')
   if (weightsBlockSubmit.value) return t('quarterGrades.weightsMustSum')
   if (students.value.some(student => gradeInvalid(student.id)))
     return t('quarterGrades.gradeRange', { min: GRADE_MIN, max: GRADE_MAX })
@@ -1199,6 +1251,7 @@ const submitHint = computed(() => {
 const canSubmit = computed(
   () =>
     sheetReady.value &&
+    quarterEditable.value &&
     !weightsBlockSubmit.value &&
     changes.value.count > 0 &&
     !students.value.some(student => gradeInvalid(student.id)) &&
@@ -1219,7 +1272,9 @@ function readSubmitError(error: unknown): { perStudent: Record<number, string>; 
   const rest =
     body && typeof body === 'object' ? flattenErrorMessage({ ...body, grades: undefined }) : ''
   const general =
-    rest || (Object.keys(perStudent).length ? '' : response ? t('quarterGrades.saveFailed') : t('quarterGrades.networkError'))
+    isTeachingPeriodPermissionError(error)
+      ? t('permissions.outsideTeachingPeriod')
+      : rest || (Object.keys(perStudent).length ? '' : response ? t('quarterGrades.saveFailed') : t('quarterGrades.networkError'))
   return { perStudent, general }
 }
 
@@ -1261,7 +1316,7 @@ async function submit() {
     submitError.value = [general, savedSomething ? t('quarterGrades.partialSaved') : '']
       .filter(Boolean)
       .join(' ')
-    if (savedSomething) await refreshSaved(id, quarterNumber)
+    await refreshSaved(id, quarterNumber)
   } finally {
     submitting.value = false
   }
@@ -1272,7 +1327,11 @@ async function refreshSaved(id: number, quarterNumber: number) {
   try {
     const { data } = await getQuarterGradesApi(id, quarterNumber)
     if (sheet.value?.offeringId === id && sheet.value.quarter === quarterNumber) {
+      quarterEditable.value = data.length > 0 && data.every(row => row.can_edit === true)
       applySaved(data.map(row => [row.student, row.grade]))
+      finalGrades.value = Object.fromEntries(
+        students.value.map(student => [student.id, savedGrades.value[student.id]?.toString() ?? '']),
+      )
     }
   } catch {
     // The banner already says something went wrong; a stale diff is the worst case.
@@ -1297,7 +1356,9 @@ watch(
     classGroupId.value = null
     offeringId.value = null
     quarter.value = null
+    availableOfferings.value = props.offerings
     sheet.value = null
+    quarterEditable.value = false
     loading.value = false
     loadError.value = ''
     submitError.value = ''

@@ -167,7 +167,7 @@
               {{ t('subjects.title') }}<template v-if="selectedQuarter"> · Q{{ selectedQuarter }}</template>
             </h2>
           </div>
-          <div class="max-w-full overflow-x-auto custom-scrollbar">
+          <div v-if="radarSubjects.length" class="max-w-full overflow-x-auto custom-scrollbar">
             <table class="w-full min-w-[640px]">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
@@ -222,41 +222,27 @@
                     </span>
                   </td>
                 </tr>
-                <tr v-if="Object.keys(subjectScores).length === 0">
-                  <td colspan="4" class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                    {{ t('common.noData') }}
-                  </td>
-                </tr>
               </tbody>
             </table>
           </div>
+          <!-- Nothing graded: the rows would only say "Not graded" over and over,
+               and the radar below is left out for the same reason. -->
+          <p v-else class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+            {{ t('common.noData') }}
+          </p>
         </div>
 
         <!-- Charts -->
-        <div class="grid grid-cols-1 gap-6">
-          <!-- Line chart: Quarter Performance -->
-          <div class="rounded-xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
-            <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ t('students.quarterGrade') }}</h3>
-            <VueApexCharts
-              type="line"
-              height="300"
-              :options="lineChartOptions"
-              :series="lineChartSeries"
-            />
-          </div>
+        <div v-if="radarSubjects.length" class="grid grid-cols-1 gap-6">
           <!-- Radar chart: Subject Performance -->
           <div class="rounded-xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
             <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ t('subjects.title') }}</h3>
             <VueApexCharts
-              v-if="radarChartSeries[0].data.length > 0"
               type="radar"
               height="600"
               :options="radarChartOptions"
               :series="radarChartSeries"
             />
-            <div v-else class="flex h-64 items-center justify-center text-sm text-gray-400">
-              {{ t('common.noData') }}
-            </div>
           </div>
         </div>
       </div>
@@ -1181,7 +1167,7 @@ import { getSchoolGroupApi, type SchoolGroup } from '@/api/auth'
 import { useAuth } from '@/composables/useAuth'
 import GenerateReportModal from '@/components/reports/GenerateReportModal.vue'
 import ReportHistoryList from '@/components/reports/ReportHistoryList.vue'
-import { SERIES_STUDENT } from '@/components/analytics/chartTheme'
+import { SERIES_CLASS, SERIES_STUDENT, padRadar, radarPaddingMarkers } from '@/components/analytics/chartTheme'
 import { currentIntlLocale } from '@/i18n'
 
 // ─── i18n / route ────────────────────────────────────────────────────────────
@@ -1465,90 +1451,52 @@ const subjectScores = computed<Record<string, number>>(() => {
   const cumulative = student.value.cumulative_subject_grades
   if (selectedQuarter.value === null) return cumulative
   const quarter = student.value.subject_quarter_grades[String(selectedQuarter.value)] ?? {}
-  return Object.fromEntries(Object.keys(cumulative).map((subject) => [subject, quarter[subject] ?? 0]))
+  return Object.fromEntries(Object.keys(cumulative).map((subject) => [subject, quarter[subject]?.grade ?? 0]))
+})
+
+// Subject → class mean for the selected quarter. The cumulative view has none.
+const subjectClassMeans = computed<Record<string, number>>(() => {
+  if (!student.value || selectedQuarter.value === null) return {}
+  const quarter = student.value.subject_quarter_grades[String(selectedQuarter.value)] ?? {}
+  return Object.fromEntries(
+    Object.entries(quarter)
+      .filter(([, entry]) => entry.class_mean != null)
+      .map(([subject, entry]) => [subject, entry.class_mean as number]),
+  )
 })
 
 // ─── Charts ──────────────────────────────────────────────────────────────────
-const lineChartSeries = computed(() => {
-  if (!student.value) return []
-  const data = [1, 2, 3, 4].map((q) => student.value!.total_quarter_grades[String(q)] ?? 0)
-  return [{ name: t('students.quarterGrade'), data }]
-})
+// Only graded subjects get an axis: a "not graded" vertex at zero reads as a
+// failing mark.
+const radarSubjects = computed(() =>
+  Object.entries(subjectScores.value).filter(([, v]) => v > 0).map(([subject]) => subject),
+)
 
-const lineChartOptions = computed(() => ({
-  chart: {
-    fontFamily: 'Manrope, sans-serif',
-    type: 'line',
-    toolbar: { show: false },
-    zoom: { enabled: false },
-    animations: { enabled: true, easing: 'easeinout', speed: 600 },
-  },
-  colors: [SERIES_STUDENT],
-  stroke: { curve: 'smooth', width: 3 },
-  markers: {
-    size: 7,
-    colors: [SERIES_STUDENT],
-    strokeWidth: 3,
-    strokeColors: '#fff',
-    hover: { sizeOffset: 3 },
-    discrete: selectedQuarter.value === null ? [] : [{
-      seriesIndex: 0,
-      dataPointIndex: selectedQuarter.value - 1,
-      size: 10,
-      fillColor: SERIES_STUDENT,
-      strokeColor: '#fff',
-    }],
-  },
-  annotations: {
-    xaxis: selectedQuarter.value === null ? [] : [{
-      x: `Q${selectedQuarter.value}`,
-      borderColor: SERIES_STUDENT,
-      strokeDashArray: 4,
-    }],
-  },
-  dataLabels: {
-    enabled: true,
-    offsetY: -10,
-    style: { fontSize: '13px', fontWeight: 600, colors: [SERIES_STUDENT] },
-    background: { enabled: false },
-  },
-  xaxis: {
-    categories: ['Q1', 'Q2', 'Q3', 'Q4'],
-    axisBorder: { show: false },
-    axisTicks: { show: false },
-    labels: { style: { colors: '#9CA3AF', fontSize: '13px', fontWeight: 500 } },
-  },
-  yaxis: {
-    min: 0,
-    max: 5,
-    tickAmount: 5,
-    labels: {
-      style: { colors: '#9CA3AF', fontSize: '12px' },
-      formatter: (v: number) => v.toFixed(1),
-    },
-  },
-  grid: {
-    borderColor: '#E5E7EB',
-    strokeDashArray: 4,
-    xaxis: { lines: { show: false } },
-    yaxis: { lines: { show: true } },
-    padding: { top: 10, bottom: 5 },
-  },
-  tooltip: {
-    theme: 'light',
-    y: { formatter: (v: number) => `${v.toFixed(2)} / 5.00` },
-  },
-}))
+const radarHasClassMean = computed(() =>
+  radarSubjects.value.some((subject) => subject in subjectClassMeans.value),
+)
 
 const radarChartSeries = computed(() => {
-  if (!student.value) return [{ name: t('students.score'), data: [] }]
-  const entries = Object.entries(subjectScores.value)
-  return [{ name: t('students.score'), data: entries.map(([, v]) => Math.round(v * 10) / 10) }]
+  const round = (v: number) => Math.round(v * 10) / 10
+  const series = [
+    {
+      name: t('students.score'),
+      data: padRadar<number | null>(radarSubjects.value.map((s) => round(subjectScores.value[s])), null),
+    },
+  ]
+  if (radarHasClassMean.value) {
+    series.push({
+      name: t('statistics.classMean'),
+      data: padRadar<number | null>(radarSubjects.value.map((s) => round(subjectClassMeans.value[s] ?? 0)), null),
+    })
+  }
+  return series
 })
 
 const radarChartOptions = computed(() => {
   if (!student.value) return {}
-  const labels = Object.keys(subjectScores.value)
+  const labels = padRadar(radarSubjects.value, '')
+  const withClass = radarHasClassMean.value
   return {
     chart: {
       fontFamily: 'Manrope, sans-serif',
@@ -1556,15 +1504,17 @@ const radarChartOptions = computed(() => {
       toolbar: { show: false },
       dropShadow: { enabled: true, blur: 4, left: 1, top: 1, opacity: 0.1 },
     },
-    colors: [SERIES_STUDENT],
-    fill: { opacity: 0.15, type: 'solid' },
-    stroke: { width: 2.5 },
+    colors: withClass ? [SERIES_STUDENT, SERIES_CLASS] : [SERIES_STUDENT],
+    fill: { opacity: withClass ? [0.15, 0.1] : 0.15, type: 'solid' },
+    stroke: { width: withClass ? [2.5, 2] : 2.5, dashArray: withClass ? [0, 4] : 0 },
+    legend: { show: withClass, position: 'top' as const, horizontalAlign: 'left' as const },
     markers: {
       size: 5,
-      colors: [SERIES_STUDENT],
+      colors: withClass ? [SERIES_STUDENT, SERIES_CLASS] : [SERIES_STUDENT],
       strokeWidth: 2,
       strokeColors: '#fff',
       hover: { sizeOffset: 2 },
+      discrete: radarPaddingMarkers(radarSubjects.value.length, radarChartSeries.value.length),
     },
     xaxis: {
       categories: labels,
@@ -1587,16 +1537,24 @@ const radarChartOptions = computed(() => {
     dataLabels: {
       enabled: true,
       style: { fontSize: '11px', fontWeight: 600, colors: [SERIES_STUDENT] },
-      background: { enabled: true, borderRadius: 2, padding: 3, borderColor: 'transparent', foreColor: SERIES_STUDENT, dropShadow: { enabled: false } },
-      formatter: (v: number) => (v ? `${v}` : ''),
+      background: { enabled: true, borderRadius: 2, padding: 3, borderColor: 'transparent', foreColor: '#fff', dropShadow: { enabled: false } },
+      // Labels on the class polygon too would pile onto the student's. Not
+      // `enabledOnSeries`: a radar runs its axis labels through that check by
+      // axis index, drops all but the first, and then crashes on the gap.
+      formatter: (v: number | null, { seriesIndex }: { seriesIndex: number }) =>
+        (seriesIndex === 0 && v ? `${v}` : ''),
     },
     tooltip: {
       theme: 'light',
-      y: { formatter: (v: number) => (v ? `${v} / 5` : t('students.notGraded')) },
+      y: { formatter: (v: number | null) => (v === null ? '' : v ? `${v} / 5` : t('students.notGraded')) },
     },
+    // The pinned radius would push the labels off a phone-width card.
+    responsive: [{ breakpoint: 640, options: { plotOptions: { radar: { size: 110 } } } }],
     plotOptions: {
       radar: {
-        size: undefined,
+        // Left to Apex, the radius can solve to nothing — a quarter with few
+        // graded subjects then draws as a point with its labels piled on it.
+        size: 200,
         polygons: {
           strokeColors: '#E5E7EB',
           connectorColors: '#E5E7EB',

@@ -213,6 +213,7 @@
       :homework="gradingHomework"
       :can-grade="canGrade(gradingHomework)"
       @close="gradingOpen = false"
+      @saved="fetchHomeworks"
     />
 
     <!-- Row actions. Teleported and fixed-positioned because the table scrolls
@@ -429,12 +430,13 @@ const deleteBackdrop = useBackdropClose(() => {
 })
 
 function askDelete(homework: Homework) {
+  if (!canManage(homework)) return
   deleteTarget.value = homework
 }
 
 async function confirmDelete() {
   const target = deleteTarget.value
-  if (!target) return
+  if (!target || !canManage(target)) return
 
   deleting.value = true
   try {

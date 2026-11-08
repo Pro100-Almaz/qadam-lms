@@ -55,7 +55,7 @@
             :model-value="quarter"
             :options="quarterOptions"
             :aria-label="t('scheduleBuilder.quarter')"
-            @update:model-value="quarter = Number($event)"
+            @update:model-value="quarter = Number($event) as Quarter"
           />
         </div>
 
@@ -367,7 +367,9 @@ import {
 } from '@/api/schedule'
 import type { UserRole } from '@/types/auth'
 import type { ClassGroup } from '@/types/academic'
-import type { TeachingAssignment } from '@/types/teachingAssignment'
+import type { Quarter, TeachingAssignmentListItem } from '@/types/teachingAssignment'
+import { formatTeachingAssignmentQuarter } from '@/utils/teachingAssignments'
+import { isForbiddenError } from '@/utils/apiErrors'
 
 const { t } = useI18n()
 const { activeRoles: roles } = useAuth()
@@ -414,7 +416,7 @@ interface BuilderClassGroup {
 
 const classGroups = ref<BuilderClassGroup[]>([])
 /** Subject + teacher pairs the selected class group is actually taught. */
-const assignments = ref<TeachingAssignment[]>([])
+const assignments = ref<TeachingAssignmentListItem[]>([])
 /** The selected class group's subgroups — its `minor` class groups. */
 const minorGroups = ref<ClassGroup[]>([])
 
@@ -424,7 +426,7 @@ const minorGroups = ref<ClassGroup[]>([])
  * what the schedule ends up being created under.
  */
 interface SubgroupAssignment {
-  assignment: TeachingAssignment
+  assignment: TeachingAssignmentListItem
   classGroupId: number
   classGroupName: string
 }
@@ -432,7 +434,7 @@ interface SubgroupAssignment {
 const subgroupAssignments = ref<SubgroupAssignment[]>([])
 const academicYearId = ref<number | null>(null)
 const classGroupId = ref<number | null>(null)
-const quarter = ref(1)
+const quarter = ref<Quarter>(1)
 
 /**
  * The selected class group's whole timetable for the quarter — taught subjects
@@ -467,7 +469,7 @@ const assignmentOptions = computed<SelectOption[]>(() =>
     .map(assignment => ({
       value: assignment.id,
       label: assignment.subject_name,
-      sublabel: assignment.teacher_name,
+      sublabel: `${assignment.teacher_name} · ${formatTeachingAssignmentQuarter(assignment, t('teachers.noQuarterAssigned'))}`,
     })),
 )
 /** The same, for the subgroups — the group is what tells the two levels apart. */
@@ -482,7 +484,7 @@ const subgroupAssignmentOptions = computed<SelectOption[]>(() =>
     .map(entry => ({
       value: entry.assignment.id,
       label: entry.assignment.subject_name,
-      sublabel: `${entry.classGroupName} · ${entry.assignment.teacher_name}`,
+      sublabel: `${entry.classGroupName} · ${entry.assignment.teacher_name} · ${formatTeachingAssignmentQuarter(entry.assignment, t('teachers.noQuarterAssigned'))}`,
     })),
 )
 /** Whichever list the switch in the editor is pointing at. */
@@ -526,6 +528,7 @@ const events = computed<ScheduleEvent[]>(() =>
       subtitle: teacherNameOf(schedule.offering_id),
       tone: schedule.type === 'other' ? 'other' : 'subject',
       colorKey: String(schedule.offering_id ?? `other-${schedule.id}`),
+      editable: schedule.can_edit === true,
     })),
   ),
 )
@@ -601,8 +604,9 @@ async function loadAssignments(): Promise<void> {
     const { data } = await getTeachingAssignmentsApi({
       academic_year: academicYearId.value ?? undefined,
       class_group: classGroupId.value,
+      quarter: quarter.value,
     })
-    assignments.value = data
+    assignments.value = data.filter(assignment => assignment.quarter !== null)
   } catch {
     assignments.value = []
   }
@@ -628,8 +632,9 @@ async function loadSubgroupAssignments(): Promise<void> {
         const { data } = await getTeachingAssignmentsApi({
           academic_year: academicYearId.value ?? undefined,
           class_group: group.id,
+          quarter: quarter.value,
         })
-        return data.map(assignment => ({
+        return data.filter(assignment => assignment.quarter !== null).map(assignment => ({
           assignment,
           classGroupId: group.id,
           classGroupName: group.display_name,
@@ -724,6 +729,7 @@ function openEdit(event: ScheduleEvent): void {
   const found = sessionIndex.value.get(Number(event.id))
   if (!found) return
   const { schedule, session } = found
+  if (schedule.can_edit !== true) return
   const borrowed = isSubgroupSchedule(schedule)
   // A subgroup's lesson belongs to another class group, so it is only editable
   // here while we can name that group — which the offering is what tells us.
@@ -794,6 +800,7 @@ function closeEditor(): void {
 
 /** The API answers per field; any of them is more useful than a generic line. */
 function readScheduleError(error: unknown): string {
+  if (isForbiddenError(error)) return t('permissions.outsideTeachingPeriod')
   const data = (error as AxiosError)?.response?.data
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>
@@ -916,7 +923,7 @@ async function saveEntry(): Promise<void> {
  * class group's timetable forever, so it goes when its last session does.
  */
 async function pruneEmptyFreeEntry(schedule: SubjectSchedule, removedSessionId: number): Promise<void> {
-  if (schedule.type !== 'other') return
+  if (schedule.type !== 'other' || schedule.can_edit !== true) return
   const remaining = (schedule.sessions ?? []).filter(session => session.id !== removedSessionId)
   if (remaining.length) return
   try {
@@ -930,6 +937,7 @@ async function removeEntry(): Promise<void> {
   const state = editor.value
   if (!state || state.sessionId === null || saving.value) return
   const current = sessionIndex.value.get(state.sessionId)
+  if (!current || current.schedule.can_edit !== true) return
   saving.value = true
   editorError.value = null
   try {
@@ -963,6 +971,10 @@ watch(classGroupId, async (next, previous) => {
 
 watch(quarter, (next, previous) => {
   if (initialLoading.value || next === previous) return
-  loadGrid()
+  closeEditor()
+  schedules.value = []
+  assignments.value = []
+  subgroupAssignments.value = []
+  void Promise.all([loadAssignments(), loadSubgroupAssignments(), loadGrid()])
 })
 </script>

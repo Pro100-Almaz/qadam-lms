@@ -12,8 +12,8 @@ export async function getSubjectsApi(params?: {
   return { data: data.results }
 }
 
-export function getSubjectDetailApi(id: number) {
-  return api.get<SubjectDetail>(`/subjects/${id}/`)
+export function getSubjectDetailApi(id: number, params?: { quarter?: number }) {
+  return api.get<SubjectDetail>(`/subjects/${id}/`, { params })
 }
 
 export function getSubjectGradesApi(id: number, params?: { quarter?: number, class_group_id?: number }) {
@@ -32,7 +32,7 @@ export function deleteSubjectApi(id: number) {
   return api.delete(`/subjects/${id}/delete/`)
 }
 
-export async function getMySubjectsApi(params?: { status?: string }) {
+export async function getMySubjectsApi(params?: { status?: string; quarter?: number }) {
   const { data } = await api.get<PaginatedResponse<Subject>>('/my-subjects/', { params })
   return { data: data.results }
 }

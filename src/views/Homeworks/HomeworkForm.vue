@@ -127,6 +127,7 @@
               </label>
               <textarea
                 v-model="form.description"
+                :disabled="!canEdit || saving"
                 rows="5"
                 :placeholder="t('homeworks.descriptionPlaceholder')"
                 :class="fieldErrors.description ? 'border-error-500' : 'border-gray-300 dark:border-gray-700'"
@@ -143,6 +144,7 @@
                 <div class="relative">
                   <flat-pickr
                     v-model="form.dueDate"
+                    :disabled="!canEdit || saving"
                     :config="datePickerConfig"
                     :placeholder="t('homeworks.selectDueDate')"
                     :class="fieldErrors.dueDate ? 'border-error-500' : 'border-gray-300 dark:border-gray-700'"
@@ -151,6 +153,9 @@
                   <CalendarDays class="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 </div>
                 <p v-if="fieldErrors.dueDate" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.dueDate }}</p>
+                <p v-else class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ t('permissions.homeworkDateAuthority') }}
+                </p>
               </div>
 
               <div>
@@ -159,6 +164,7 @@
                 </label>
                 <input
                   v-model="form.maxGrade"
+                  :disabled="!canEdit || saving"
                   type="number"
                   inputmode="numeric"
                   min="1"
@@ -179,6 +185,7 @@
                   v-model="statusModel"
                   :options="statusOptions"
                   :aria-label="t('common.status')"
+                  :disabled="!canEdit || saving"
                   trigger-class="flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-4 text-left text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                 />
                 <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ t('homeworks.statusHint') }}</p>
@@ -239,7 +246,7 @@
           v-if="isEditing && !canEdit"
           class="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-400"
         >
-          {{ t('homeworks.notOfferingTeacher') }}
+          {{ t('permissions.itemReadOnly') }}
         </p>
 
         <div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 dark:border-gray-800 sm:flex-row sm:justify-end">
@@ -347,6 +354,7 @@ import {
 import { useHomeworkPermissions } from '@/composables/useHomeworkPermissions'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { useToast } from '@/composables/useToast'
+import { isTeachingPeriodPermissionError } from '@/utils/apiErrors'
 
 /** The API rejects anything above this with a 400 on `max_grade`. */
 const MAX_GRADE_LIMIT = 100
@@ -370,8 +378,7 @@ const {
 const homework = ref<Homework | null>(null)
 
 /**
- * Every teacher of the offering may edit, not only the author — a colleague's
- * task is editable, an offering you do not teach is not.
+ * The backend-provided flag is the only write authority for an existing row.
  */
 const canEdit = computed(() => (isEditing ? canManage(homework.value) : canCreate.value))
 const loading = ref(true)
@@ -491,9 +498,11 @@ async function loadInitialData() {
       if (target) selectedSubjectName.value = target.subjectName
     }
   } catch (error) {
-    // Homework outside the caller's scope answers 404, not 403 — say "not
-    // found" rather than accusing the user of a permission problem.
     const status = axios.isAxiosError(error) ? error.response?.status : undefined
+    if (status === 404) {
+      await router.replace('/homeworks')
+      return
+    }
     submitError.value = t(status === 404 ? 'homeworks.notFound' : 'homeworks.detailLoadError')
   } finally {
     loading.value = false
@@ -521,6 +530,7 @@ function validate(): boolean {
 
 async function submitForm() {
   submitError.value = ''
+  if (!canEdit.value) return
   if (!validate()) return
 
   saving.value = true
@@ -581,6 +591,10 @@ function firstErrorMessage(value: unknown): string {
 
 function applyBackendErrors(error: unknown) {
   const fallback = t(isEditing ? 'homeworks.updateFailed' : 'homeworks.createFailed')
+  if (isTeachingPeriodPermissionError(error)) {
+    submitError.value = t('permissions.outsideTeachingPeriod')
+    return
+  }
   const data = axios.isAxiosError(error) ? error.response?.data : null
   if (!data || typeof data !== 'object') {
     submitError.value = fallback

@@ -1,5 +1,10 @@
 <template>
-  <div class="space-y-4">
+  <!-- Nothing to plot on any axis: the tiles, table and note would only repeat
+       the emptiness, so the whole panel says so once. -->
+  <p v-if="!chartAxes.length" class="py-16 text-center text-sm text-gray-500 dark:text-gray-400">
+    {{ t('common.noData') }}
+  </p>
+  <div v-else class="space-y-4">
     <!-- Summary tiles -->
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <div
@@ -20,19 +25,15 @@
     <CategoryBreakdown :breakdown="data.summary.by_category" />
 
     <VueApexCharts
-      v-if="axes.length"
       type="radar"
       height="360"
       :options="chartOptions"
       :series="series"
     />
-    <p v-else class="py-16 text-center text-sm text-gray-500 dark:text-gray-400">
-      {{ t('common.noData') }}
-    </p>
 
     <!-- The same numbers as a table. The polygon shows the shape; only this
          shows how many marks each axis rests on. -->
-    <div v-if="axes.length" class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
+    <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
       <div class="max-w-full overflow-x-auto custom-scrollbar">
         <table class="w-full min-w-[560px]">
           <thead>
@@ -65,8 +66,8 @@
                   <span
                     class="h-2 w-2 shrink-0 rounded-full"
                     :style="{
-                      backgroundColor: hasWork(axis) ? SERIES_STUDENT : 'transparent',
-                      boxShadow: hasWork(axis) ? 'none' : `inset 0 0 0 1.5px ${SERIES_STUDENT}`,
+                      backgroundColor: isPlotted(axis) ? SERIES_STUDENT : 'transparent',
+                      boxShadow: isPlotted(axis) ? 'none' : `inset 0 0 0 1.5px ${SERIES_STUDENT}`,
                     }"
                   ></span>
                   <span class="text-sm text-gray-800 dark:text-white/90">{{ axis.subject }}</span>
@@ -74,16 +75,16 @@
               </td>
               <td class="px-4 py-2.5 text-right text-sm tabular-nums text-gray-800 dark:text-white/90">
                 <!-- A zero on an axis with no assignments is filler, not a mark. -->
-                <span v-if="hasWork(axis)">{{ axis.value.toFixed(1) }}%</span>
+                <span v-if="isPlotted(axis)">{{ axis.value.toFixed(1) }}%</span>
                 <span v-else class="text-gray-400 dark:text-gray-500">
-                  {{ t('statistics.noAssignments') }}
+                  {{ hasWork(axis) ? t('statistics.notGraded') : t('statistics.noAssignments') }}
                 </span>
               </td>
               <td class="px-4 py-2.5 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">
-                {{ axis.class_mean !== undefined && hasWork(axis) ? `${axis.class_mean.toFixed(1)}%` : '—' }}
+                {{ axis.class_mean !== undefined && isPlotted(axis) ? `${axis.class_mean.toFixed(1)}%` : '—' }}
               </td>
               <td class="px-4 py-2.5 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">
-                {{ axis.percentile !== undefined && hasWork(axis) ? `${axis.percentile}%` : '—' }}
+                {{ axis.percentile !== undefined && isPlotted(axis) ? `${axis.percentile}%` : '—' }}
               </td>
               <td
                 class="px-4 py-2.5 text-right text-sm tabular-nums"
@@ -108,6 +109,13 @@
       <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <span>{{ t('statistics.emptyAssignmentAxes', { subjects: emptyAxes.join(', ') }) }}</span>
     </p>
+    <p
+      v-if="ungradedAxes.length"
+      class="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-800 dark:bg-white/5 dark:text-gray-400"
+    >
+      <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span>{{ t('statistics.ungradedAxes', { subjects: ungradedAxes.join(', ') }) }}</span>
+    </p>
   </div>
 </template>
 
@@ -122,6 +130,8 @@ import {
   SERIES_CLASS,
   SERIES_STUDENT,
   baseChartOptions,
+  padRadar,
+  radarPaddingMarkers,
   useChartTheme,
 } from '@/components/analytics/chartTheme'
 
@@ -132,9 +142,9 @@ import {
  * The axes are ordered by subject name and never by value, so the shape stays
  * comparable between quarters — which means an axis can be present with no work
  * behind it. Those arrive as `value: 0` with `assignment_count: 0`, and a reader
- * will take that for "scored nothing" unless told otherwise, so they are named
- * under the chart, flagged on their axis label, and their score cell says so
- * instead of showing the zero.
+ * would take a vertex at zero for "scored nothing", so they are left off the
+ * polygon, named under the chart, and their score cell says so instead of
+ * showing the zero. With no axis left, there is no chart.
  */
 const props = defineProps<{ data: AssignmentSummaryResponse }>()
 
@@ -148,21 +158,33 @@ function hasWork(axis: AssignmentSummaryAxis): boolean {
   return axis.assignment_count > 0
 }
 
+/** Work was set but none of it is marked yet, so `value: 0` is no score either. */
+function isPlotted(axis: AssignmentSummaryAxis): boolean {
+  return hasWork(axis) && axis.graded_count > 0
+}
+
 const emptyAxes = computed(() => axes.value.filter(axis => !hasWork(axis)).map(axis => axis.subject))
 
-const hasClassMean = computed(() => axes.value.some(axis => axis.class_mean !== undefined))
+const ungradedAxes = computed(() =>
+  axes.value.filter(axis => hasWork(axis) && !isPlotted(axis)).map(axis => axis.subject),
+)
+
+/** The axes the polygon is drawn on; the table still lists every one. */
+const chartAxes = computed(() => axes.value.filter(isPlotted))
+
+const hasClassMean = computed(() => chartAxes.value.some(axis => axis.class_mean !== undefined))
 
 const series = computed(() => {
   const built = [
     {
       name: props.data.student.short_name,
-      data: axes.value.map(axis => Number(axis.value.toFixed(1))),
+      data: padRadar<number | null>(chartAxes.value.map(axis => Number(axis.value.toFixed(1))), null),
     },
   ]
   if (hasClassMean.value) {
     built.push({
       name: t('statistics.classMean'),
-      data: axes.value.map(axis => Number((axis.class_mean ?? 0).toFixed(1))),
+      data: padRadar<number | null>(chartAxes.value.map(axis => Number((axis.class_mean ?? 0).toFixed(1))), null),
     })
   }
   return built
@@ -177,15 +199,12 @@ const chartOptions = computed(() => ({
     width: hasClassMean.value ? [2.5, 2] : [2.5],
     dashArray: hasClassMean.value ? [0, 4] : [0],
   },
-  markers: { size: 4, strokeWidth: 2, strokeColors: chrome.value.surface, hover: { sizeOffset: 3 } },
-  legend: {
-    show: series.value.length > 1,
-    position: 'top' as const,
-    horizontalAlign: 'left' as const,
-    fontSize: '12px',
-    markers: { width: 10, height: 10, radius: 3 },
-    labels: { colors: chrome.value.label },
-    itemMargin: { horizontal: 10 },
+  markers: {
+    size: 4,
+    strokeWidth: 2,
+    strokeColors: chrome.value.surface,
+    hover: { sizeOffset: 3 },
+    discrete: radarPaddingMarkers(chartAxes.value.length, series.value.length),
   },
   dataLabels: { enabled: false },
   plotOptions: {
@@ -198,8 +217,8 @@ const chartOptions = computed(() => ({
     },
   },
   xaxis: {
-    categories: axes.value.map(axis => (hasWork(axis) ? axis.subject : `${axis.subject} *`)),
-    labels: { style: { fontSize: '12px', colors: axes.value.map(() => chrome.value.label) } },
+    categories: padRadar(chartAxes.value.map(axis => axis.subject), ''),
+    labels: { style: { fontSize: '12px', colors: padRadar(chartAxes.value, null).map(() => chrome.value.label) } },
   },
   yaxis: {
     // A percent of each assignment's own maximum, so the ceiling is fixed.
@@ -210,7 +229,7 @@ const chartOptions = computed(() => ({
   },
   tooltip: {
     theme: chrome.value.tooltip,
-    y: { formatter: (value: number) => `${value.toFixed(1)}%` },
+    y: { formatter: (value: number | null) => (value === null ? '' : `${value.toFixed(1)}%`) },
   },
 }))
 
