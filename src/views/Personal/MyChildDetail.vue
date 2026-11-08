@@ -636,7 +636,14 @@ import {
 import type { StudentDetail, PsychologicalState } from '@/types/student'
 import type { Achievement, ReadingEntry, AchievementCategory, Attachment } from '@/types/achievement'
 import ReportHistoryList from '@/components/reports/ReportHistoryList.vue'
-import { SERIES_CLASS, SERIES_STUDENT, padRadar, radarPaddingMarkers } from '@/components/analytics/chartTheme'
+import {
+  SERIES_CLASS,
+  SERIES_STUDENT,
+  baseChartOptions,
+  padRadar,
+  radarPaddingMarkers,
+  useChartTheme,
+} from '@/components/analytics/chartTheme'
 import { currentIntlLocale } from '@/i18n'
 
 const route = useRoute()
@@ -817,14 +824,21 @@ const subjectScores = computed<Record<string, number>>(() => {
   return Object.fromEntries(Object.keys(cumulative).map((subject) => [subject, quarter[subject]?.grade ?? 0]))
 })
 
-// Subject → class mean for the selected quarter. The cumulative view has none.
+// Subject → class mean for the selected quarter. The API has no cumulative
+// class mean, so with all quarters shown it is the mean of each quarter's.
 const subjectClassMeans = computed<Record<string, number>>(() => {
-  if (!student.value || selectedQuarter.value === null) return {}
-  const quarter = student.value.subject_quarter_grades[String(selectedQuarter.value)] ?? {}
+  if (!student.value) return {}
+  const quarters = selectedQuarter.value === null
+    ? Object.values(student.value.subject_quarter_grades)
+    : [student.value.subject_quarter_grades[String(selectedQuarter.value)] ?? {}]
+  const means: Record<string, number[]> = {}
+  for (const quarter of quarters) {
+    for (const [subject, entry] of Object.entries(quarter)) {
+      if (entry.class_mean != null) (means[subject] ??= []).push(entry.class_mean)
+    }
+  }
   return Object.fromEntries(
-    Object.entries(quarter)
-      .filter(([, entry]) => entry.class_mean != null)
-      .map(([subject, entry]) => [subject, entry.class_mean as number]),
+    Object.entries(means).map(([subject, values]) => [subject, values.reduce((a, b) => a + b, 0) / values.length]),
   )
 })
 
@@ -856,33 +870,36 @@ const radarChartSeries = computed(() => {
   return series
 })
 
+// Styled like AssignmentRadarChart, so the class polygon reads the same everywhere.
+const { chrome } = useChartTheme()
+
 const radarChartOptions = computed(() => {
   if (!student.value) return {}
   const labels = padRadar(radarSubjects.value, '')
   const withClass = radarHasClassMean.value
   return {
-    chart: {
-      fontFamily: 'Manrope, sans-serif',
-      type: 'radar',
-      toolbar: { show: false },
-      dropShadow: { enabled: true, blur: 4, left: 1, top: 1, opacity: 0.1 },
-    },
+    chart: { ...baseChartOptions(), type: 'radar', dropShadow: { enabled: false } },
     colors: withClass ? [SERIES_STUDENT, SERIES_CLASS] : [SERIES_STUDENT],
-    fill: { opacity: withClass ? [0.15, 0.1] : 0.15, type: 'solid' },
-    stroke: { width: withClass ? [2.5, 2] : 2.5, dashArray: withClass ? [0, 4] : 0 },
-    legend: { show: withClass, position: 'top' as const, horizontalAlign: 'left' as const },
+    // Two translucent polygons stack; the class's has to stay readable underneath.
+    fill: { opacity: withClass ? [0.2, 0.1] : [0.2] },
+    stroke: { width: withClass ? [2.5, 2] : [2.5], dashArray: withClass ? [0, 4] : [0] },
+    legend: {
+      show: withClass,
+      position: 'top' as const,
+      horizontalAlign: 'left' as const,
+      labels: { colors: chrome.value.label },
+    },
     markers: {
-      size: 5,
-      colors: withClass ? [SERIES_STUDENT, SERIES_CLASS] : [SERIES_STUDENT],
+      size: 4,
       strokeWidth: 2,
-      strokeColors: '#fff',
-      hover: { sizeOffset: 2 },
+      strokeColors: chrome.value.surface,
+      hover: { sizeOffset: 3 },
       discrete: radarPaddingMarkers(radarSubjects.value.length, radarChartSeries.value.length),
     },
     xaxis: {
       categories: labels,
       labels: {
-        style: { fontSize: '11px', fontWeight: 500, colors: Array(labels.length).fill('#6B7280') },
+        style: { fontSize: '11px', fontWeight: 500, colors: labels.map(() => chrome.value.label) },
         // Long subject names eat the space the web is drawn in.
         formatter: (name: string) => (name.length > 18 ? `${name.slice(0, 17)}…` : name),
       },
@@ -893,7 +910,7 @@ const radarChartOptions = computed(() => {
       max: 5,
       tickAmount: 5,
       labels: {
-        style: { fontSize: '10px', colors: ['#9CA3AF'] },
+        style: { fontSize: '10px', colors: [chrome.value.label] },
         formatter: (v: number) => `${v}`,
       },
     },
@@ -908,7 +925,7 @@ const radarChartOptions = computed(() => {
         (seriesIndex === 0 && v ? `${v}` : ''),
     },
     tooltip: {
-      theme: 'light',
+      theme: chrome.value.tooltip,
       y: { formatter: (v: number | null) => (v === null ? '' : v ? `${v} / 5` : t('students.notGraded')) },
     },
     // The pinned radius would push the labels off a phone-width card.
@@ -918,11 +935,7 @@ const radarChartOptions = computed(() => {
         // Left to Apex, the radius can solve to nothing — a quarter with few
         // graded subjects then draws as a point with its labels piled on it.
         size: 200,
-        polygons: {
-          strokeColors: '#E5E7EB',
-          connectorColors: '#E5E7EB',
-          fill: { colors: ['#F9FAFB', 'transparent'] },
-        },
+        polygons: { strokeColors: chrome.value.grid, connectorColors: chrome.value.grid },
       },
     },
   }
