@@ -132,6 +132,7 @@ export function buildGradeGrid(
       date: assignment.date,
       max_grade: assignment.max_grade,
       graded_count: graded.filter(cells => cells[column]).length,
+      can_edit: assignment.can_edit,
     })),
     matrix,
     graded,

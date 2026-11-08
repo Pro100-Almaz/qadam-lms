@@ -404,6 +404,7 @@ import {
   type AttendanceStatus,
 } from '@/api/attendance'
 import { useToast } from '@/composables/useToast'
+import { isForbiddenError } from '@/utils/apiErrors'
 import type { UserRole } from '@/types/auth'
 import type { ClassStudent, TeacherClassGroup } from '@/types/teacherDashboard'
 import type { QuarterDates } from '@/types/academic'
@@ -449,12 +450,16 @@ const students = ref<ClassStudent[]>([])
 const schedules = ref<SubjectSchedule[]>([])
 /** Subgroup class group id → the student ids enrolled in it. */
 const subgroupStudents = ref<Record<number, Set<number>>>({})
-/**
- * The sessions the caller may mark, from the same list asked for with
- * `only_mine`. `null` means that request failed, and the sheet falls back to
- * reading ownership off the response's own `sessions` / `other_sessions` split.
- */
-const manageableSessions = ref<Set<number> | null>(null)
+/** Session id → the owner schedule's backend-provided edit flag. */
+const manageableSessions = computed(() => {
+  const flags = new Map<number, boolean>()
+  for (const schedule of schedules.value) {
+    for (const session of schedule.sessions ?? []) {
+      flags.set(session.id, schedule.can_edit === true)
+    }
+  }
+  return flags
+})
 
 const period = ref(currentPeriod())
 const weeks = computed(() => weeksOfMonth(period.value))
@@ -468,8 +473,6 @@ const academicYearId = ref<number | null>(null)
 const selectedClassroom = computed(
   () => classrooms.value.find(item => item.class_group_id === classroomId.value) ?? null,
 )
-/** Free entries belong to the class group, so its homeroom teacher marks them. */
-const isHomeroomOfSelected = computed(() => selectedClassroom.value?.is_homeroom === true)
 const selectedWeek = computed(
   () => weeks.value.find(week => week.id === weekId.value) ?? weeks.value[0],
 )
@@ -536,8 +539,7 @@ const statisticsOfferings = computed<StatisticsOfferingOption[]>(() => {
     // The list holds the whole class group's timetable now; another teacher's
     // subject is readable on the sheet but would 403 in the analytics endpoint.
     if (
-      manageableSessions.value !== null &&
-      !(schedule.sessions ?? []).some(session => manageableSessions.value?.has(session.id))
+      !(schedule.sessions ?? []).some(session => manageableSessions.value.get(session.id) === true)
     ) {
       continue
     }
@@ -589,16 +591,12 @@ function apiWeekdayOf(iso: string): number {
  * whole class group's timetable is on the sheet, so this is what separates the
  * caller's own lessons from the columns that are there to be seen.
  *
- * `ownBucket` is the older signal — the session arrived under a schedule's own
- * `sessions` rather than under `other_sessions` — and stands in when the
- * `only_mine` request did not come back.
+ * `ownBucket` means the session arrived under its owner schedule. Foreign
+ * copies use the owner schedule's `can_edit` flag indexed by session id.
  */
 function isManageable(schedule: SubjectSchedule, sessionId: number, ownBucket: boolean): boolean {
-  // A free entry belongs to the class group, and its homeroom teacher owns it
-  // whatever the subject teachers may do.
-  if (schedule.type === 'other') return isHomeroomOfSelected.value
-  if (manageableSessions.value === null) return ownBucket
-  return manageableSessions.value.has(sessionId)
+  if (ownBucket) return schedule.can_edit === true
+  return manageableSessions.value.get(sessionId) === true
 }
 
 /**
@@ -727,16 +725,19 @@ function isPresent(sessionId: number, studentId: number): boolean {
   return marks.value[cellKey(sessionId, studentId)] === true
 }
 
-async function loadClasses(): Promise<void> {
+async function loadClasses(quarter = selectedQuarter.value): Promise<void> {
   classesLoading.value = true
   loadError.value = null
   try {
-    const { data } = await getTeacherMyClassesApi()
+    const previous = classroomId.value
+    const { data } = await getTeacherMyClassesApi(quarter ? { quarter } : undefined)
     classrooms.value = Array.isArray(data) ? data : []
-    if (classrooms.value.length) {
+    if (previous !== null && classrooms.value.some(item => item.class_group_id === previous)) {
+      classroomId.value = previous
+    } else if (classrooms.value.length) {
       const homeroom = classrooms.value.find(item => item.is_homeroom)
       classroomId.value = (homeroom ?? classrooms.value[0]).class_group_id
-    }
+    } else classroomId.value = null
   } catch {
     loadError.value = t('attendance.loadFailed')
   } finally {
@@ -794,27 +795,11 @@ async function loadSchedules(): Promise<void> {
     page_size: PAGE_SIZE,
   }
   try {
-    // Twice over the same filters: the whole timetable, so every subject's
-    // register can be read, and the caller's own slice of it, which is the only
-    // part they may mark. The second is allowed to fail on its own — see below.
-    const [all, mine] = await Promise.allSettled([
-      getSubjectSchedulesApi(filters),
-      getSubjectSchedulesApi({ ...filters, only_mine: true }),
-    ])
-    if (all.status === 'rejected') throw all.reason
-    schedules.value = all.value.data
-    manageableSessions.value =
-      mine.status === 'fulfilled'
-        ? new Set(
-            mine.value.data.flatMap(schedule =>
-              (schedule.sessions ?? []).map(session => session.id),
-            ),
-          )
-        : null
+    const { data } = await getSubjectSchedulesApi(filters)
+    schedules.value = data
     await loadSubgroupStudents()
   } catch {
     schedules.value = []
-    manageableSessions.value = null
     subgroupStudents.value = {}
     sheetError.value = t('attendance.loadFailed')
   } finally {
@@ -907,10 +892,9 @@ onMounted(async () => {
     classesLoading.value = false
     return
   }
+  await loadQuarters()
   await loadClasses()
-  // Schedules need a quarter, so loading them is left to the `selectedQuarter`
-  // watcher — it fires as soon as the quarters resolve.
-  await Promise.all([loadStudents(), loadQuarters()])
+  await Promise.all([loadStudents(), loadSchedules()])
 })
 
 watch(classroomId, (next, previous) => {
@@ -924,9 +908,14 @@ watch(classroomId, (next, previous) => {
   loadSchedules()
 })
 
-watch(selectedQuarter, (next, previous) => {
+watch(selectedQuarter, async (next, previous) => {
   if (classesLoading.value || next === previous) return
-  loadSchedules()
+  schedules.value = []
+  students.value = []
+  marks.value = {}
+  saved.value = {}
+  await loadClasses(next)
+  await Promise.all([loadStudents(), loadSchedules()])
 })
 
 // Once the visible week identifies a quarter by itself, the explicit pick is
@@ -1008,22 +997,24 @@ const canSubmit = computed(
 )
 
 /** Small pool so a full sheet doesn't fire hundreds of requests at once. */
-async function runQueued(tasks: Array<() => Promise<unknown>>): Promise<number> {
+async function runQueued(tasks: Array<() => Promise<unknown>>): Promise<{ failed: number; forbidden: boolean }> {
   let cursor = 0
   let failed = 0
+  let forbidden = false
   const workers = Array.from({ length: Math.min(WRITE_CONCURRENCY, tasks.length) }, async () => {
     while (cursor < tasks.length) {
       const task = tasks[cursor]
       cursor += 1
       try {
         await task()
-      } catch {
+      } catch (error) {
         failed += 1
+        forbidden ||= isForbiddenError(error)
       }
     }
   })
   await Promise.all(workers)
-  return failed
+  return { failed, forbidden }
 }
 
 /**
@@ -1057,7 +1048,7 @@ async function submitDay(): Promise<void> {
     }
   }
 
-  const failed = await runQueued(tasks)
+  const { failed, forbidden } = await runQueued(tasks)
   submitting.value = false
 
   // Clear the flag first so the reload below is allowed to overwrite the day.
@@ -1066,7 +1057,8 @@ async function submitDay(): Promise<void> {
   unsavedDays.value = remaining
   await loadDay()
 
-  if (failed) toast.error(t('attendance.submitFailed'), t('attendance.submitPartial', { n: failed }))
+  if (forbidden) toast.error(t('permissions.outsideTeachingPeriod'))
+  else if (failed) toast.error(t('attendance.submitFailed'), t('attendance.submitPartial', { n: failed }))
   else toast.success(t('attendance.submitted'), formatDayMonth(date))
 }
 

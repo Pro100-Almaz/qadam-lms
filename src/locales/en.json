@@ -4,6 +4,14 @@
         "school": "Qadam School",
         "tagline": "Learning Management System"
     },
+    "permissions": {
+        "outsideTeachingPeriod": "You do not have permission to modify this quarter.",
+        "itemReadOnly": "This quarter is available read-only.",
+        "gradebookReadOnly": "This gradebook is read-only for the selected quarter.",
+        "quarterReadOnly": "This quarter is read-only.",
+        "lessonDateAuthority": "Lesson and topic-grade access follows the lesson's stored quarter.",
+        "homeworkDateAuthority": "Homework and grade access is provided by the server."
+    },
     "nav": {
         "dashboard": "Dashboard",
         "academicYears": "Academic Years",
@@ -538,6 +546,9 @@
         "mySubtitle": "Everything assigned to your class, newest due date first.",
         "subject": "Subject",
         "allSubjects": "All subjects",
+        "deadline": "Deadline",
+        "upcoming": "Upcoming",
+        "passed": "Passed",
         "due": "Due",
         "past": "Past due",
         "grade": "Grade",
@@ -587,7 +598,7 @@
         "allClassGroups": "All classes",
         "allCategories": "All types",
         "date": "Date",
-        "dateHint": "The day the lesson or exam took place.",
+        "dateHint": "The day the lesson or exam took place. Edit authority is checked against this date.",
         "dateFrom": "From",
         "dateTo": "To",
         "assignment": "Assignment",
@@ -1033,7 +1044,12 @@
         "assignments": "Assignments",
         "classGroup": "Class Group",
         "gradingStrategy": "Grading Strategy",
-        "role": "Role"
+        "role": "Role",
+        "quarter": "Quarter",
+        "noQuarterAssigned": "No quarter assigned",
+        "replaceTeacherWarning": "Changing the teacher immediately revokes the previous teacher's access to this quarter.",
+        "duplicateOfferingQuarter": "This teacher already has an assignment for the same offering and quarter.",
+        "assignmentUpdated": "Teaching assignment updated."
     },
     "students": {
         "title": "Students",
@@ -1171,6 +1187,7 @@
         "gradingMode": "Mode",
         "cascade": "Cascade",
         "independent": "Independent",
+        "saveFailed": "The lesson grades could not be saved.",
         "confirmDeleteGrade": "Are you sure you want to delete this student's grade?"
     },
     "pagination": {

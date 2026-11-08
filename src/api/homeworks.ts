@@ -1,5 +1,6 @@
 import type { AxiosRequestConfig } from 'axios'
 import api, { unwrapList, type ListResponse, type PaginatedResponse } from './client'
+import type { EditableResource } from '@/types/teachingAssignment'
 
 export interface HomeworkOffering {
   id: number
@@ -35,7 +36,7 @@ export interface HomeworkAttachment {
 }
 
 /** One homework row — always scoped to a single offering (subject × class group). */
-export interface Homework {
+export interface Homework extends EditableResource {
   id: number
   description: string
   offering: HomeworkOffering
@@ -182,7 +183,7 @@ export function getStudentHomeworksApi(
  * `student` is the Student *profile* id — the same id space the roster's top-level
  * `id` and the attendance API use, **not** the user id (that is `student_user_id`).
  */
-export interface HomeworkGrade {
+export interface HomeworkGrade extends EditableResource {
   id: number
   student: number
   student_user_id: number

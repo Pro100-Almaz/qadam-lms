@@ -35,6 +35,9 @@
           <p class="text-sm text-gray-500 dark:text-gray-400">
             {{ grading.title }} — Q{{ grading.quarter }}
           </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            {{ grading.can_edit === true ? t('permissions.lessonDateAuthority') : t('permissions.itemReadOnly') }}
+          </p>
         </div>
 
         <!-- Lesson Info -->
@@ -118,7 +121,7 @@
                     <span v-else class="text-xs text-gray-400 dark:text-gray-500 italic">{{ t('grading.noComment') }}</span>
                   </td>
                   <td class="px-5 py-3 text-right">
-                    <div class="flex items-center justify-end gap-1.5">
+                    <div v-if="grading.can_edit === true" class="flex items-center justify-end gap-1.5">
                       <button
                         @click="openGradingModal(student)"
                         class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 transition"
@@ -250,6 +253,7 @@
                           <input
                             v-if="!topic.subtopics.length"
                             type="checkbox"
+                            :disabled="grading?.can_edit !== true"
                             :checked="topicStates[topic.id]?.covered"
                             @change="onTopicCoveredChange(topic)"
                             class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
@@ -260,6 +264,7 @@
                             v-if="!topic.subtopics.length"
                             v-model="topicStates[topic.id].comment"
                             rows="1"
+                            :disabled="grading?.can_edit !== true"
                             class="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-700 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 resize-none"
                             :placeholder="t('grading.addComment')"
                           />
@@ -268,6 +273,7 @@
                           <input
                             v-if="!topic.subtopics.length"
                             type="checkbox"
+                            :disabled="grading?.can_edit !== true"
                             :checked="topicStates[topic.id]?.comment_selected"
                             @change="onCommentSelectedChange(topic.id, 'topic')"
                             class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
@@ -298,6 +304,7 @@
                           <td class="px-3 py-2.5 text-center">
                             <input
                               type="checkbox"
+                              :disabled="grading?.can_edit !== true"
                               :checked="subtopicStates[sub.id]?.covered"
                               @change="onSubtopicCoveredChange(topic, sub)"
                               class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
@@ -307,6 +314,7 @@
                             <textarea
                               v-model="subtopicStates[sub.id].comment"
                               rows="1"
+                              :disabled="grading?.can_edit !== true"
                               class="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-700 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 resize-none"
                               :placeholder="t('grading.addComment')"
                             />
@@ -314,6 +322,7 @@
                           <td v-if="commentMode === 'selected'" class="px-3 py-2.5 text-center">
                             <input
                               type="checkbox"
+                              :disabled="grading?.can_edit !== true"
                               :checked="subtopicStates[sub.id]?.comment_selected"
                               @change="onCommentSelectedChange(sub.id, 'subtopic', topic.id)"
                               class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800"
@@ -340,6 +349,13 @@
                 </table>
               </div>
 
+              <p
+                v-if="modalSubmitError"
+                class="mx-6 mb-3 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-600 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-400"
+              >
+                {{ modalSubmitError }}
+              </p>
+
               <!-- Modal Footer -->
               <div class="flex items-center justify-end gap-2 border-t border-gray-200 px-6 py-4 dark:border-gray-800 shrink-0">
                 <button
@@ -349,6 +365,7 @@
                   {{ t('common.cancel') }}
                 </button>
                 <button
+                  v-if="grading?.can_edit === true"
                   @click="submitGrading"
                   :disabled="saving"
                   class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition"
@@ -437,7 +454,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
 import { useI18n } from 'vue-i18n'
 import {
   Loader2,
@@ -456,8 +474,10 @@ import {getLessonDetailApi} from '@/api/lessons'
 
 import type { GradingData } from '@/types/grading'
 import type { LessonStudent, Topic, Subtopic, LessonDetail } from '@/types/lesson'
+import { isTeachingPeriodPermissionError } from '@/utils/apiErrors'
 
 const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
 
 const lessonId = computed(() => Number(route.params.id))
@@ -466,6 +486,7 @@ const grading = ref<GradingData | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const error = ref<string | null>(null)
+const modalSubmitError = ref('')
 
 // Modal state
 const showModal = ref(false)
@@ -502,7 +523,11 @@ async function fetchGrading() {
     grading.value = data
     const {data: lessonData} = await getLessonDetailApi(lessonId.value)
     lesson.value = lessonData
-  } catch {
+  } catch (fetchError) {
+    if (axios.isAxiosError(fetchError) && fetchError.response?.status === 404) {
+      await router.replace('/lessons')
+      return
+    }
     error.value = t('common.noData')
   } finally {
     loading.value = false
@@ -557,6 +582,8 @@ function showCommentModal(text: string) {
 // ─── Grading modal ──────────────────────────────────────────────────────────────
 
 function openGradingModal(student: LessonStudent) {
+  if (grading.value?.can_edit !== true) return
+  modalSubmitError.value = ''
   modalStudent.value = student
   const userId = String(student.user_id)
   const g = grading.value!
@@ -733,8 +760,9 @@ const calculatedTotal = computed(() => {
 // ─── Submit ─────────────────────────────────────────────────────────────────────
 
 async function submitGrading() {
-  if (!modalStudent.value || !grading.value) return
+  if (!modalStudent.value || grading.value?.can_edit !== true) return
   saving.value = true
+  modalSubmitError.value = ''
 
   const topics: Record<string, { covered: boolean; comment: string; comment_selected: boolean }> = {}
   const subtopics: Record<string, { covered: boolean; comment: string; comment_selected: boolean }> = {}
@@ -772,6 +800,13 @@ async function submitGrading() {
     showModal.value = false
     await fetchGrading()
   } catch (e) {
+    const message = isTeachingPeriodPermissionError(e)
+      ? t('permissions.outsideTeachingPeriod')
+      : t('grading.saveFailed')
+    const student = modalStudent.value
+    await fetchGrading()
+    if (student && grading.value) openGradingModal(student)
+    modalSubmitError.value = message
     console.error('Failed to submit grading:', e)
   } finally {
     saving.value = false
@@ -781,12 +816,13 @@ async function submitGrading() {
 // ─── Delete grade ───────────────────────────────────────────────────────────────
 
 function confirmDeleteGrade(student: LessonStudent) {
+  if (grading.value?.can_edit !== true) return
   deleteStudentRef.value = student
   showDeleteConfirm.value = true
 }
 
 async function executeDeleteGrade() {
-  if (!deleteStudentRef.value) return
+  if (!deleteStudentRef.value || grading.value?.can_edit !== true) return
   saving.value = true
   try {
     await deleteStudentGradingApi(lessonId.value, deleteStudentRef.value.user_id)

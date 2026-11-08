@@ -74,13 +74,15 @@
               class="absolute z-10 flex flex-col overflow-hidden rounded-lg border text-left transition"
               :class="[
                 toneClass(block.event),
-                readonly ? 'cursor-default' : 'cursor-pointer hover:brightness-95',
+                readonly || block.event.editable === false
+                  ? 'cursor-default'
+                  : 'cursor-pointer hover:brightness-95',
                 textLines(block.event) === 1 ? 'justify-center px-1.5' : 'justify-start px-2 py-1',
               ]"
               :style="{ ...blockStyle(block.event.start, block.event.end), ...laneStyle(block) }"
               :title="blockTitle(block.event)"
               @pointerdown.stop
-              @click="emit('select', block.event)"
+              @click="block.event.editable === false ? undefined : emit('select', block.event)"
             >
               <span
                 class="block truncate font-semibold"
@@ -123,6 +125,8 @@ export interface ScheduleEvent {
   tone?: 'subject' | 'other'
   /** Colour bucket — same number, same colour, across the whole week. */
   colorKey?: string
+  /** False keeps a visible event from exposing edit affordances. */
+  editable?: boolean
 }
 
 export interface ScheduleRange {

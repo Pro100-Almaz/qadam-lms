@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { loginApi, logoutApi, getMeApi, updateProfileApi, uploadAvatarApi } from '@/api/auth'
-import { setAccessToken, refreshAccessToken } from '@/api/client'
+import { setAccessToken, setActiveRoleHeader, refreshAccessToken } from '@/api/client'
 import type { User, UserRole } from '@/types/auth'
 import type { SelectableUserRole } from '@/types/auth'
 import { getActiveRoles, getAvailableRoles, normalizeSelectableRole } from '@/utils/roles'
@@ -38,30 +38,45 @@ export const useAuthStore = defineStore('auth', () => {
     userRoles.value.some(role => (['teacher', 'homeroom_teacher'] as UserRole[]).includes(role))
   )
 
+  // The picked role lives in localStorage next to the refresh token, so it
+  // survives reloads, new tabs and browser restarts for as long as the session.
   function readStoredActiveRole(): StoredActiveRole | null {
     try {
-      const value = sessionStorage.getItem(ACTIVE_ROLE_STORAGE_KEY)
+      const value = localStorage.getItem(ACTIVE_ROLE_STORAGE_KEY)
       return value ? JSON.parse(value) as StoredActiveRole : null
     } catch {
       return null
     }
   }
 
+  function removeStoredActiveRole() {
+    try {
+      localStorage.removeItem(ACTIVE_ROLE_STORAGE_KEY)
+    } catch {
+      // Storage unavailable — nothing to clear.
+    }
+  }
+
   function persistActiveRole() {
     if (!user.value || !activeRole.value) {
-      sessionStorage.removeItem(ACTIVE_ROLE_STORAGE_KEY)
+      removeStoredActiveRole()
       return
     }
-    sessionStorage.setItem(ACTIVE_ROLE_STORAGE_KEY, JSON.stringify({
-      userId: user.value.id,
-      role: activeRole.value,
-    } satisfies StoredActiveRole))
+    try {
+      localStorage.setItem(ACTIVE_ROLE_STORAGE_KEY, JSON.stringify({
+        userId: user.value.id,
+        role: activeRole.value,
+      } satisfies StoredActiveRole))
+    } catch {
+      // Storage unavailable — the role still applies for this page load.
+    }
   }
 
   function reconcileActiveRole() {
     if (!user.value) {
       activeRole.value = null
-      sessionStorage.removeItem(ACTIVE_ROLE_STORAGE_KEY)
+      setActiveRoleHeader(null)
+      removeStoredActiveRole()
       return
     }
 
@@ -73,12 +88,14 @@ export const useAuthStore = defineStore('auth', () => {
       ?? (primaryRole && roles.includes(primaryRole) ? primaryRole : null)
       ?? roles[0]
       ?? null
+    setActiveRoleHeader(activeRole.value)
     persistActiveRole()
   }
 
   function setActiveRole(role: SelectableUserRole): boolean {
     if (!availableRoles.value.includes(role)) return false
     activeRole.value = role
+    setActiveRoleHeader(role)
     persistActiveRole()
     return true
   }
@@ -86,7 +103,8 @@ export const useAuthStore = defineStore('auth', () => {
   function clearAuthState() {
     user.value = null
     activeRole.value = null
-    sessionStorage.removeItem(ACTIVE_ROLE_STORAGE_KEY)
+    setActiveRoleHeader(null)
+    removeStoredActiveRole()
     setAccessToken(null)
     localStorage.removeItem('refresh_token')
   }
@@ -110,6 +128,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     isSessionLoading.value = true
+    // Send the stored role with /auth/me/ too, so the first authenticated
+    // request already carries X-Active-Role; reconcileActiveRole() re-checks
+    // it against the user once they are known.
+    setActiveRoleHeader(readStoredActiveRole()?.role ?? null)
     try {
       await refreshAccessToken()
       await fetchCurrentUser()

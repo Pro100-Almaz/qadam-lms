@@ -33,7 +33,7 @@
           <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">
             {{ lesson.title }}
           </h1>
-          <div class="flex items-center gap-2">
+          <div v-if="lesson.can_edit === true" class="flex items-center gap-2">
             <router-link
               :to="`/lessons/${lesson.id}/grading`"
               class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-700 transition"
@@ -50,6 +50,13 @@
             </button>
           </div>
         </div>
+
+        <p
+          v-if="lesson.can_edit !== true"
+          class="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-400"
+        >
+          {{ t('permissions.itemReadOnly') }}
+        </p>
 
         <!-- Lesson Info Card -->
         <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
@@ -121,7 +128,7 @@
         <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
           <div class="flex flex-col gap-3 border-b border-gray-200 p-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
             <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ t('lessons.topics') }}</h2>
-            <div class="flex items-center gap-2">
+            <div v-if="lesson.can_edit === true" class="flex items-center gap-2">
               <button
                 @click="handleDistributeTopicWeights"
                 class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
@@ -160,7 +167,7 @@
                   <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ topic.weight }}%</td>
                   <td class="max-w-[200px] truncate px-4 py-3 text-gray-500 dark:text-gray-400">{{ topic.comment_template || '—' }}</td>
                   <td class="px-4 py-3 text-right">
-                    <div class="flex items-center justify-end gap-1">
+                    <div v-if="lesson.can_edit === true" class="flex items-center justify-end gap-1">
                       <button
                         @click="openEditTopicModal(topic)"
                         class="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
@@ -200,7 +207,7 @@
                 </option>
               </select>
             </div>
-            <div class="flex items-center gap-2">
+            <div v-if="lesson.can_edit === true" class="flex items-center gap-2">
               <button
                 @click="handleDistributeSubtopicWeights"
                 class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
@@ -239,7 +246,7 @@
                   <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ sub.subtopic.weight }}%</td>
                   <td class="max-w-[200px] truncate px-4 py-3 text-gray-500 dark:text-gray-400">{{ sub.subtopic.comment_template || '—' }}</td>
                   <td class="px-4 py-3 text-right">
-                    <div class="flex items-center justify-end gap-1">
+                    <div v-if="lesson.can_edit === true" class="flex items-center justify-end gap-1">
                       <button
                         @click="openEditSubtopicModal(sub.subtopic, sub.topicId)"
                         class="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
@@ -693,6 +700,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -870,6 +878,10 @@ async function fetchLesson() {
     lesson.value = data
     await resolveBackToSubject(data)
   } catch (e) {
+    if (axios.isAxiosError(e) && e.response?.status === 404) {
+      await router.replace('/lessons')
+      return
+    }
     error.value = 'Failed to load lesson details.'
     console.error(e)
   } finally {
@@ -889,12 +901,14 @@ async function refreshLesson() {
 
 // Topic CRUD
 function openAddTopicModal() {
+  if (lesson.value?.can_edit !== true) return
   editingTopicId.value = null
   topicForm.value = { title: '', weight: '', comment_template: '' }
   showTopicModal.value = true
 }
 
 function openEditTopicModal(topic: Topic) {
+  if (lesson.value?.can_edit !== true) return
   editingTopicId.value = topic.id
   topicForm.value = {
     title: topic.title,
@@ -905,6 +919,7 @@ function openEditTopicModal(topic: Topic) {
 }
 
 async function handleSaveTopic() {
+  if (lesson.value?.can_edit !== true) return
   saving.value = true
   try {
     if (editingTopicId.value) {
@@ -929,6 +944,7 @@ async function handleSaveTopic() {
 }
 
 function confirmDeleteTopic(topicId: number) {
+  if (lesson.value?.can_edit !== true) return
   confirmMessage.value = t('lessons.confirmDeleteTopic')
   confirmAction.value = async () => {
     await deleteTopicApi(topicId)
@@ -938,6 +954,7 @@ function confirmDeleteTopic(topicId: number) {
 }
 
 async function handleDistributeTopicWeights() {
+  if (lesson.value?.can_edit !== true) return
   saving.value = true
   try {
     await distributeTopicWeightsApi(lessonId.value)
@@ -959,6 +976,7 @@ async function handleDistributeTopicWeights() {
 
 // Subtopic CRUD
 function openAddSubtopicModal() {
+  if (lesson.value?.can_edit !== true) return
   editingSubtopicId.value = null
   subtopicForm.value = {
     parent: lesson.value?.topics[0]?.id ?? 0,
@@ -970,6 +988,7 @@ function openAddSubtopicModal() {
 }
 
 function openEditSubtopicModal(subtopic: Subtopic, topicId: number) {
+  if (lesson.value?.can_edit !== true) return
   editingSubtopicId.value = subtopic.id
   subtopicForm.value = {
     parent: topicId,
@@ -981,6 +1000,7 @@ function openEditSubtopicModal(subtopic: Subtopic, topicId: number) {
 }
 
 async function handleSaveSubtopic() {
+  if (lesson.value?.can_edit !== true) return
   saving.value = true
   try {
     if (editingSubtopicId.value) {
@@ -1024,6 +1044,7 @@ async function handleSaveSubtopic() {
 }
 
 function confirmDeleteSubtopic(subtopicId: number) {
+  if (lesson.value?.can_edit !== true) return
   confirmMessage.value = t('lessons.confirmDeleteSubtopic')
   confirmAction.value = async () => {
     await deleteSubtopicApi(subtopicId)
@@ -1033,6 +1054,7 @@ function confirmDeleteSubtopic(subtopicId: number) {
 }
 
 async function handleDistributeSubtopicWeights() {
+  if (lesson.value?.can_edit !== true) return
   saving.value = true
   try {
     await distributeSubtopicWeightsApi(lessonId.value)
@@ -1053,6 +1075,7 @@ function openGradeModal(student: LessonStudent) {
 
 // Delete lesson
 function confirmDeleteLesson() {
+  if (lesson.value?.can_edit !== true) return
   confirmMessage.value = t('lessons.confirmDeleteLesson')
   confirmAction.value = async () => {
     await deleteLessonApi(lessonId.value)

@@ -1,4 +1,5 @@
 import api from './client'
+import type { EditableResource, Quarter } from '@/types/teachingAssignment'
 
 /**
  * Quarter grades — one mark per student, per offering, per quarter.
@@ -14,9 +15,9 @@ import api from './client'
  * runs before validation, so a 403 can hide a body that was also invalid.
  */
 
-export interface QuarterGrade {
+export interface QuarterGrade extends EditableResource {
   id: number
-  quarter: number
+  quarter: Quarter
   grade: number
   /** Student **profile** id — the key every write uses. */
   student: number

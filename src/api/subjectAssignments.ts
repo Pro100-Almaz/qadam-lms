@@ -1,4 +1,6 @@
 import api, { type PaginatedResponse } from './client'
+import type { EditableResource } from '@/types/teachingAssignment'
+import type { Quarter } from '@/types/teachingAssignment'
 
 /**
  * A graded piece of work — a lesson mark, an exam or a final. Distinct from
@@ -39,7 +41,7 @@ export function getAssignmentCategoriesApi() {
  * flattened into `offering_id` plus denormalised names, so there is no nested
  * `offering` object to read through.
  */
-export interface SubjectAssignment {
+export interface SubjectAssignment extends EditableResource {
   id: number
   title: string
   category: SubjectAssignmentCategory
@@ -77,7 +79,7 @@ export interface SubjectAssignment {
    * on purpose. `null` on rows the backend could not place; those never match
    * a `quarter` filter.
    */
-  quarter: number | null
+  quarter: Quarter | null
   created_at: string
 }
 
@@ -162,7 +164,7 @@ export function deleteSubjectAssignmentApi(id: number | string) {
  * — the same id space the roster's top-level `id` uses, not `student_user_id`.
  * The assignment is inlined on every row, so a grade renders without a lookup.
  */
-export interface SubjectGrade {
+export interface SubjectGrade extends EditableResource {
   id: number
   assignment: SubjectAssignment
   student: number
@@ -206,6 +208,8 @@ export interface OfferingGradeRow {
   grade: number | null
   comments: string | null
   created_at: string
+  /** Some nested gradebook serializers omit this; use the parent assignment then. */
+  can_edit?: boolean
 }
 
 /** An assignment with every grade stored on it — ungraded students are absent. */

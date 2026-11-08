@@ -216,15 +216,19 @@ async function fetchSubjects() {
     const { data } = await getTeachingAssignmentsApi({
       academic_year: activeYear?.id,
       class_group: props.classGroupId,
+      quarter: quarter.value as 1 | 2 | 3 | 4,
     })
 
-    subjectOptions.value = data
-      .map(assignment => ({
+    const visible = data.filter(assignment => assignment.quarter !== null)
+    subjectOptions.value = [...new Map(visible.map(assignment => [assignment.id, {
         offeringId: assignment.id,
         subjectName: assignment.subject_name,
         classGroupName: assignment.class_group_name,
-        teacherName: assignment.teacher_name,
-      }))
+        teacherName: visible
+          .filter(row => row.id === assignment.id)
+          .map(row => row.teacher_name)
+          .join(', '),
+      }])).values()]
       .sort(
         (a, b) =>
           a.subjectName.localeCompare(b.subjectName) ||
@@ -242,7 +246,7 @@ async function fetchSubjects() {
 }
 
 watch(
-  () => [props.classGroupId, props.offerings, props.classGroupName],
+  () => [props.classGroupId, props.offerings, props.classGroupName, quarter.value],
   fetchSubjects,
   { immediate: true },
 )

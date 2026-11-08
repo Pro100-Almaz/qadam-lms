@@ -142,6 +142,8 @@ export interface TeacherOfferingsParams {
    * `true`. It takes no quarter, category or date filters.
    */
   include_empty?: boolean
+  /** Filters offerings to those visible for the requested content quarter. */
+  quarter?: number
 }
 
 export interface PsychologistStats {

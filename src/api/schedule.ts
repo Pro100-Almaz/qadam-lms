@@ -1,6 +1,7 @@
 import api from './client'
 import { type ListResponse, unwrapList } from './client'
 import type { ClassGroupCategory } from '@/types/academic'
+import type { EditableResource, Quarter } from '@/types/teachingAssignment'
 
 export type ApiWeekday = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
@@ -52,7 +53,7 @@ export interface ScheduleClassGroup {
   academic_year_label: string | null
 }
 
-export interface SubjectSchedule {
+export interface SubjectSchedule extends EditableResource {
   id: number
   type: ScheduleType
   /** The subject name, or the description when there is no offering. */
@@ -64,7 +65,7 @@ export interface SubjectSchedule {
   class_group?: ScheduleClassGroup | null
   /** Required when the schedule has no offering. */
   description: string | null
-  quarter: number
+  quarter: Quarter
   sessions: ScheduleSession[]
   other_sessions?: ForeignScheduleSession[]
 }

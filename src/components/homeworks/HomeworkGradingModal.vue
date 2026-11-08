@@ -34,6 +34,12 @@
 
           <!-- Body -->
           <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <p
+              v-if="!canGrade"
+              class="mb-4 rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-400"
+            >
+              {{ t('permissions.itemReadOnly') }}
+            </p>
             <!-- Loading -->
             <div v-if="loading" class="space-y-2">
               <div
@@ -78,7 +84,7 @@
                   </p>
 
                   <!-- Only the offering's teachers may write; everyone else reads. -->
-                  <div v-if="!canGrade" class="flex shrink-0 items-center gap-1.5">
+                  <div v-if="!row.editable" class="flex shrink-0 items-center gap-1.5">
                     <span class="w-20 text-center text-sm font-medium text-gray-800 dark:text-white/90">
                       {{ text(row.value) || '—' }}
                     </span>
@@ -106,7 +112,7 @@
                 <!-- Comment: optional on the API, so it stays out of the way. -->
                 <div class="mt-1.5 pl-11">
                   <input
-                    v-if="canGrade"
+                    v-if="row.editable"
                     v-model="row.comments"
                     type="text"
                     maxlength="500"
@@ -170,6 +176,7 @@ import {
   updateHomeworkGradeApi,
   type Homework,
 } from '@/api/homeworks'
+import { isTeachingPeriodPermissionError } from '@/utils/apiErrors'
 
 /** One roster line. `studentId` is the Student *profile* id the API keys on. */
 interface GradeRow {
@@ -190,6 +197,8 @@ interface GradeRow {
   /** Trimmed comment as loaded, for change detection. */
   originalComments: string
   error: string
+  /** Existing grades use their own flag; empty rows inherit the parent homework flag. */
+  editable: boolean
 }
 
 /** Normalises the dual-typed input model to the trimmed string form. */
@@ -281,6 +290,7 @@ async function load() {
           comments,
           originalComments: comments,
           error: '',
+          editable: Boolean(props.canGrade && (!existing || existing.can_edit === true)),
         }
       })
       .sort((a, b) => a.fullName.localeCompare(b.fullName))
@@ -328,7 +338,7 @@ async function save() {
   submitError.value = ''
   if (!validate()) return
 
-  const changed = rows.value.filter(isDirty)
+  const changed = rows.value.filter(row => row.editable && isDirty(row))
   if (!changed.length) return
 
   saving.value = true
@@ -356,7 +366,12 @@ async function save() {
     const row = changed[index]
     if (result.status === 'rejected') {
       failed += 1
-      row.error = t('homeworks.gradeSaveFailed')
+      // Restore the server value immediately; failed grades must not look saved.
+      row.value = row.original
+      row.comments = row.originalComments
+      row.error = isTeachingPeriodPermissionError(result.reason)
+        ? t('permissions.outsideTeachingPeriod')
+        : t('homeworks.gradeSaveFailed')
       return
     }
     // Commit locally instead of refetching: a create hands back the new row id,
@@ -377,10 +392,13 @@ async function save() {
     // A create whose id did not come back would be duplicated on the next save,
     // so resync and let the server state win. The message is set afterwards
     // because `load()` clears it.
-    if (rows.value.some(row => (row.original !== '' || row.originalComments !== '') && row.gradeId === null)) {
-      await load()
-    }
-    submitError.value = t('homeworks.gradesPartialError', { count: failed })
+    await load()
+    const temporalFailure = results.some(
+      result => result.status === 'rejected' && isTeachingPeriodPermissionError(result.reason),
+    )
+    submitError.value = temporalFailure
+      ? t('permissions.outsideTeachingPeriod')
+      : t('homeworks.gradesPartialError', { count: failed })
     return
   }
 

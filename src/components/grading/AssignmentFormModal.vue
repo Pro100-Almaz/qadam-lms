@@ -43,6 +43,12 @@
               <CircleAlert class="mt-0.5 h-4 w-4 shrink-0" />
               <span>{{ submitError }}</span>
             </p>
+            <p
+              v-if="isEditing && !canEdit"
+              class="rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-700 dark:border-warning-500/20 dark:bg-warning-500/10 dark:text-warning-400"
+            >
+              {{ t('permissions.itemReadOnly') }}
+            </p>
 
             <!-- Edit: the offering is immutable, so it reads as plain text. -->
             <dl v-if="isEditing" class="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-3 sm:p-4 dark:bg-white/5">
@@ -222,7 +228,7 @@
             <!-- A homework assignment goes when its homework is deleted, on the
                  Homeworks page; the API refuses it here. -->
             <button
-              v-if="isEditing && !isEditingHomework"
+              v-if="isEditing && !isEditingHomework && canEdit"
               type="button"
               :disabled="saving"
               class="inline-flex items-center justify-center gap-2 rounded-lg border border-error-200 px-4 py-2 text-sm font-medium text-error-500 transition hover:bg-error-50 disabled:opacity-50 dark:border-error-500/30 dark:hover:bg-error-500/10"
@@ -241,6 +247,7 @@
                 {{ t('common.cancel') }}
               </button>
               <button
+                v-if="canEdit"
                 type="button"
                 :disabled="saving"
                 class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-brand-600 sm:flex-none px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -269,6 +276,8 @@ import { useBackdropClose } from '@/composables/useBackdropClose'
 import { useToast } from '@/composables/useToast'
 import type { TeacherSubjectOfferings } from '@/composables/useTeacherOfferings'
 import { toIsoDate } from '@/utils/attendanceWeeks'
+import { isTeachingPeriodPermissionError } from '@/utils/apiErrors'
+import type { Quarter } from '@/types/teachingAssignment'
 import {
   HOMEWORK_CATEGORY,
   createSubjectAssignmentApi,
@@ -281,6 +290,8 @@ const props = defineProps<{
   open: boolean
   /** `null` opens the form in create mode. */
   assignment: SubjectAssignment | null
+  /** Quarter selected by the surrounding list; creation sends it explicitly. */
+  defaultQuarter?: Quarter
   /** The caller's own offerings — the API rejects any other. */
   subjectGroups: TeacherSubjectOfferings[]
   offeringsLoading?: boolean
@@ -305,6 +316,7 @@ const backdrop = useBackdropClose(() => {
 })
 
 const isEditing = computed(() => Boolean(props.assignment))
+const canEdit = computed(() => !props.assignment || props.assignment.can_edit === true)
 
 /**
  * A homework assignment is tied to the `/homeworks/` row the backend made for
@@ -325,7 +337,7 @@ const form = ref({
   /** `YYYY-MM-DD`, the format both the date input and the API speak. */
   date: toIsoDate(new Date()),
   /** 1–4, or `null` for "from the date". */
-  quarter: null as number | null,
+  quarter: null as Quarter | null,
   isActive: true,
 })
 
@@ -346,7 +358,11 @@ const quarterModel = computed<number | string | null>({
   get: () => form.value.quarter,
   set: value => {
     const picked = Number(value)
-    form.value.quarter = value === null || value === '' ? null : picked >= 1 && picked <= 4 ? picked : null
+    form.value.quarter = value === null || value === ''
+      ? null
+      : picked >= 1 && picked <= 4
+        ? picked as Quarter
+        : null
     quarterTouched.value = true
   },
 })
@@ -479,7 +495,7 @@ watch(
       category: 'lesson',
       maxGrade: '10',
       date: toIsoDate(new Date()),
-      quarter: null,
+      quarter: props.defaultQuarter ?? null,
       isActive: true,
     }
     quarterTouched.value = false
@@ -515,6 +531,7 @@ function validate(): boolean {
 
 async function submit() {
   submitError.value = ''
+  if (!canEdit.value) return
   if (!validate()) return
 
   saving.value = true
@@ -549,7 +566,7 @@ async function submit() {
 }
 
 function requestDelete() {
-  if (!props.assignment || isEditingHomework.value || saving.value) return
+  if (!props.assignment || !canEdit.value || isEditingHomework.value || saving.value) return
   emit('delete', props.assignment)
 }
 
@@ -569,6 +586,16 @@ function firstErrorMessage(value: unknown): string {
  */
 function applyBackendErrors(error: unknown) {
   const fallback = t(isEditing.value ? 'assignments.updateFailed' : 'assignments.createFailed')
+  if (isTeachingPeriodPermissionError(error)) {
+    submitError.value = t('permissions.outsideTeachingPeriod')
+    // Changing quarters requires write access on both sides. Restore the
+    // stored quarter after the server rejects the move.
+    if (props.assignment) {
+      form.value.quarter = props.assignment.quarter
+      quarterTouched.value = false
+    }
+    return
+  }
   const data = axios.isAxiosError(error) ? error.response?.data : null
   if (!data || typeof data !== 'object') {
     submitError.value = fallback

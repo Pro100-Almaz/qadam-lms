@@ -230,6 +230,7 @@
                       <td class="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{{ lesson.class_group_name }}</td>
                       <td v-if="canAddLesson" class="px-5 py-3 text-right">
                         <button
+                          v-if="lesson.can_edit === true"
                           type="button"
                           @click="openCopyLessonModal(lesson.id)"
                           :disabled="loadingCopySource === lesson.id"
@@ -530,6 +531,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -730,9 +732,13 @@ async function fetchDetail() {
   loadingDetail.value = true
   detailError.value = null
   try {
-    const { data } = await getSubjectDetailApi(subjectId.value)
+    const { data } = await getSubjectDetailApi(subjectId.value, { quarter: activeQuarter.value })
     subject.value = data
-  } catch {
+  } catch (fetchError) {
+    if (axios.isAxiosError(fetchError) && fetchError.response?.status === 404) {
+      await router.replace('/subjects/active')
+      return
+    }
     detailError.value = t('common.noData')
   } finally {
     loadingDetail.value = false
@@ -756,9 +762,12 @@ function selectClassGroup(g: number) {
   fetchGrades(activeClassGroup.value, activeQuarter.value)
 }
 
-function selectQuarter(q: number) {
+async function selectQuarter(q: number) {
   activeQuarter.value = q
-  fetchGrades(activeClassGroup.value, activeQuarter.value)
+  grades.value = null
+  subject.value = null
+  await fetchDetail()
+  if (activeClassGroup.value) await fetchGrades(activeClassGroup.value, activeQuarter.value)
 }
 
 // ── Computed helpers ───────────────────────────────────────────────────────────
