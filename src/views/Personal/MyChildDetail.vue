@@ -163,7 +163,7 @@
               {{ t('subjects.title') }}<template v-if="selectedQuarter"> · Q{{ selectedQuarter }}</template>
             </h2>
           </div>
-          <div class="max-w-full overflow-x-auto custom-scrollbar">
+          <div v-if="radarSubjects.length" class="max-w-full overflow-x-auto custom-scrollbar">
             <table class="w-full min-w-[640px]">
               <thead>
                 <tr class="border-b border-gray-200 dark:border-gray-800">
@@ -217,29 +217,27 @@
                     </span>
                   </td>
                 </tr>
-                <tr v-if="Object.keys(subjectScores).length === 0">
-                  <td colspan="4" class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">{{ t('common.noData') }}</td>
-                </tr>
               </tbody>
             </table>
           </div>
+          <!-- Nothing graded: the rows would only say "Not graded" over and over,
+               and the radar below is left out for the same reason. -->
+          <p v-else class="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+            {{ t('common.noData') }}
+          </p>
         </div>
 
         <!-- Charts -->
-        <div class="grid grid-cols-1 gap-6">
+        <div v-if="radarSubjects.length" class="grid grid-cols-1 gap-6">
           <!-- Radar chart: Subject Performance -->
           <div class="rounded-xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
             <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ t('subjects.title') }}</h3>
             <VueApexCharts
-              v-if="radarChartSeries[0].data.length > 0"
               type="radar"
               height="600"
               :options="radarChartOptions"
               :series="radarChartSeries"
             />
-            <div v-else class="flex h-64 items-center justify-center text-sm text-gray-400">
-              {{ t('common.noData') }}
-            </div>
           </div>
         </div>
       </div>
@@ -645,7 +643,7 @@ import {
 import type { StudentDetail, PsychologicalState } from '@/types/student'
 import type { Achievement, ReadingEntry, AchievementCategory, Attachment } from '@/types/achievement'
 import ReportHistoryList from '@/components/reports/ReportHistoryList.vue'
-import { SERIES_STUDENT } from '@/components/analytics/chartTheme'
+import { SERIES_CLASS, SERIES_STUDENT, padRadar, radarPaddingMarkers } from '@/components/analytics/chartTheme'
 import { currentIntlLocale } from '@/i18n'
 
 const route = useRoute()
@@ -830,22 +828,56 @@ function toggleQuarter(q: number) {
 const subjectScores = computed<Record<string, number>>(() => {
   if (!student.value) return {}
   const cumulative = student.value.cumulative_subject_grades
-  const quarter = selectedQuarter.value === null
-    ? cumulative
-    : student.value.subject_quarter_grades[String(selectedQuarter.value)] ?? {}
-  return Object.fromEntries(Object.keys(cumulative).map((subject) => [subject, quarter[subject] ?? 0]))
+  if (selectedQuarter.value === null) {
+    return Object.fromEntries(Object.keys(cumulative).map((subject) => [subject, cumulative[subject] ?? 0]))
+  }
+  const quarter = student.value.subject_quarter_grades[String(selectedQuarter.value)] ?? {}
+  return Object.fromEntries(Object.keys(cumulative).map((subject) => [subject, quarter[subject]?.grade ?? 0]))
+})
+
+// Subject → class mean for the selected quarter. The cumulative view has none.
+const subjectClassMeans = computed<Record<string, number>>(() => {
+  if (!student.value || selectedQuarter.value === null) return {}
+  const quarter = student.value.subject_quarter_grades[String(selectedQuarter.value)] ?? {}
+  return Object.fromEntries(
+    Object.entries(quarter)
+      .filter(([, entry]) => entry.class_mean != null)
+      .map(([subject, entry]) => [subject, entry.class_mean as number]),
+  )
 })
 
 // Charts
+// Only graded subjects get an axis: a "not graded" vertex at zero reads as a
+// failing mark.
+const radarSubjects = computed(() =>
+  Object.entries(subjectScores.value).filter(([, v]) => v > 0).map(([subject]) => subject),
+)
+
+const radarHasClassMean = computed(() =>
+  radarSubjects.value.some((subject) => subject in subjectClassMeans.value),
+)
+
 const radarChartSeries = computed(() => {
-  if (!student.value) return [{ name: t('students.score'), data: [] as number[] }]
-  const entries = Object.entries(subjectScores.value)
-  return [{ name: t('students.score'), data: entries.map(([, v]) => Math.round(v * 10) / 10) }]
+  const round = (v: number) => Math.round(v * 10) / 10
+  const series = [
+    {
+      name: t('students.score'),
+      data: padRadar<number | null>(radarSubjects.value.map((s) => round(subjectScores.value[s])), null),
+    },
+  ]
+  if (radarHasClassMean.value) {
+    series.push({
+      name: t('statistics.classMean'),
+      data: padRadar<number | null>(radarSubjects.value.map((s) => round(subjectClassMeans.value[s] ?? 0)), null),
+    })
+  }
+  return series
 })
 
 const radarChartOptions = computed(() => {
   if (!student.value) return {}
-  const labels = Object.keys(subjectScores.value)
+  const labels = padRadar(radarSubjects.value, '')
+  const withClass = radarHasClassMean.value
   return {
     chart: {
       fontFamily: 'Manrope, sans-serif',
@@ -853,15 +885,17 @@ const radarChartOptions = computed(() => {
       toolbar: { show: false },
       dropShadow: { enabled: true, blur: 4, left: 1, top: 1, opacity: 0.1 },
     },
-    colors: [SERIES_STUDENT],
-    fill: { opacity: 0.15, type: 'solid' },
-    stroke: { width: 2.5 },
+    colors: withClass ? [SERIES_STUDENT, SERIES_CLASS] : [SERIES_STUDENT],
+    fill: { opacity: withClass ? [0.15, 0.1] : 0.15, type: 'solid' },
+    stroke: { width: withClass ? [2.5, 2] : 2.5, dashArray: withClass ? [0, 4] : 0 },
+    legend: { show: withClass, position: 'top' as const, horizontalAlign: 'left' as const },
     markers: {
       size: 5,
-      colors: [SERIES_STUDENT],
+      colors: withClass ? [SERIES_STUDENT, SERIES_CLASS] : [SERIES_STUDENT],
       strokeWidth: 2,
       strokeColors: '#fff',
       hover: { sizeOffset: 2 },
+      discrete: radarPaddingMarkers(radarSubjects.value.length, radarChartSeries.value.length),
     },
     xaxis: {
       categories: labels,
@@ -884,16 +918,24 @@ const radarChartOptions = computed(() => {
     dataLabels: {
       enabled: true,
       style: { fontSize: '11px', fontWeight: 600, colors: [SERIES_STUDENT] },
-      background: { enabled: true, borderRadius: 2, padding: 3, borderColor: 'transparent', foreColor: SERIES_STUDENT, dropShadow: { enabled: false } },
-      formatter: (v: number) => (v ? `${v}` : ''),
+      background: { enabled: true, borderRadius: 2, padding: 3, borderColor: 'transparent', foreColor: '#fff', dropShadow: { enabled: false } },
+      // Labels on the class polygon too would pile onto the student's. Not
+      // `enabledOnSeries`: a radar runs its axis labels through that check by
+      // axis index, drops all but the first, and then crashes on the gap.
+      formatter: (v: number | null, { seriesIndex }: { seriesIndex: number }) =>
+        (seriesIndex === 0 && v ? `${v}` : ''),
     },
     tooltip: {
       theme: 'light',
-      y: { formatter: (v: number) => (v ? `${v} / 5` : t('students.notGraded')) },
+      y: { formatter: (v: number | null) => (v === null ? '' : v ? `${v} / 5` : t('students.notGraded')) },
     },
+    // The pinned radius would push the labels off a phone-width card.
+    responsive: [{ breakpoint: 640, options: { plotOptions: { radar: { size: 110 } } } }],
     plotOptions: {
       radar: {
-        size: undefined,
+        // Left to Apex, the radius can solve to nothing — a quarter with few
+        // graded subjects then draws as a point with its labels piled on it.
+        size: 200,
         polygons: {
           strokeColors: '#E5E7EB',
           connectorColors: '#E5E7EB',

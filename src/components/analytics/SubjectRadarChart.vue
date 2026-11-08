@@ -1,5 +1,10 @@
 <template>
-  <div class="space-y-4">
+  <!-- Nothing to plot on any axis: the tiles, table and note would only repeat
+       the emptiness, so the whole panel says so once. -->
+  <p v-if="!chartAxes.length" class="py-16 text-center text-sm text-gray-500 dark:text-gray-400">
+    {{ t('common.noData') }}
+  </p>
+  <div v-else class="space-y-4">
     <!-- Summary tiles -->
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <div
@@ -16,19 +21,15 @@
     </div>
 
     <VueApexCharts
-      v-if="axes.length"
       type="radar"
       height="360"
       :options="chartOptions"
       :series="series"
     />
-    <p v-else class="py-16 text-center text-sm text-gray-500 dark:text-gray-400">
-      {{ t('common.noData') }}
-    </p>
 
     <!-- The same numbers as a table. The polygon shows the shape; only this
          shows which axis is a snapshot, and by how much a subject is ahead. -->
-    <div v-if="axes.length" class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
+    <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
       <div class="max-w-full overflow-x-auto custom-scrollbar">
         <table class="w-full min-w-[520px]">
           <thead>
@@ -60,7 +61,7 @@
                 <span class="flex items-center gap-2">
                   <span
                     class="h-2 w-2 shrink-0 rounded-full"
-                    :style="{ backgroundColor: hasLessons(axis) ? SERIES_STUDENT : 'transparent', boxShadow: hasLessons(axis) ? 'none' : `inset 0 0 0 1.5px ${SERIES_STUDENT}` }"
+                    :style="{ backgroundColor: isPlotted(axis) ? SERIES_STUDENT : 'transparent', boxShadow: isPlotted(axis) ? 'none' : `inset 0 0 0 1.5px ${SERIES_STUDENT}` }"
                   ></span>
                   <span class="text-sm text-gray-800 dark:text-white/90">{{ axis.subject }}</span>
                   <span
@@ -73,14 +74,16 @@
               </td>
               <td class="px-4 py-2.5 text-right text-sm tabular-nums text-gray-800 dark:text-white/90">
                 <!-- A zero on an axis with no lessons is filler, not a mark. -->
-                <span v-if="hasLessons(axis)">{{ axis.value.toFixed(1) }}</span>
-                <span v-else class="text-gray-400 dark:text-gray-500">{{ t('statistics.noLessons') }}</span>
+                <span v-if="isPlotted(axis)">{{ axis.value.toFixed(1) }}</span>
+                <span v-else class="text-gray-400 dark:text-gray-500">
+                  {{ hasLessons(axis) ? t('statistics.notGraded') : t('statistics.noLessons') }}
+                </span>
               </td>
               <td class="px-4 py-2.5 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">
-                {{ axis.class_mean !== undefined && hasLessons(axis) ? axis.class_mean.toFixed(1) : '—' }}
+                {{ axis.class_mean !== undefined && isPlotted(axis) ? axis.class_mean.toFixed(1) : '—' }}
               </td>
               <td class="px-4 py-2.5 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">
-                {{ axis.percentile !== undefined && hasLessons(axis) ? `${axis.percentile}%` : '—' }}
+                {{ axis.percentile !== undefined && isPlotted(axis) ? `${axis.percentile}%` : '—' }}
               </td>
               <td class="px-4 py-2.5">
                 <span
@@ -109,6 +112,13 @@
       <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <span>{{ t('statistics.emptyAxes', { subjects: emptyAxes.join(', ') }) }}</span>
     </p>
+    <p
+      v-if="ungradedAxes.length"
+      class="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-800 dark:bg-white/5 dark:text-gray-400"
+    >
+      <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span>{{ t('statistics.ungradedAxes', { subjects: ungradedAxes.join(', ') }) }}</span>
+    </p>
   </div>
 </template>
 
@@ -122,6 +132,8 @@ import {
   SERIES_CLASS,
   SERIES_STUDENT,
   baseChartOptions,
+  padRadar,
+  radarPaddingMarkers,
   useChartTheme,
 } from '@/components/analytics/chartTheme'
 
@@ -131,9 +143,10 @@ import {
  *
  * The endpoint keeps the vertex count steady across quarters so the shape stays
  * comparable, which means an axis can be present with no lessons behind it. It
- * arrives as `value: 0`, and a reader will read that as "scored nothing" unless
- * told otherwise — so those axes are named under the chart and their score cell
- * says so rather than showing the zero.
+ * arrives as `value: 0`, and a vertex at zero reads as "scored nothing" — so
+ * those axes are left off the polygon, named under the chart, and their score
+ * cell says so rather than showing the zero. With no axis left, there is no
+ * chart.
  */
 const props = defineProps<{ data: SubjectRadarResponse }>()
 
@@ -147,21 +160,36 @@ function hasLessons(axis: RadarAxis): boolean {
   return axis.lesson_count > 0
 }
 
+/**
+ * Lessons were held but none is marked yet, so `value: 0` is no score either.
+ * A snapshot axis is the recorded quarter grade and stands on its own.
+ */
+function isPlotted(axis: RadarAxis): boolean {
+  return hasLessons(axis) && (axis.source === 'snapshot' || axis.graded_lesson_count > 0)
+}
+
 const emptyAxes = computed(() => axes.value.filter(axis => !hasLessons(axis)).map(axis => axis.subject))
 
-const hasClassMean = computed(() => axes.value.some(axis => axis.class_mean !== undefined))
+const ungradedAxes = computed(() =>
+  axes.value.filter(axis => hasLessons(axis) && !isPlotted(axis)).map(axis => axis.subject),
+)
+
+/** The axes the polygon is drawn on; the table still lists every one. */
+const chartAxes = computed(() => axes.value.filter(isPlotted))
+
+const hasClassMean = computed(() => chartAxes.value.some(axis => axis.class_mean !== undefined))
 
 const series = computed(() => {
   const built = [
     {
       name: props.data.student.short_name,
-      data: axes.value.map(axis => Number(axis.value.toFixed(1))),
+      data: padRadar<number | null>(chartAxes.value.map(axis => Number(axis.value.toFixed(1))), null),
     },
   ]
   if (hasClassMean.value) {
     built.push({
       name: t('statistics.classMean'),
-      data: axes.value.map(axis => Number((axis.class_mean ?? 0).toFixed(1))),
+      data: padRadar<number | null>(chartAxes.value.map(axis => Number((axis.class_mean ?? 0).toFixed(1))), null),
     })
   }
   return built
@@ -169,7 +197,7 @@ const series = computed(() => {
 
 /** The scale's ceiling — radar has no `max_points` of its own to read. */
 const maxValue = computed(() => {
-  const highest = axes.value.reduce(
+  const highest = chartAxes.value.reduce(
     (top, axis) => Math.max(top, axis.value, axis.class_mean ?? 0),
     0,
   )
@@ -187,6 +215,7 @@ const chartOptions = computed(() => ({
     strokeWidth: 2,
     strokeColors: chrome.value.surface,
     hover: { sizeOffset: 3 },
+    discrete: radarPaddingMarkers(chartAxes.value.length, series.value.length),
   },
   legend: {
     show: series.value.length > 1,
@@ -211,10 +240,8 @@ const chartOptions = computed(() => ({
     },
   },
   xaxis: {
-    // An axis with nothing behind it is flagged on its own label, so the
-    // polygon's dent is explained where the reader is looking.
-    categories: axes.value.map(axis => (hasLessons(axis) ? axis.subject : `${axis.subject} *`)),
-    labels: { style: { fontSize: '12px', colors: axes.value.map(() => chrome.value.label) } },
+    categories: padRadar(chartAxes.value.map(axis => axis.subject), ''),
+    labels: { style: { fontSize: '12px', colors: padRadar(chartAxes.value, null).map(() => chrome.value.label) } },
   },
   yaxis: {
     min: 0,
@@ -224,7 +251,7 @@ const chartOptions = computed(() => ({
   },
   tooltip: {
     theme: chrome.value.tooltip,
-    y: { formatter: (value: number) => value.toFixed(1) },
+    y: { formatter: (value: number | null) => (value === null ? '' : value.toFixed(1)) },
   },
 }))
 
