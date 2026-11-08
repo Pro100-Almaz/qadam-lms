@@ -226,18 +226,20 @@
         </div>
 
         <!-- Charts -->
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div class="rounded-xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
-            <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ t('students.quarterGrade') }}</h3>
-            <VueApexCharts type="line" height="260" :options="lineChartOptions" :series="lineChartSeries" />
-          </div>
+        <div class="grid grid-cols-1 gap-6">
+          <!-- Radar chart: Subject Performance -->
           <div class="rounded-xl border border-gray-200 bg-white px-5 pb-5 pt-5 dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
             <h3 class="mb-4 text-sm font-semibold text-gray-800 dark:text-white/90">{{ t('subjects.title') }}</h3>
             <VueApexCharts
               v-if="radarChartSeries[0].data.length > 0"
-              type="radar" height="260" :options="radarChartOptions" :series="radarChartSeries"
+              type="radar"
+              height="600"
+              :options="radarChartOptions"
+              :series="radarChartSeries"
             />
-            <div v-else class="flex h-64 items-center justify-center text-sm text-gray-400">{{ t('common.noData') }}</div>
+            <div v-else class="flex h-64 items-center justify-center text-sm text-gray-400">
+              {{ t('common.noData') }}
+            </div>
           </div>
         </div>
       </div>
@@ -835,77 +837,6 @@ const subjectScores = computed<Record<string, number>>(() => {
 })
 
 // Charts
-const lineChartSeries = computed(() => {
-  if (!student.value) return []
-  const data = [1, 2, 3, 4].map((q) => student.value!.total_quarter_grades[String(q)] ?? 0)
-  return [{ name: t('students.quarterGrade'), data }]
-})
-
-const lineChartOptions = computed(() => ({
-  chart: {
-    fontFamily: 'Manrope, sans-serif',
-    type: 'line',
-    toolbar: { show: false },
-    zoom: { enabled: false },
-    animations: { enabled: true, easing: 'easeinout', speed: 600 },
-  },
-  colors: [SERIES_STUDENT],
-  stroke: { curve: 'smooth', width: 3 },
-  markers: {
-    size: 7,
-    colors: [SERIES_STUDENT],
-    strokeWidth: 3,
-    strokeColors: '#fff',
-    hover: { sizeOffset: 3 },
-    discrete: selectedQuarter.value === null ? [] : [{
-      seriesIndex: 0,
-      dataPointIndex: selectedQuarter.value - 1,
-      size: 10,
-      fillColor: SERIES_STUDENT,
-      strokeColor: '#fff',
-    }],
-  },
-  annotations: {
-    xaxis: selectedQuarter.value === null ? [] : [{
-      x: `Q${selectedQuarter.value}`,
-      borderColor: SERIES_STUDENT,
-      strokeDashArray: 4,
-    }],
-  },
-  dataLabels: {
-    enabled: true,
-    offsetY: -10,
-    style: { fontSize: '13px', fontWeight: 600, colors: [SERIES_STUDENT] },
-    background: { enabled: false },
-  },
-  xaxis: {
-    categories: ['Q1', 'Q2', 'Q3', 'Q4'],
-    axisBorder: { show: false },
-    axisTicks: { show: false },
-    labels: { style: { colors: '#9CA3AF', fontSize: '13px', fontWeight: 500 } },
-  },
-  yaxis: {
-    min: 0,
-    max: 5,
-    tickAmount: 5,
-    labels: {
-      style: { colors: '#9CA3AF', fontSize: '12px' },
-      formatter: (v: number) => v.toFixed(1),
-    },
-  },
-  grid: {
-    borderColor: '#E5E7EB',
-    strokeDashArray: 4,
-    xaxis: { lines: { show: false } },
-    yaxis: { lines: { show: true } },
-    padding: { top: 10, bottom: 5 },
-  },
-  tooltip: {
-    theme: 'light',
-    y: { formatter: (v: number) => `${v.toFixed(2)} / 5.00` },
-  },
-}))
-
 const radarChartSeries = computed(() => {
   if (!student.value) return [{ name: t('students.score'), data: [] as number[] }]
   const entries = Object.entries(subjectScores.value)
@@ -960,7 +891,16 @@ const radarChartOptions = computed(() => {
       theme: 'light',
       y: { formatter: (v: number) => (v ? `${v} / 5` : t('students.notGraded')) },
     },
-    plotOptions: { radar: { polygons: { strokeColors: '#E5E7EB', fill: { colors: ['#F9FAFB', 'transparent'] } } } },
+    plotOptions: {
+      radar: {
+        size: undefined,
+        polygons: {
+          strokeColors: '#E5E7EB',
+          connectorColors: '#E5E7EB',
+          fill: { colors: ['#F9FAFB', 'transparent'] },
+        },
+      },
+    },
   }
 })
 
