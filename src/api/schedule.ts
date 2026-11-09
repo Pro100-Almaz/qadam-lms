@@ -53,7 +53,12 @@ export interface ScheduleClassGroup {
   academic_year_label: string | null
 }
 
-export interface SubjectSchedule extends EditableResource {
+export interface SubjectSchedule extends Partial<EditableResource> {
+  /**
+   * Not sent by the backend yet — the schedule serializer has no such field.
+   * Missing means unknown, not `false`; see the attendance sheet's fallback.
+   */
+  can_edit?: boolean
   id: number
   type: ScheduleType
   /** The subject name, or the description when there is no offering. */
