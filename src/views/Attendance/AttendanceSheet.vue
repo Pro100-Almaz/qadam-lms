@@ -396,6 +396,7 @@ import {
   getSubjectSchedulesApi,
   timeToMinutes,
   type SubjectSchedule,
+  type SubjectScheduleFilters,
 } from '@/api/schedule'
 import {
   createSessionAttendanceApi,
@@ -450,12 +451,18 @@ const students = ref<ClassStudent[]>([])
 const schedules = ref<SubjectSchedule[]>([])
 /** Subgroup class group id → the student ids enrolled in it. */
 const subgroupStudents = ref<Record<number, Set<number>>>({})
-/** Session id → the owner schedule's backend-provided edit flag. */
+/**
+ * Fallback for a backend that doesn't send `can_edit` on schedules yet: the
+ * sessions of the same list asked for with `only_mine`. `null` when it wasn't
+ * needed or failed — the sheet then reads ownership off `sessions` alone.
+ */
+const ownedSessions = ref<Set<number> | null>(null)
+/** Session id → whether its owner schedule may be marked. */
 const manageableSessions = computed(() => {
   const flags = new Map<number, boolean>()
   for (const schedule of schedules.value) {
     for (const session of schedule.sessions ?? []) {
-      flags.set(session.id, schedule.can_edit === true)
+      flags.set(session.id, canEditSchedule(schedule, session.id))
     }
   }
   return flags
@@ -473,6 +480,8 @@ const academicYearId = ref<number | null>(null)
 const selectedClassroom = computed(
   () => classrooms.value.find(item => item.class_group_id === classroomId.value) ?? null,
 )
+/** Legacy rule for free entries without `can_edit`: the class's homeroom teacher marks them. */
+const isHomeroomOfSelected = computed(() => selectedClassroom.value?.is_homeroom === true)
 const selectedWeek = computed(
   () => weeks.value.find(week => week.id === weekId.value) ?? weeks.value[0],
 )
@@ -592,11 +601,22 @@ function apiWeekdayOf(iso: string): number {
  * caller's own lessons from the columns that are there to be seen.
  *
  * `ownBucket` means the session arrived under its owner schedule. Foreign
- * copies use the owner schedule's `can_edit` flag indexed by session id.
+ * copies use the owner schedule's flag indexed by session id.
  */
 function isManageable(schedule: SubjectSchedule, sessionId: number, ownBucket: boolean): boolean {
-  if (ownBucket) return schedule.can_edit === true
+  if (ownBucket) return canEditSchedule(schedule, sessionId)
   return manageableSessions.value.get(sessionId) === true
+}
+
+/**
+ * The server's `can_edit` wins whenever it is sent, `false` included. Without
+ * it, the pre-`can_edit` rules apply: free entries go to the homeroom teacher,
+ * subjects to whoever `only_mine` lists them for.
+ */
+function canEditSchedule(schedule: SubjectSchedule, sessionId: number): boolean {
+  if (typeof schedule.can_edit === 'boolean') return schedule.can_edit
+  if (schedule.type === 'other') return isHomeroomOfSelected.value
+  return ownedSessions.value?.has(sessionId) ?? true
 }
 
 /**
@@ -796,14 +816,34 @@ async function loadSchedules(): Promise<void> {
   }
   try {
     const { data } = await getSubjectSchedulesApi(filters)
+    ownedSessions.value = await loadOwnedSessions(data, filters)
     schedules.value = data
     await loadSubgroupStudents()
   } catch {
     schedules.value = []
+    ownedSessions.value = null
     subgroupStudents.value = {}
     sheetError.value = t('attendance.loadFailed')
   } finally {
     sheetLoading.value = false
+  }
+}
+
+/**
+ * The caller's own sessions, asked for only while the backend leaves `can_edit`
+ * off a schedule — once every row carries it, this costs no request. Allowed to
+ * fail on its own: `null` falls back to the `sessions` / `other_sessions` split.
+ */
+async function loadOwnedSessions(
+  list: SubjectSchedule[],
+  filters: SubjectScheduleFilters,
+): Promise<Set<number> | null> {
+  if (list.every(schedule => typeof schedule.can_edit === 'boolean')) return null
+  try {
+    const { data } = await getSubjectSchedulesApi({ ...filters, only_mine: true })
+    return new Set(data.flatMap(schedule => (schedule.sessions ?? []).map(session => session.id)))
+  } catch {
+    return null
   }
 }
 
