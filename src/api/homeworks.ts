@@ -42,8 +42,13 @@ export interface Homework extends EditableResource {
   offering: HomeworkOffering
   class_group_id: number
   subject_id: number
-  teaching_assignment: number
-  teacher: HomeworkTeacher
+  /**
+   * The author (`created_by`). Survives the author's assignment being deleted;
+   * `null` only once the teacher themselves is permanently deleted.
+   */
+  teacher: HomeworkTeacher | null
+  /** 1–4. Stored as chosen — never derived from `due_date`. */
+  quarter: number
   max_grade: number
   due_date: string
   is_active: boolean
@@ -64,6 +69,8 @@ export interface HomeworkListParams {
   /** Teacher **profile** id, same id space as `/teachers/<id>/homeworks/`. */
   teacher?: number
   academic_year?: number
+  /** 1–4, the homework's own `quarter`. */
+  quarter?: number
   is_active?: boolean
   due_from?: string
   due_to?: string
@@ -73,13 +80,16 @@ export interface HomeworkListParams {
 
 /**
  * Bulk create — one row is created per offering, so assigning to three classes
- * returns three homeworks. `teaching_assignment` is resolved server-side.
+ * returns three homeworks. The caller needs an assignment on every offering for
+ * `quarter`, otherwise the whole request 403s with the offending `offerings`.
  */
 export interface CreateHomeworksRequest {
   offerings: number[]
   description: string
   max_grade: number
   due_date: string
+  /** Required, 1–4 — the API never works it out from `due_date`. */
+  quarter: number
   is_active: boolean
 }
 
@@ -88,6 +98,8 @@ export interface UpdateHomeworkRequest {
   description: string
   max_grade: number
   due_date: string
+  /** Left out, the stored quarter is kept even when `due_date` moves. */
+  quarter?: number
   is_active: boolean
 }
 
@@ -134,6 +146,7 @@ function appendHomeworkFields(form: FormData, fields: Partial<UpdateHomeworkRequ
   if (fields.description !== undefined) form.append('description', fields.description)
   if (fields.max_grade !== undefined) form.append('max_grade', String(fields.max_grade))
   if (fields.due_date !== undefined) form.append('due_date', fields.due_date)
+  if (fields.quarter !== undefined) form.append('quarter', String(fields.quarter))
   if (fields.is_active !== undefined) form.append('is_active', String(fields.is_active))
 }
 

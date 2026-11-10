@@ -207,10 +207,13 @@
                     class="absolute inset-x-0.5 z-10 cursor-pointer overflow-hidden rounded px-1.5 py-1 text-left"
                     :class="subjectColorClasses(event.subjectColor)"
                     :style="eventPositionStyle(event, hour)"
+                    :title="[formatTime(event.startTime), event.title, event.className].filter(Boolean).join(' · ')"
                   >
-                    <div class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ formatTime(event.startTime) }}</div>
-                    <div class="text-[10px] font-semibold leading-tight sm:text-xs">{{ event.title }}</div>
-                    <div v-if="event.className" class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ event.className }}</div>
+                    <!-- Two lines, not three: a 40–45 minute lesson is too short for three. -->
+                    <div class="truncate text-[9px] leading-tight opacity-80 sm:text-[10px]">
+                      {{ formatTime(event.startTime) }}<template v-if="event.className"> · {{ event.className }}</template>
+                    </div>
+                    <div class="truncate text-[10px] font-semibold leading-tight sm:text-xs">{{ event.title }}</div>
                   </button>
                 </div>
               </div>
@@ -475,14 +478,14 @@ import { getTeachersApi } from '@/api/teachers'
 import type { SubjectOffering } from '@/types/subject'
 import type { Teacher } from '@/types/teacher'
 import { useAuth } from '@/composables/useAuth'
-import { useCurrentQuarter } from '@/composables/useCurrentQuarter'
+import { useQuarterStore } from '@/stores/quarter'
 import { useRouter } from 'vue-router'
 import { currentIntlLocale } from '@/i18n'
 
 const { t } = useI18n()
 const router = useRouter()
 const { activeRoles } = useAuth()
-const { quarter: currentQuarter, load: loadCurrentQuarter } = useCurrentQuarter()
+const quarterStore = useQuarterStore()
 const canAddLesson = computed(() => !activeRoles.value.includes('parent'))
 
 type ViewType = 'month' | 'week' | 'day'
@@ -560,7 +563,10 @@ async function handleCreateLesson() {
 
 // Filter state
 const filterTeacher = ref<number | null>(null)
-const filterQuarter = ref<number>(currentQuarter.value)
+const filterQuarter = computed({
+  get: () => quarterStore.quarter,
+  set: quarterStore.setQuarter,
+})
 const ready = ref(false)
 
 // Data from API
@@ -736,8 +742,7 @@ async function fetchTeachers() {
 async function initializeCalendar() {
   loading.value = true
   try {
-    await Promise.all([loadCurrentQuarter(), fetchTeachers()])
-    filterQuarter.value = currentQuarter.value
+    await Promise.all([quarterStore.load(), fetchTeachers()])
     await fetchSubjects()
     ready.value = true
   } finally {

@@ -94,6 +94,7 @@ import SubjectLessonModal from '@/components/parentSubject/SubjectLessonModal.vu
 import { getMyChildSubjectDetailApi } from '@/api/parentSelf'
 import type { ParentChildSubjectDetail, ParentChildLessonGrade } from '@/types/parentSelf'
 import { useGradeHelpers } from '@/composables/useGradeHelpers'
+import { useQuarterStore } from '@/stores/quarter'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -101,7 +102,11 @@ const { t } = useI18n()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const detail = ref<ParentChildSubjectDetail | null>(null)
-const activeQuarter = ref<number>(1)
+const quarterStore = useQuarterStore()
+const activeQuarter = computed({
+  get: () => quarterStore.quarter,
+  set: quarterStore.setQuarter,
+})
 const selectedLesson = ref<ParentChildLessonGrade | null>(null)
 
 const childId = computed(() => Number(route.params.childId))

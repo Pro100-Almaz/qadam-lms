@@ -29,17 +29,23 @@ export function useTeacherOfferings() {
   const loading = ref(false)
   const loadError = ref(false)
 
+  /** Bumped per request, so a slow answer for an older quarter is dropped. */
+  let requestId = 0
+
   async function load(quarter?: number): Promise<void> {
+    const id = ++requestId
     loading.value = true
     loadError.value = false
     try {
       const { data } = await getTeacherMyClassesApi(quarter ? { quarter } : undefined)
+      if (id !== requestId) return
       classes.value = Array.isArray(data) ? data : []
     } catch {
+      if (id !== requestId) return
       classes.value = []
       loadError.value = true
     } finally {
-      loading.value = false
+      if (id === requestId) loading.value = false
     }
   }
 

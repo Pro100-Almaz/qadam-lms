@@ -562,6 +562,7 @@ import type { SubjectDetail, SubjectGrades } from '@/types/subject'
 import { formatUserName } from '@/utils/userName'
 import { formatLanguageGroup } from '@/utils/subjectLanguage'
 import { currentIntlLocale } from '@/i18n'
+import { useQuarterStore } from '@/stores/quarter'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -575,7 +576,11 @@ const grades = ref<SubjectGrades | null>(null)
 const loadingDetail = ref(false)
 const loadingGrades = ref(false)
 const detailError = ref<string | null>(null)
-const activeQuarter = ref(1)
+const quarterStore = useQuarterStore()
+const activeQuarter = computed({
+  get: () => quarterStore.quarter,
+  set: quarterStore.setQuarter,
+})
 const activeClassGroup = ref(0)
 
 /**
@@ -885,6 +890,7 @@ function formatDate(dateStr: string): string {
 // ── Lifecycle ──────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
+  await quarterStore.load()
   await fetchDetail()
   await fetchGrades(activeClassGroup.value, activeQuarter.value)
 })

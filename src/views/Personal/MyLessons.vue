@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   AlertCircle,
@@ -144,6 +144,7 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { getLessonsApi } from '@/api/lessons'
 import { useAuth } from '@/composables/useAuth'
 import { currentIntlLocale } from '@/i18n'
+import { useQuarterStore } from '@/stores/quarter'
 import type { Lesson } from '@/types/lesson'
 
 const { t } = useI18n()
@@ -152,7 +153,10 @@ const { activeRoles } = useAuth()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const lessons = ref<Lesson[]>([])
+/** 0 = all quarters, the default here. A picked quarter carries over to other pages. */
 const selectedQuarter = ref(0)
+const quarterStore = useQuarterStore()
+watch(selectedQuarter, next => quarterStore.setQuarter(next))
 
 const isTeacher = computed(() => {
   return activeRoles.value.includes('teacher') || activeRoles.value.includes('homeroom_teacher')

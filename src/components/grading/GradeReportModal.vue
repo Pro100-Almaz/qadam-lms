@@ -226,7 +226,7 @@ import {
   type GradeReportParams,
 } from '@/api/gradeReports'
 import { useBackdropClose } from '@/composables/useBackdropClose'
-import { useCurrentQuarter } from '@/composables/useCurrentQuarter'
+import { useQuarterStore } from '@/stores/quarter'
 import { useToast } from '@/composables/useToast'
 import { flattenErrorMessage, readBlobErrorData, saveBlobResponse } from '@/utils/fileDownload'
 
@@ -291,7 +291,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 const { t } = useI18n()
 const { success } = useToast()
-const { quarter: currentQuarter, load: loadCurrentQuarter } = useCurrentQuarter()
+const quarterStore = useQuarterStore()
 const backdrop = useBackdropClose(() => {
   if (!downloading.value) emit('close')
 })
@@ -302,7 +302,8 @@ const scope = ref<'class' | 'student'>('class')
 const classGroupId = ref<number | string | null>(null)
 const studentId = ref<number | string | null>(null)
 const subjectId = ref<number | string | null>(null)
-const quarter = ref(currentQuarter.value)
+/** Shared with the pages: the report opens on the quarter being looked at. */
+const quarter = computed(() => quarterStore.quarter)
 const ordering = ref<'subject' | 'student'>('subject')
 
 const downloading = ref(false)
@@ -336,10 +337,7 @@ const quarterOptions = computed<SelectOption[]>(() =>
 /** `SelectMenu` speaks `string | number | null`; the quarter is always a number. */
 const quarterModel = computed<number | string | null>({
   get: () => quarter.value,
-  set: value => {
-    const picked = Number(value)
-    if (picked >= 1 && picked <= 4) quarter.value = picked
-  },
+  set: value => quarterStore.setQuarter(value),
 })
 
 const scopeOptions = computed(() => [
@@ -444,13 +442,9 @@ watch(
     // A single class needs no choosing; otherwise honour the host's preselection.
     const only = (props.classes ?? []).length === 1 ? props.classes![0].classGroupId : null
     classGroupId.value = props.defaultClassGroupId ?? only
-    // The calendar's guess shows immediately; the academic year's own answer
-    // replaces it when it lands, unless the reader has already picked one.
-    const seeded = currentQuarter.value
-    quarter.value = seeded
-    loadCurrentQuarter().then(() => {
-      if (quarter.value === seeded) quarter.value = currentQuarter.value
-    })
+    // Until someone picks, the academic year's own answer replaces the
+    // calendar's guess when it lands.
+    void quarterStore.load()
   },
   { immediate: true },
 )

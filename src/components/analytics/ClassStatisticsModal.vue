@@ -76,7 +76,7 @@ import {
   type HeatmapGroupBy,
   type TopicHeatmapResponse,
 } from '@/api/analytics'
-import { useCurrentQuarter } from '@/composables/useCurrentQuarter'
+import { useQuarterStore } from '@/stores/quarter'
 
 export interface StatisticsOfferingOption {
   /** Subject offering id — one subject taught to one class group. */
@@ -108,11 +108,11 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const { t } = useI18n()
-const { quarter: currentQuarter, load: loadCurrentQuarter } = useCurrentQuarter()
+const quarterStore = useQuarterStore()
 
 const offeringId = ref<number | string | null>(null)
 /** Nullable, unlike the report's: the heatmap happily spans the whole year. */
-const quarter = ref<number | null>(currentQuarter.value)
+const quarter = ref<number | null>(quarterStore.quarter)
 const groupBy = ref<HeatmapGroupBy>('topic_title')
 const includeSubtopics = ref(false)
 
@@ -143,6 +143,8 @@ const quarterModel = computed<number | string | null>({
   get: () => quarter.value,
   set: value => {
     quarter.value = value === null ? null : Number(value)
+    // A quarter is shared with the pages; "whole year" stays with this modal.
+    if (quarter.value !== null) quarterStore.setQuarter(quarter.value)
   },
 })
 
@@ -194,11 +196,11 @@ watch(
     const only = props.offerings.length === 1 ? props.offerings[0].offeringId : null
     offeringId.value = props.defaultOfferingId ?? only
 
-    const seeded = currentQuarter.value
+    const seeded = quarterStore.quarter
     quarter.value = seeded
-    loadCurrentQuarter().then(() => {
-      if (quarter.value === seeded && currentQuarter.value !== seeded) {
-        quarter.value = currentQuarter.value
+    quarterStore.load().then(() => {
+      if (quarter.value === seeded && quarterStore.quarter !== seeded) {
+        quarter.value = quarterStore.quarter
       }
     })
   },

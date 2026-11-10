@@ -137,7 +137,7 @@ import {
   type AttendanceHeatmapResponse,
   type ClassAttendanceOverviewResponse,
 } from '@/api/analytics'
-import { useCurrentQuarter } from '@/composables/useCurrentQuarter'
+import { useQuarterStore } from '@/stores/quarter'
 
 export interface StatisticsClassGroupOption {
   classGroupId: number
@@ -173,7 +173,7 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const { t } = useI18n()
-const { quarter: currentQuarter, load: loadCurrentQuarter } = useCurrentQuarter()
+const quarterStore = useQuarterStore()
 
 type Tab = 'register' | 'overview'
 
@@ -181,7 +181,7 @@ const tab = ref<Tab>('register')
 const offeringId = ref<number | string | null>(null)
 const classGroupId = ref<number | string | null>(null)
 /** Nullable: the register happily spans the whole year. */
-const quarter = ref<number | null>(currentQuarter.value)
+const quarter = ref<number | null>(quarterStore.quarter)
 const dateFrom = ref('')
 const dateTo = ref('')
 const threshold = ref(90)
@@ -248,6 +248,8 @@ const quarterModel = computed<number | string | null>({
   get: () => quarter.value,
   set: value => {
     quarter.value = value === null ? null : Number(value)
+    // A quarter is shared with the pages; "whole year" stays with this modal.
+    if (quarter.value !== null) quarterStore.setQuarter(quarter.value)
   },
 })
 
@@ -322,11 +324,11 @@ watch(
     const onlyGroup = classGroups.value.length === 1 ? classGroups.value[0].classGroupId : null
     classGroupId.value = props.defaultClassGroupId ?? onlyGroup
 
-    const seeded = currentQuarter.value
+    const seeded = quarterStore.quarter
     quarter.value = seeded
-    loadCurrentQuarter().then(() => {
-      if (quarter.value === seeded && currentQuarter.value !== seeded) {
-        quarter.value = currentQuarter.value
+    quarterStore.load().then(() => {
+      if (quarter.value === seeded && quarterStore.quarter !== seeded) {
+        quarter.value = quarterStore.quarter
       }
     })
   },

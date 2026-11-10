@@ -162,7 +162,6 @@ import AdminLayout from '@/components/layout/AdminLayout.vue'
 import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
 import WeekScheduleGrid, { type ScheduleEvent } from '@/components/schedule/WeekScheduleGrid.vue'
 import { useAuth } from '@/composables/useAuth'
-import { quarterFromDate } from '@/composables/useCurrentQuarter'
 import { getAcademicYearsApi, getClassGroupsApi } from '@/api/academic'
 import {
   formatTimeRange,
@@ -176,6 +175,7 @@ import { getMyChildrenApi } from '@/api/parentSelf'
 import type { UserRole } from '@/types/auth'
 import type { ClassGroup } from '@/types/academic'
 import type { ParentChild } from '@/types/parentSelf'
+import { useQuarterStore } from '@/stores/quarter'
 
 const { t } = useI18n()
 const { activeRoles: roles } = useAuth()
@@ -210,9 +210,13 @@ const academicYearId = ref<number | null>(null)
 const classGroupId = ref<number | null>(null)
 const children = ref<ParentChild[]>([])
 const childId = ref<number | null>(null)
-// Without the picker the quarter has to land on its own; staff still overwrite
-// this from the active academic year below.
-const quarter = ref(quarterFromDate())
+// Shared with the other pages. Until someone picks, staff replace the calendar's
+// guess with the active academic year's quarter below.
+const quarterStore = useQuarterStore()
+const quarter = computed({
+  get: () => quarterStore.quarter,
+  set: quarterStore.setQuarter,
+})
 const schedules = ref<SubjectSchedule[]>([])
 const selected = ref<ScheduleEvent | null>(null)
 
@@ -288,7 +292,7 @@ async function loadFilters(): Promise<void> {
     const { data: years } = await getAcademicYearsApi()
     const activeYear = years.find(year => year.is_active)
     academicYearId.value = activeYear?.id ?? null
-    quarter.value = activeYear?.current_quarter ?? quarter.value
+    quarterStore.adoptCurrent(activeYear?.current_quarter)
     const { data } = await getClassGroupsApi(activeYear ? { year: activeYear.id } : undefined)
     classGroups.value = data
   } catch {

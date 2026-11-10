@@ -74,10 +74,9 @@ export interface SubjectAssignment extends EditableResource {
    */
   date: string
   /**
-   * 1–4. Filled from `date` when not sent, recalculated when only `date` is
-   * patched, and kept as sent when both are — so it may disagree with the date
-   * on purpose. `null` on rows the backend could not place; those never match
-   * a `quarter` filter.
+   * 1–4, stored as chosen: changing `date` never moves it, so it may disagree
+   * with the date on purpose. `null` only on older rows the backend could not
+   * place; those never match a `quarter` filter.
    */
   quarter: Quarter | null
   created_at: string
@@ -114,12 +113,16 @@ export interface CreateSubjectAssignmentRequest {
   max_grade: number | null
   /** Required, `YYYY-MM-DD`: omitting it is a 400, not a default of today. */
   date: string
-  /** 1–4. Optional: the backend fills it from `date`. */
-  quarter?: number
+  /** Required, 1–4, for every category — the API no longer works it out from `date`. */
+  quarter: number
   is_active?: boolean
 }
 
-/** Everything but `offering`, which the API rejects as immutable. */
+/**
+ * Everything but `offering`, which the API rejects as immutable. A `quarter`
+ * left out keeps the stored one; on a homework's mirror a change moves the
+ * homework too.
+ */
 export type UpdateSubjectAssignmentRequest = Partial<Omit<CreateSubjectAssignmentRequest, 'offering'>>
 
 /**

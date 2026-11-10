@@ -409,6 +409,7 @@ import { isForbiddenError } from '@/utils/apiErrors'
 import type { UserRole } from '@/types/auth'
 import type { ClassStudent, TeacherClassGroup } from '@/types/teacherDashboard'
 import type { QuarterDates } from '@/types/academic'
+import { useQuarterStore } from '@/stores/quarter'
 import {
   currentPeriod,
   formatDayMonth,
@@ -514,6 +515,8 @@ const weekQuarter = computed(() => {
 
 /** Set by the select; cleared again as soon as the dates can answer for themselves. */
 const quarterOverride = ref<number | null>(null)
+/** A quarter picked on another page — the sheet opens inside it. */
+const quarterStore = useQuarterStore()
 /** `current_quarter` of the active year — the fallback when no term dates exist. */
 const currentQuarter = ref<number | null>(null)
 
@@ -933,6 +936,15 @@ onMounted(async () => {
     return
   }
   await loadQuarters()
+  // Today's week answers for itself unless another page picked a different quarter.
+  const shared = quarterStore.quarter
+  if (
+    quarterStore.picked &&
+    shared !== selectedQuarter.value &&
+    quarters.value.some(item => item.quarter === shared)
+  ) {
+    jumpToQuarter(shared)
+  }
   await loadClasses()
   await Promise.all([loadStudents(), loadSchedules()])
 })
@@ -1149,12 +1161,18 @@ function onPeriodChange(value: string): void {
   period.value = value || currentPeriod()
 }
 
+/** The select's pick also becomes the quarter the other pages open on. */
+function onQuarterChange(value: number): void {
+  quarterStore.setQuarter(value)
+  jumpToQuarter(value)
+}
+
 /**
  * Lands on today when it falls inside the quarter, otherwise on its first week.
  * Quarters can come back without dates, in which case the pick only re-filters
  * the schedules and the week selection is left where it is.
  */
-function onQuarterChange(value: number): void {
+function jumpToQuarter(value: number): void {
   quarterOverride.value = value
   const target = quarters.value.find(item => item.quarter === value)
   if (!target?.start || !target.end) return

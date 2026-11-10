@@ -148,10 +148,18 @@ export const useAuthStore = defineStore('auth', () => {
   ): Promise<{ success: boolean; errors?: Record<string, string[]> }> {
     try {
       const { data } = await loginApi({ username, password })
-      user.value = data.user
-      reconcileActiveRole()
       setAccessToken(data.tokens.access)
       localStorage.setItem('refresh_token', data.tokens.refresh)
+      // Pick the active role from the same /auth/me/ a reload reads: without
+      // its roles no role is chosen, and every role-scoped endpoint answers 403
+      // until the page is reloaded.
+      try {
+        const { data: me } = await getMeApi()
+        user.value = me
+      } catch {
+        user.value = data.user
+      }
+      reconcileActiveRole()
       return { success: true }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 400) {

@@ -7,21 +7,24 @@
       <span class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
         {{ t('attendance.classroom') }}
       </span>
-      <select
-        :value="classroomId ?? ''"
-        :disabled="!classrooms.length"
-        class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-        @change="emit('update:classroomId', Number(($event.target as HTMLSelectElement).value))"
-      >
-        <option v-if="!classrooms.length" value="">—</option>
-        <option
-          v-for="classroom in classrooms"
-          :key="classroom.class_group_id"
-          :value="classroom.class_group_id"
+      <span class="relative block">
+        <select
+          :value="classroomId ?? ''"
+          :disabled="!classrooms.length"
+          class="h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-9 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          @change="emit('update:classroomId', Number(($event.target as HTMLSelectElement).value))"
         >
-          {{ classroom.display_name }}
-        </option>
-      </select>
+          <option v-if="!classrooms.length" value="">—</option>
+          <option
+            v-for="classroom in classrooms"
+            :key="classroom.class_group_id"
+            :value="classroom.class_group_id"
+          >
+            {{ classroom.display_name }}
+          </option>
+        </select>
+        <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      </span>
     </label>
 
     <!-- Quarter — jumps the month/week selection into that quarter. -->
@@ -29,16 +32,19 @@
       <span class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
         {{ t('attendance.quarter') }}
       </span>
-      <select
-        :value="quarter ?? ''"
-        class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-        @change="emit('update:quarter', Number(($event.target as HTMLSelectElement).value))"
-      >
-        <!-- The selected week can sit outside every quarter (holidays). -->
-        <option v-for="item in quarters" :key="item.quarter" :value="item.quarter">
-          {{ t('attendance.quarterN', { n: item.quarter }) }}
-        </option>
-      </select>
+      <span class="relative block">
+        <select
+          :value="quarter ?? ''"
+          class="h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-9 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          @change="emit('update:quarter', Number(($event.target as HTMLSelectElement).value))"
+        >
+          <!-- The selected week can sit outside every quarter (holidays). -->
+          <option v-for="item in quarters" :key="item.quarter" :value="item.quarter">
+            {{ t('attendance.quarterN', { n: item.quarter }) }}
+          </option>
+        </select>
+        <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      </span>
     </label>
 
     <!-- Month + year -->
@@ -61,15 +67,18 @@
       <span class="mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
         {{ t('attendance.week') }}
       </span>
-      <select
-        :value="weekId"
-        class="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-        @change="emit('update:weekId', ($event.target as HTMLSelectElement).value)"
-      >
-        <option v-for="week in weeks" :key="week.id" :value="week.id">
-          {{ formatWeekRange(week, calendarLocale) }}
-        </option>
-      </select>
+      <span class="relative block">
+        <select
+          :value="weekId"
+          class="h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-9 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+          @change="emit('update:weekId', ($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="week in weeks" :key="week.id" :value="week.id">
+            {{ formatWeekRange(week, calendarLocale) }}
+          </option>
+        </select>
+        <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      </span>
     </label>
 
     <div class="flex items-center gap-1 sm:ml-auto sm:pb-0.5">
@@ -107,7 +116,7 @@ import flatPickr from 'vue-flatpickr-component'
 import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect'
 import { Kazakh } from 'flatpickr/dist/l10n/kz'
 import { Russian } from 'flatpickr/dist/l10n/ru'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import type { TeacherClassGroup } from '@/types/teacherDashboard'
 import type { QuarterDates } from '@/types/academic'
 import {

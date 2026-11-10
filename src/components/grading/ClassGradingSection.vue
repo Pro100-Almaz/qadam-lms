@@ -123,6 +123,7 @@ import HomeworkGradebookTable from '@/components/homeworks/HomeworkGradebookTabl
 import { getAcademicYearsApi } from '@/api/academic'
 import { getTeachingAssignmentsApi } from '@/api/teachingAssignments'
 import type { HomeroomClassOffering } from '@/types/teacherDashboard'
+import { useQuarterStore } from '@/stores/quarter'
 
 const props = defineProps<{
   /** The homeroom class whose active offerings are shown. */
@@ -150,8 +151,9 @@ const selectedOfferingId = ref<number | null>(null)
 const loading = ref(true)
 const loadError = ref(false)
 const activeMode = ref<'assignments' | 'homeworks'>('assignments')
-/** Required by the gradebook; starts on 1, like the grading page. */
-const quarter = ref(1)
+const quarterStore = useQuarterStore()
+/** Required by the gradebook; shared with the grading page and the rest. */
+const quarter = computed(() => quarterStore.quarter)
 
 const quarterOptions = computed<SelectOption[]>(() =>
   [1, 2, 3, 4].map(value => ({ value, label: t('assignments.quarterOption', { quarter: value }) })),
@@ -159,10 +161,7 @@ const quarterOptions = computed<SelectOption[]>(() =>
 
 const quarterModel = computed<number | string | null>({
   get: () => quarter.value,
-  set: value => {
-    const picked = Number(value)
-    if (picked >= 1 && picked <= 4) quarter.value = picked
-  },
+  set: value => quarterStore.setQuarter(value),
 })
 
 const gradeModes = computed(() => [
