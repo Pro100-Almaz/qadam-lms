@@ -1080,7 +1080,6 @@
       :student-id="studentPk"
       :student-name="fullName"
       :class-group="student?.current_class_group?.display_name || '—'"
-      :current-quarter="currentQuarter"
       @close="showReportModal = false"
       @generated="onReportGenerated"
     />
@@ -1176,6 +1175,7 @@ import {
   useChartTheme,
 } from '@/components/analytics/chartTheme'
 import { currentIntlLocale } from '@/i18n'
+import { useQuarterStore } from '@/stores/quarter'
 
 // ─── i18n / route ────────────────────────────────────────────────────────────
 const { t } = useI18n()
@@ -1193,7 +1193,7 @@ const canGenerateReport = computed(() =>
 
 const showReportModal = ref(false)
 const reportHistoryRef = ref<InstanceType<typeof ReportHistoryList> | null>(null)
-const currentQuarter = ref(1)
+const quarterStore = useQuarterStore()
 
 function onReportGenerated() {
   showReportModal.value = false
@@ -1449,6 +1449,8 @@ const selectedQuarter = ref<number | null>(null)
 
 function toggleQuarter(q: number) {
   selectedQuarter.value = selectedQuarter.value === q ? null : q
+  // A picked quarter carries over to other pages; "all" stays here.
+  if (selectedQuarter.value !== null) quarterStore.setQuarter(selectedQuarter.value)
 }
 
 // Subject → score for the subjects table and radar. Keeps every subject in
@@ -1674,7 +1676,7 @@ async function fetchAcademicYears() {
     if (active) {
       newAchievement.value.academic_year = active.id
       newReading.value.academic_year = active.id
-      if (active.current_quarter) currentQuarter.value = active.current_quarter
+      quarterStore.adoptCurrent(active.current_quarter)
     }
   } catch { /* silent */ }
 }

@@ -370,6 +370,7 @@ import type { ClassGroup } from '@/types/academic'
 import type { Quarter, TeachingAssignmentListItem } from '@/types/teachingAssignment'
 import { formatTeachingAssignmentQuarter } from '@/utils/teachingAssignments'
 import { isForbiddenError } from '@/utils/apiErrors'
+import { useQuarterStore } from '@/stores/quarter'
 
 const { t } = useI18n()
 const { activeRoles: roles } = useAuth()
@@ -434,7 +435,11 @@ interface SubgroupAssignment {
 const subgroupAssignments = ref<SubgroupAssignment[]>([])
 const academicYearId = ref<number | null>(null)
 const classGroupId = ref<number | null>(null)
-const quarter = ref<Quarter>(1)
+const quarterStore = useQuarterStore()
+const quarter = computed<Quarter>({
+  get: () => quarterStore.quarter as Quarter,
+  set: quarterStore.setQuarter,
+})
 
 /**
  * The selected class group's whole timetable for the quarter — taught subjects
@@ -958,7 +963,7 @@ onMounted(async () => {
     initialLoading.value = false
     return
   }
-  await loadFilters()
+  await Promise.all([loadFilters(), quarterStore.load()])
   await Promise.all([loadAssignments(), loadSubgroupAssignments()])
   await loadGrid()
 })

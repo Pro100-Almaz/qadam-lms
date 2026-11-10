@@ -108,6 +108,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { X, Sparkles, Loader2, Info, AlertCircle } from 'lucide-vue-next'
 import Modal from '@/components/ui/Modal.vue'
+import { useQuarterStore } from '@/stores/quarter'
 import { generateReportApi, getReportApi } from '@/api/reports'
 import type { StudentReport, ReportLanguage } from '@/types/report'
 
@@ -115,7 +116,6 @@ const props = defineProps<{
   studentId: number
   studentName: string
   classGroup: string
-  currentQuarter: number
 }>()
 
 const emit = defineEmits<{
@@ -136,7 +136,11 @@ const languages = [
 
 const localeToLang: Record<string, ReportLanguage> = { ru: 'ru', kz: 'kz', en: 'en' }
 const selectedLanguage = ref<ReportLanguage>(localeToLang[locale.value] ?? 'ru')
-const selectedQuarter = ref(props.currentQuarter || 1)
+const quarterStore = useQuarterStore()
+const selectedQuarter = computed({
+  get: () => quarterStore.quarter,
+  set: quarterStore.setQuarter,
+})
 const isGenerating = ref(false)
 const error = ref<string | null>(null)
 const loadingText = ref('')

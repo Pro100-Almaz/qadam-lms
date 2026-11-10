@@ -645,6 +645,7 @@ import {
   useChartTheme,
 } from '@/components/analytics/chartTheme'
 import { currentIntlLocale } from '@/i18n'
+import { useQuarterStore } from '@/stores/quarter'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -806,10 +807,13 @@ function formatDate(dateStr: string): string {
 
 // Quarter filter
 // null = all quarters. Clicking the selected quarter card again resets to all.
+const quarterStore = useQuarterStore()
 const selectedQuarter = ref<number | null>(null)
 
 function toggleQuarter(q: number) {
   selectedQuarter.value = selectedQuarter.value === q ? null : q
+  // A picked quarter carries over to other pages; "all" stays here.
+  if (selectedQuarter.value !== null) quarterStore.setQuarter(selectedQuarter.value)
 }
 
 // Subject → mark for the subjects table and radar. Keeps every subject in

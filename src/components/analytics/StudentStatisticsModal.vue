@@ -177,7 +177,7 @@ import {
   type SubjectRadarResponse,
   type TrajectoryResponse,
 } from '@/api/analytics'
-import { useCurrentQuarter } from '@/composables/useCurrentQuarter'
+import { useQuarterStore } from '@/stores/quarter'
 
 export interface StatisticsStudentTarget {
   /** Student **profile** id — what `/analytics/students/<id>/` expects. */
@@ -209,7 +209,7 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const { t } = useI18n()
-const { quarter: currentQuarter, load: loadCurrentQuarter } = useCurrentQuarter()
+const quarterStore = useQuarterStore()
 
 type Mode = 'lessons' | 'assignments' | 'attendance'
 type Tab = 'subjects' | 'trajectory'
@@ -217,7 +217,7 @@ type Tab = 'subjects' | 'trajectory'
 const mode = ref<Mode>('lessons')
 const tab = ref<Tab>('subjects')
 
-const quarter = ref(currentQuarter.value)
+const quarter = computed(() => quarterStore.quarter)
 const source = ref<RadarSource>('auto')
 const category = ref<AssignmentCategory | null>(null)
 const missing = ref<MissingMode>('exclude')
@@ -328,10 +328,7 @@ const quarterOptions = computed<SelectOption[]>(() =>
 
 const quarterModel = computed<number | string | null>({
   get: () => quarter.value,
-  set: value => {
-    const picked = Number(value)
-    if (picked >= 1 && picked <= 4) quarter.value = picked
-  },
+  set: value => quarterStore.setQuarter(value),
 })
 
 const sourceOptions = computed<SelectOption[]>(() => [
@@ -572,17 +569,11 @@ watch(
     trajectory.value = null
     assignmentTrajectory.value = null
 
-    // The calendar's guess shows immediately; the academic year's own answer
-    // replaces it when it lands, unless the reader has already picked one.
-    // The panel watchers below see `open` flip and do the first fetch — calling
-    // it here as well would be the same request twice.
-    const seeded = currentQuarter.value
-    quarter.value = seeded
-    loadCurrentQuarter().then(() => {
-      if (quarter.value === seeded && currentQuarter.value !== seeded) {
-        quarter.value = currentQuarter.value
-      }
-    })
+    // Until someone picks, the academic year's own answer replaces the
+    // calendar's guess when it lands. The panel watchers below see `open` flip
+    // and do the first fetch — calling it here as well would be the same
+    // request twice.
+    void quarterStore.load()
   },
   // Most callers mount the modal already open (`v-if` on the student, `open`
   // derived from it), so there is no false → true flip to wait for.

@@ -361,6 +361,7 @@ import { useAssignmentPermissions } from '@/composables/useAssignmentPermissions
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { matchSubjectNames } from '@/composables/useSubjectNameLookup'
 import { useToast } from '@/composables/useToast'
+import { useQuarterStore } from '@/stores/quarter'
 import type { LanguageGroup, Subject } from '@/types/subject'
 import type { TeacherOffering } from '@/types/teacherDashboard'
 import type { Quarter } from '@/types/teachingAssignment'
@@ -402,12 +403,12 @@ const offeringGrades = ref<Record<number, OfferingGradesAssignment[]>>({})
 const loading = ref(true)
 const loadError = ref(false)
 
-/** The quarter the page opens on, and the one Reset goes back to. */
-const DEFAULT_QUARTER = 1
+/** Opens on the quarter picked elsewhere; Reset leaves it alone for the same reason. */
+const quarterStore = useQuarterStore()
 
 const filters = ref({
   /** 1–4, always set: the assignment's own `quarter`, not its date. */
-  quarter: DEFAULT_QUARTER as Quarter,
+  quarter: quarterStore.quarter as Quarter,
   subject: null as number | string | null,
   classGroup: null as number | string | null,
   category: null as number | string | null,
@@ -674,13 +675,20 @@ const quarterModel = computed<number | string | null>({
   get: () => filters.value.quarter,
   set: value => {
     const picked = Number(value)
-    if (picked >= 1 && picked <= 4) filters.value.quarter = picked as Quarter
+    if (picked >= 1 && picked <= 4) quarterStore.setQuarter(picked)
   },
 })
 
+// A pick in one of the page's modals moves the page along with it.
+watch(
+  () => quarterStore.quarter,
+  next => {
+    filters.value.quarter = next as Quarter
+  },
+)
+
 const hasActiveFilters = computed(
   () =>
-    filters.value.quarter !== DEFAULT_QUARTER ||
     Boolean(filters.value.subject) ||
     Boolean(filters.value.classGroup) ||
     Boolean(filters.value.category) ||
@@ -691,7 +699,7 @@ const hasActiveFilters = computed(
 
 function resetFilters() {
   filters.value = {
-    quarter: DEFAULT_QUARTER,
+    quarter: filters.value.quarter,
     subject: null,
     classGroup: null,
     category: null,
