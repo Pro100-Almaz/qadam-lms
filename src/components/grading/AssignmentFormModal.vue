@@ -134,23 +134,19 @@
                 <p v-if="fieldErrors.date" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.date }}</p>
                 <p v-else class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ t('assignments.dateHint') }}</p>
               </div>
-              <!-- Optional: left empty, the backend takes the quarter from the
-                   date. Picked, it is kept even if the date says otherwise. -->
+              <!-- Required: the API never takes the quarter from the date. -->
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
-                  {{ t('assignments.quarter') }}
+                  {{ t('assignments.quarter') }} <span class="text-error-500">*</span>
                 </label>
                 <SelectMenu
                   v-model="quarterModel"
                   :options="quarterOptions"
-                  :placeholder="t('assignments.quarterAuto')"
+                  :placeholder="t('assignments.selectQuarter')"
                   :aria-label="t('assignments.quarter')"
-                  clearable
-                  :clear-label="t('assignments.quarterAuto')"
                   :trigger-class="triggerClass(Boolean(fieldErrors.quarter))"
                 />
                 <p v-if="fieldErrors.quarter" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.quarter }}</p>
-                <p v-else class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ quarterHint }}</p>
               </div>
             </div>
 
@@ -266,7 +262,7 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CircleAlert, Loader2, Trash2, X } from 'lucide-vue-next'
 import DatePicker from '@/components/ui/DatePicker.vue'
@@ -274,10 +270,11 @@ import SelectMenu, { type SelectOption } from '@/components/ui/SelectMenu.vue'
 import { useAssignmentCategories } from '@/composables/useAssignmentCategories'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { useToast } from '@/composables/useToast'
-import type { TeacherSubjectOfferings } from '@/composables/useTeacherOfferings'
+import { useAssignmentPermissions } from '@/composables/useAssignmentPermissions'
 import { toIsoDate } from '@/utils/attendanceWeeks'
 import { isTeachingPeriodPermissionError } from '@/utils/apiErrors'
 import type { Quarter } from '@/types/teachingAssignment'
+import { useQuarterStore } from '@/stores/quarter'
 import {
   HOMEWORK_CATEGORY,
   createSubjectAssignmentApi,
@@ -292,9 +289,6 @@ const props = defineProps<{
   assignment: SubjectAssignment | null
   /** Quarter selected by the surrounding list; creation sends it explicitly. */
   defaultQuarter?: Quarter
-  /** The caller's own offerings — the API rejects any other. */
-  subjectGroups: TeacherSubjectOfferings[]
-  offeringsLoading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -305,6 +299,13 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const { success } = useToast()
+const quarterStore = useQuarterStore()
+/**
+ * The form's own copy of the caller's offerings, fetched for the quarter picked
+ * here — the API rejects an offering the teacher holds no assignment on for
+ * that quarter. Separate from the page's, whose filters use the page's quarter.
+ */
+const { loadOfferings, subjectGroups, offeringsLoading } = useAssignmentPermissions()
 const {
   categories,
   loading: categoriesLoading,
@@ -336,19 +337,10 @@ const form = ref({
   maxGrade: '10',
   /** `YYYY-MM-DD`, the format both the date input and the API speak. */
   date: toIsoDate(new Date()),
-  /** 1–4, or `null` for "from the date". */
+  /** 1–4. `null` only on an older assignment the backend never placed. */
   quarter: null as Quarter | null,
   isActive: true,
 })
-
-/**
- * Whether the teacher picked the quarter in this session, and the date the
- * assignment was opened with. The API recalculates `quarter` whenever `date`
- * is sent without it, and keeps both when both are sent — so what to send
- * depends on what was touched (see `quarterToSend`).
- */
-const quarterTouched = ref(false)
-const originalDate = ref('')
 
 const quarterOptions = computed<SelectOption[]>(() =>
   [1, 2, 3, 4].map(value => ({ value, label: t('assignments.quarterOption', { quarter: value }) })),
@@ -358,34 +350,8 @@ const quarterModel = computed<number | string | null>({
   get: () => form.value.quarter,
   set: value => {
     const picked = Number(value)
-    form.value.quarter = value === null || value === ''
-      ? null
-      : picked >= 1 && picked <= 4
-        ? picked as Quarter
-        : null
-    quarterTouched.value = true
+    if (picked >= 1 && picked <= 4) form.value.quarter = picked as Quarter
   },
-})
-
-/** On edit, an untouched quarter follows a changed date, as the API will do. */
-const quarterFollowsDate = computed(
-  () => isEditing.value && !quarterTouched.value && form.value.date !== originalDate.value,
-)
-
-/**
- * - picked, or kept as stored while the date stands: sent, so it is kept;
- * - "from the date", or an untouched quarter under a new date: left out, so
- *   the backend works it out from the date.
- */
-const quarterToSend = computed<number | undefined>(() => {
-  if (form.value.quarter === null || quarterFollowsDate.value) return undefined
-  return form.value.quarter
-})
-
-const quarterHint = computed(() => {
-  if (quarterFollowsDate.value) return t('assignments.quarterRecalcHint')
-  if (form.value.quarter === null) return t('assignments.quarterAutoHint')
-  return t('assignments.quarterKeptHint')
 })
 
 /**
@@ -399,7 +365,7 @@ const maxGradeToSend = computed<number | null>(() => {
 })
 
 const subjectOptions = computed<SelectOption[]>(() =>
-  props.subjectGroups.map(group => ({
+  subjectGroups.value.map(group => ({
     value: group.subjectName,
     label: group.subjectName,
     sublabel: t('assignments.classCount', { count: group.offerings.length }),
@@ -408,7 +374,7 @@ const subjectOptions = computed<SelectOption[]>(() =>
 
 const offeringOptions = computed<SelectOption[]>(
   () =>
-    props.subjectGroups
+    subjectGroups.value
       .find(group => group.subjectName === selectedSubjectName.value)
       ?.offerings.map(offering => ({ value: offering.offeringId, label: offering.displayName })) ?? [],
 )
@@ -456,6 +422,12 @@ function triggerClass(hasError: boolean): string {
   ].join(' ')
 }
 
+/**
+ * The quarter the class list was last asked for; a newer request wins. Declared
+ * before the open watcher below, which runs immediately.
+ */
+let requestedQuarter: number | null = null
+
 // Switching subject invalidates the picked class — it belongs to another offering.
 watch(selectedSubjectName, () => {
   form.value.offering = null
@@ -482,12 +454,9 @@ watch(
         quarter: editing.quarter ?? null,
         isActive: editing.is_active ?? true,
       }
-      quarterTouched.value = false
-      originalDate.value = editing.date
       return
     }
-    const [firstSubject] = props.subjectGroups
-    selectedSubjectName.value = firstSubject?.subjectName ?? null
+    selectedSubjectName.value = null
     // A new assignment is nearly always being recorded for today's lesson.
     form.value = {
       offering: null,
@@ -495,13 +464,41 @@ watch(
       category: 'lesson',
       maxGrade: '10',
       date: toIsoDate(new Date()),
-      quarter: props.defaultQuarter ?? null,
+      // The quarter being looked at, here or on any other page.
+      quarter: props.defaultQuarter ?? (quarterStore.quarter as Quarter),
       isActive: true,
     }
-    quarterTouched.value = false
-    originalDate.value = ''
+    void loadQuarterOfferings(form.value.quarter as Quarter)
   },
   { immediate: true },
+)
+
+/**
+ * Refetches the classes for `quarter`, keeping the subject and the class where
+ * the new quarter still has them, and falling back to the first subject.
+ */
+async function loadQuarterOfferings(quarter: Quarter): Promise<void> {
+  requestedQuarter = quarter
+  const keepSubject = selectedSubjectName.value
+  const keepOffering = form.value.offering
+  await loadOfferings(quarter)
+  if (quarter !== requestedQuarter || isEditing.value || !props.open) return
+  const group = subjectGroups.value.find(item => item.subjectName === keepSubject)
+    ?? subjectGroups.value[0]
+  selectedSubjectName.value = group?.subjectName ?? null
+  // The subject watcher has cleared the class by now if the subject changed.
+  await nextTick()
+  if (group?.offerings.some(option => option.offeringId === Number(keepOffering))) {
+    form.value.offering = keepOffering
+  }
+}
+
+watch(
+  () => form.value.quarter,
+  quarter => {
+    if (!props.open || isEditing.value || quarter === null || quarter === requestedQuarter) return
+    void loadQuarterOfferings(quarter)
+  },
 )
 
 function validate(): boolean {
@@ -521,6 +518,9 @@ function validate(): boolean {
 
   // Required on create and rejected as blank on edit, so it is checked on both.
   if (!form.value.date) fieldErrors.value.date = t('validation.required')
+
+  // An older edited row may lack one; leaving it out then keeps it as stored.
+  if (!isEditing.value && form.value.quarter === null) fieldErrors.value.quarter = t('validation.required')
 
   if (!isEditing.value) {
     if (!selectedSubjectName.value) fieldErrors.value.subject = t('validation.required')
@@ -543,7 +543,7 @@ async function submit() {
           category: form.value.category,
           max_grade: maxGradeToSend.value,
           date: form.value.date,
-          quarter: quarterToSend.value,
+          quarter: form.value.quarter ?? undefined,
           is_active: form.value.isActive,
         })
       : await createSubjectAssignmentApi({
@@ -552,7 +552,7 @@ async function submit() {
           category: form.value.category,
           max_grade: maxGradeToSend.value,
           date: form.value.date,
-          quarter: quarterToSend.value,
+          quarter: Number(form.value.quarter),
           is_active: form.value.isActive,
         })
     success(t(editing ? 'assignments.updatedSuccess' : 'assignments.createdSuccess'))
@@ -590,10 +590,7 @@ function applyBackendErrors(error: unknown) {
     submitError.value = t('permissions.outsideTeachingPeriod')
     // Changing quarters requires write access on both sides. Restore the
     // stored quarter after the server rejects the move.
-    if (props.assignment) {
-      form.value.quarter = props.assignment.quarter
-      quarterTouched.value = false
-    }
+    if (props.assignment) form.value.quarter = props.assignment.quarter
     return
   }
   const data = axios.isAxiosError(error) ? error.response?.data : null

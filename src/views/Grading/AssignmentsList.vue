@@ -236,8 +236,6 @@
       :open="formOpen"
       :assignment="formTarget"
       :default-quarter="filters.quarter"
-      :subject-groups="subjectGroups"
-      :offerings-loading="offeringsLoading"
       @close="formOpen = false"
       @saved="onSaved"
       @delete="onFormDelete"

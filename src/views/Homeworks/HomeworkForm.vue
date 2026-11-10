@@ -52,6 +52,22 @@
             </div>
           </div>
 
+          <!-- Required on create; on edit, changing it moves the homework to that quarter. -->
+          <div class="mb-5 sm:w-1/2 sm:pr-2.5">
+            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+              {{ t('homeworks.quarter') }} <span class="text-error-500">*</span>
+            </label>
+            <SelectMenu
+              v-model="quarterModel"
+              :options="quarterOptions"
+              :aria-label="t('homeworks.quarter')"
+              :disabled="!canEdit || saving"
+              :trigger-class="quarterTriggerClass"
+            />
+            <p v-if="fieldErrors.quarter" class="mt-1.5 text-xs text-error-500">{{ fieldErrors.quarter }}</p>
+            <p v-else class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ t('homeworks.quarterHint') }}</p>
+          </div>
+
           <!-- Edit: the offering is fixed -->
           <dl v-if="isEditing" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
@@ -69,7 +85,7 @@
             <div>
               <dt class="text-xs text-gray-500 dark:text-gray-400">{{ t('homeworks.teacher') }}</dt>
               <dd class="mt-1 text-sm font-medium text-gray-800 dark:text-white/90">
-                {{ homework?.teacher.full_name || '—' }}
+                {{ homework?.teacher?.full_name || '—' }}
               </dd>
             </div>
           </dl>
@@ -320,7 +336,7 @@
 
 <script setup lang="ts">
 import axios from 'axios'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import flatPickr from 'vue-flatpickr-component'
@@ -355,6 +371,7 @@ import { useHomeworkPermissions } from '@/composables/useHomeworkPermissions'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { useToast } from '@/composables/useToast'
 import { isTeachingPeriodPermissionError } from '@/utils/apiErrors'
+import { useQuarterStore } from '@/stores/quarter'
 
 /** The API rejects anything above this with a 400 on `max_grade`. */
 const MAX_GRADE_LIMIT = 100
@@ -387,7 +404,11 @@ const submitError = ref('')
 const fieldErrors = ref<Record<string, string>>({})
 const selectedSubjectName = ref<number | string | null>(null)
 
+const quarterStore = useQuarterStore()
+
 const form = ref({
+  /** A new homework starts in the quarter being looked at elsewhere. */
+  quarter: quarterStore.quarter,
   offerings: [] as number[],
   description: '',
   dueDate: '',
@@ -443,12 +464,32 @@ const statusOptions = computed<SelectOption[]>(() => [
   { value: 'pending', label: t('homeworks.statuses.pending') },
 ])
 
+const quarterOptions = computed<SelectOption[]>(() =>
+  [1, 2, 3, 4].map(value => ({ value, label: t('homeworks.quarterOption', { quarter: value }) })),
+)
+
+/** `SelectMenu` speaks `string | number | null`; the quarter is always 1–4. */
+const quarterModel = computed<number | string | null>({
+  get: () => form.value.quarter,
+  set: value => {
+    const picked = Number(value)
+    if (picked >= 1 && picked <= 4) form.value.quarter = picked
+  },
+})
+
 const statusModel = computed<number | string | null>({
   get: () => (form.value.isActive ? 'active' : 'pending'),
   set: value => {
     form.value.isActive = value === 'active'
   },
 })
+
+const quarterTriggerClass = computed(() =>
+  [
+    'flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-white px-4 text-left text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-900 dark:text-white/90',
+    fieldErrors.value.quarter ? 'border-error-500' : 'border-gray-300 dark:border-gray-700',
+  ].join(' '),
+)
 
 const subjectTriggerClass = computed(() =>
   [
@@ -472,23 +513,45 @@ watch(selectedSubjectName, () => {
   form.value.offerings = []
 })
 
+// The classes on offer are the quarter's assignments: refetch them, keep the
+// subject and the picked classes where they still exist, and drop the rest.
+watch(
+  () => form.value.quarter,
+  async quarter => {
+    if (isEditing || loading.value) return
+    const keepSubject = selectedSubjectName.value
+    const keepOfferings = form.value.offerings
+    await loadOfferings(quarter)
+    if (quarter !== form.value.quarter) return
+    const group = subjectGroups.value.find(item => item.subjectName === keepSubject)
+      ?? subjectGroups.value[0]
+    selectedSubjectName.value = group?.subjectName ?? null
+    // After the subject watcher has cleared the selection.
+    await nextTick()
+    const available = new Set(group?.offerings.map(option => option.offeringId) ?? [])
+    form.value.offerings = keepOfferings.filter(id => available.has(id))
+  },
+)
+
 onMounted(loadInitialData)
 
 async function loadInitialData() {
   loading.value = true
   try {
-    // Needed in both modes: it fills the create picker, and on edit it decides
-    // whether this teacher may touch the homework's offering at all.
-    await loadOfferings()
-
     if (isEditing) {
+      // `can_edit` decides the writes, so the class list is not needed here.
       const { data } = await getHomeworkApi(homeworkId)
       homework.value = data
+      form.value.quarter = data.quarter
       form.value.description = data.description
       form.value.dueDate = data.due_date
       form.value.maxGrade = String(data.max_grade)
       form.value.isActive = data.is_active
     } else {
+      // The picker only offers classes taught in the chosen quarter.
+      await quarterStore.load()
+      form.value.quarter = quarterStore.quarter
+      await loadOfferings(form.value.quarter)
       // `?subject=` lets a subject page hand off its own subject; it only matches
       // when the teacher actually teaches it, otherwise fall back to the first.
       const requested = typeof route.query.subject === 'string' ? route.query.subject : ''
@@ -544,6 +607,7 @@ async function submitForm() {
           description: form.value.description.trim(),
           max_grade: Number(form.value.maxGrade),
           due_date: form.value.dueDate,
+          quarter: form.value.quarter,
           is_active: form.value.isActive,
         },
         // Incremental: files not listed here stay attached.
@@ -559,6 +623,7 @@ async function submitForm() {
           description: form.value.description.trim(),
           max_grade: Number(form.value.maxGrade),
           due_date: form.value.dueDate,
+          quarter: form.value.quarter,
           is_active: form.value.isActive,
         },
         newFiles.value,
@@ -605,6 +670,7 @@ function applyBackendErrors(error: unknown) {
     offerings: 'offerings',
     description: 'description',
     due_date: 'dueDate',
+    quarter: 'quarter',
     max_grade: 'maxGrade',
     // Both file errors belong next to the picker.
     attachments: 'attachments',

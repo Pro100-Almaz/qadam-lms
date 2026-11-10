@@ -16,6 +16,15 @@
 
       <!-- Filters -->
       <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <!-- Always set: the classes on offer depend on the quarter's assignments. -->
+        <div class="w-full sm:w-40">
+          <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('homeworks.quarter') }}</label>
+          <SelectMenu
+            v-model="quarterModel"
+            :options="quarterOptions"
+            :aria-label="t('homeworks.quarter')"
+          />
+        </div>
         <div class="w-full sm:w-48">
           <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('homeworks.subject') }}</label>
           <SelectMenu
@@ -346,6 +355,7 @@ import { getMySubjectsApi } from '@/api/subjects'
 import { useBackdropClose } from '@/composables/useBackdropClose'
 import { useHomeworkPermissions } from '@/composables/useHomeworkPermissions'
 import { useToast } from '@/composables/useToast'
+import { useQuarterStore } from '@/stores/quarter'
 import type { Subject } from '@/types/subject'
 import { currentIntlLocale } from '@/i18n'
 
@@ -366,6 +376,20 @@ const loadError = ref(false)
 
 const subjects = ref<Subject[]>([])
 
+/** Shared with the other pages; Reset leaves it alone, as on the grading page. */
+const quarterStore = useQuarterStore()
+const quarter = computed(() => quarterStore.quarter)
+
+const quarterOptions = computed<SelectOption[]>(() =>
+  [1, 2, 3, 4].map(value => ({ value, label: t('homeworks.quarterOption', { quarter: value }) })),
+)
+
+/** `SelectMenu` speaks `string | number | null`; the quarter is always 1–4. */
+const quarterModel = computed<number | string | null>({
+  get: () => quarter.value,
+  set: value => quarterStore.setQuarter(value),
+})
+
 const filters = ref({
   subject: null as number | string | null,
   classGroup: null as number | string | null,
@@ -375,6 +399,8 @@ const filters = ref({
 })
 const currentPage = ref(1)
 const pageSize = ref(50)
+/** Set once the quarter has settled; until then nothing refetches. */
+const ready = ref(false)
 
 // ─── Row actions menu ────────────────────────────────────────────────────────
 
@@ -509,6 +535,7 @@ async function fetchHomeworks() {
     const { data } = await getTeacherHomeworksApi(teacherId, {
       subject: filters.value.subject ? Number(filters.value.subject) : undefined,
       class_group: filters.value.classGroup ? Number(filters.value.classGroup) : undefined,
+      quarter: quarter.value,
       is_active: filters.value.status ? filters.value.status === 'active' : undefined,
       due_from: filters.value.dueFrom || undefined,
       due_to: filters.value.dueTo || undefined,
@@ -552,17 +579,31 @@ watch(
 )
 watch(currentPage, fetchHomeworks)
 
-// The route is teacher-only, but `profile_id` can land a tick after mount.
-watch(myTeacherId, (id, previous) => {
-  if (id && !previous) fetchHomeworks()
+// Another quarter means other assignments: refetch the classes on offer too,
+// and drop a class filter that may not exist in it.
+watch(quarter, () => {
+  if (!ready.value) return
+  loadOfferings(quarter.value)
+  // Clearing the class filter refetches through the filter watcher above.
+  if (filters.value.classGroup) filters.value.classGroup = null
+  else if (currentPage.value === 1) fetchHomeworks()
+  else currentPage.value = 1
 })
 
-onMounted(() => {
-  fetchHomeworks()
-  loadFilterOptions()
+// The route is teacher-only, but `profile_id` can land a tick after mount.
+watch(myTeacherId, (id, previous) => {
+  if (ready.value && id && !previous) fetchHomeworks()
+})
+
+onMounted(async () => {
   document.addEventListener('click', closeMenu)
   window.addEventListener('scroll', closeMenu, true)
   window.addEventListener('resize', closeMenu)
+  // Settle the quarter first, so the first fetch is not followed by a second.
+  await quarterStore.load()
+  ready.value = true
+  fetchHomeworks()
+  loadFilterOptions()
 })
 
 onBeforeUnmount(() => {
@@ -581,8 +622,8 @@ function loadFilterOptions() {
       subjects.value = []
     })
 
-  // Also decides which rows may be edited, graded and deleted.
-  loadOfferings()
+  // The class filter's options: the classes taught in the selected quarter.
+  loadOfferings(quarter.value)
 }
 
 function formatDate(value: string): string {

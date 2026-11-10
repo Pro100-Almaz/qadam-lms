@@ -453,6 +453,9 @@
         "selectDueDate": "Select the due date",
         "dueFrom": "Due from",
         "dueTo": "Due to",
+        "quarter": "Quarter",
+        "quarterOption": "Quarter {quarter}",
+        "quarterHint": "The homework counts toward this quarter, whatever the due date.",
         "anyDate": "Any date",
         "createdAt": "Created",
         "classGroup": "Class",
@@ -577,7 +580,7 @@
             "homework": "Homework"
         },
         "maxGrade": "Max grade",
-        "maxGradeHint": "The highest mark a student can earn. Leave blank for an unscored assignment that takes comments only.",
+        "maxGradeHint": "Leave blank for an unscored assignment that takes comments only.",
         "unscored": "Comments only",
         "maxGradeInteger": "Enter a whole number",
         "maxGradeMin": "Must be at least 1",
@@ -598,7 +601,7 @@
         "allClassGroups": "All classes",
         "allCategories": "All types",
         "date": "Date",
-        "dateHint": "The day the lesson or exam took place. Edit authority is checked against this date.",
+        "dateHint": "The day the lesson or exam took place.",
         "dateFrom": "From",
         "dateTo": "To",
         "assignment": "Assignment",
@@ -638,10 +641,7 @@
         "noGradebookColumns": "No assignments in this range.",
         "quarter": "Quarter",
         "quarterOption": "Quarter {quarter}",
-        "quarterAuto": "From the date",
-        "quarterAutoHint": "Left empty, the quarter is taken from the date.",
-        "quarterKeptHint": "Kept as chosen, even if the date falls in another quarter.",
-        "quarterRecalcHint": "The date changed, so the quarter will be recalculated from it. Pick one to keep it."
+        "selectQuarter": "Select a quarter"
     },
     "studentGrades": {
         "title": "Grades",

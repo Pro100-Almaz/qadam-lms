@@ -43,8 +43,12 @@ export function useHomeworkPermissions() {
     return canManage(homework)
   }
 
-  /** Non-teachers must not call the teacher dashboard — it 403s for them. */
-  async function loadOfferings(quarter?: number): Promise<void> {
+  /**
+   * Non-teachers must not call the teacher dashboard — it 403s for them.
+   * Assignments are per quarter, so the quarter is required: without it the
+   * classes offered would not match what the API lets the teacher write to.
+   */
+  async function loadOfferings(quarter: number): Promise<void> {
     if (!isTeacher.value) return
     await offerings.load(quarter)
   }

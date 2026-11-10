@@ -115,7 +115,7 @@
                 </span>
                 <span v-if="homework.teacher" class="inline-flex items-center gap-1.5">
                   <User class="h-3.5 w-3.5" />
-                  {{ homework.teacher.full_name }}
+                  {{ homework.teacher?.full_name ?? '—' }}
                 </span>
                 <span class="inline-flex items-center gap-1.5">
                   <School class="h-3.5 w-3.5" />
