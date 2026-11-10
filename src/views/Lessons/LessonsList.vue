@@ -207,10 +207,13 @@
                     class="absolute inset-x-0.5 z-10 cursor-pointer overflow-hidden rounded px-1.5 py-1 text-left"
                     :class="subjectColorClasses(event.subjectColor)"
                     :style="eventPositionStyle(event, hour)"
+                    :title="[formatTime(event.startTime), event.title, event.className].filter(Boolean).join(' · ')"
                   >
-                    <div class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ formatTime(event.startTime) }}</div>
-                    <div class="text-[10px] font-semibold leading-tight sm:text-xs">{{ event.title }}</div>
-                    <div v-if="event.className" class="text-[9px] leading-tight opacity-80 sm:text-[10px]">{{ event.className }}</div>
+                    <!-- Two lines, not three: a 40–45 minute lesson is too short for three. -->
+                    <div class="truncate text-[9px] leading-tight opacity-80 sm:text-[10px]">
+                      {{ formatTime(event.startTime) }}<template v-if="event.className"> · {{ event.className }}</template>
+                    </div>
+                    <div class="truncate text-[10px] font-semibold leading-tight sm:text-xs">{{ event.title }}</div>
                   </button>
                 </div>
               </div>
