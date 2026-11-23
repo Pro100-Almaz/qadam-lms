@@ -1,3 +1,5 @@
+import type { ClassGroupCategory } from './academic'
+
 export interface OfferingSummary {
   offering_id: number
   subject_name: string
@@ -216,6 +218,8 @@ export interface TeacherClassGroup {
   display_name: string
   grade_level: number
   letter: string
+  /** `minor` is a subgroup — it has no subgroups of its own to pull in. */
+  class_group_type: ClassGroupCategory
   student_count: number
   subjects: TeacherClassSubject[]
   is_homeroom: boolean
