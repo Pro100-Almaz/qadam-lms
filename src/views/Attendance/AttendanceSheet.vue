@@ -811,8 +811,9 @@ async function loadSchedules(): Promise<void> {
   const filters = {
     class_group: classGroup,
     // A subgroup's lesson is one of this class's hours too — the subject is
-    // just taught to part of it, which is what the roster below narrows.
-    include_minor_groups: true,
+    // just taught to part of it, which is what the roster below narrows. A
+    // subgroup itself has none to add, so its sheet is only its own lessons.
+    include_minor_groups: selectedClassroom.value?.class_group_type !== 'minor',
     quarter: selectedQuarter.value,
     academic_year: academicYearId.value ?? undefined,
     page_size: PAGE_SIZE,
