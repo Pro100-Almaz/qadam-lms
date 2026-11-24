@@ -800,13 +800,12 @@ async function submitGrading() {
     showModal.value = false
     await fetchGrading()
   } catch (e) {
-    const message = isTeachingPeriodPermissionError(e)
+    const permissionError = isTeachingPeriodPermissionError(e)
+    // Refetch only when can_edit may have changed; keep the teacher's unsaved input otherwise.
+    if (permissionError) await fetchGrading()
+    modalSubmitError.value = permissionError
       ? t('permissions.outsideTeachingPeriod')
       : t('grading.saveFailed')
-    const student = modalStudent.value
-    await fetchGrading()
-    if (student && grading.value) openGradingModal(student)
-    modalSubmitError.value = message
     console.error('Failed to submit grading:', e)
   } finally {
     saving.value = false

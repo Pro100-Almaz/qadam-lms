@@ -967,6 +967,7 @@ watch(selectedQuarter, async (next, previous) => {
   students.value = []
   marks.value = {}
   saved.value = {}
+  unsavedDays.value = new Set()
   await loadClasses(next)
   await Promise.all([loadStudents(), loadSchedules()])
 })

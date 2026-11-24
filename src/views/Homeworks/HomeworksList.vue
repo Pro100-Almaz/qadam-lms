@@ -358,6 +358,7 @@ import { useToast } from '@/composables/useToast'
 import { useQuarterStore } from '@/stores/quarter'
 import type { Subject } from '@/types/subject'
 import { currentIntlLocale } from '@/i18n'
+import { toIsoDate } from '@/utils/attendanceWeeks'
 
 const { t, locale } = useI18n()
 const { success } = useToast()
@@ -650,6 +651,6 @@ function formatDateTime(value: string): string {
 
 function isOverdue(homework: Homework): boolean {
   if (!homework.due_date) return false
-  return homework.due_date.slice(0, 10) < new Date().toISOString().slice(0, 10)
+  return homework.due_date.slice(0, 10) < toIsoDate(new Date())
 }
 </script>

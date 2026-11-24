@@ -352,8 +352,7 @@ function weekdayForDate(date: string): ClubWeekday {
 function findFirstSessionDate(currentClub: ClubDetail): string {
   const start = new Date(`${currentClub.start_date}T00:00:00Z`)
   const end = new Date(`${currentClub.end_date}T00:00:00Z`)
-  const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
+  const today = new Date(`${formatLocalDate(new Date())}T00:00:00Z`)
   const cursor = today < start ? start : today > end ? start : today
   const scheduledDays = new Set(currentClub.schedule.map(session => session.weekday))
   while (cursor <= end) {

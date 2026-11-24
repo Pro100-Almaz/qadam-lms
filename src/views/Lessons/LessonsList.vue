@@ -481,6 +481,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useQuarterStore } from '@/stores/quarter'
 import { useRouter } from 'vue-router'
 import { currentIntlLocale } from '@/i18n'
+import { toIsoDate } from '@/utils/attendanceWeeks'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -502,7 +503,7 @@ type SubjectWithOfferings = { offerings?: SubjectOffering[] }
 const lessonForm = ref({
   offering: null as number | null,
   title: '',
-  date: new Date().toISOString().split('T')[0],
+  date: toIsoDate(new Date()),
   quarter: 1,
   unit: 1,
   order: 0,
