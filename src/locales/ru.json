@@ -186,7 +186,9 @@
         "noComment": "Нет комментариев",
         "parentOnly": "Эта страница доступна только родителям.",
         "homeroomTeachersOnly": "Эта страница доступна только классным руководителям.",
-        "commandSearchPlaceholder": "Поиск или команда..."
+        "commandSearchPlaceholder": "Поиск или команда...",
+        "select": "Выберите",
+        "retry": "Повторить"
     },
     "validation": {
         "required": "Это поле обязательно",
@@ -927,7 +929,8 @@
             "kaz": "Казахский",
             "rus": "Русский",
             "eng": "Английский"
-        }
+        },
+        "subject": "Предмет"
     },
     "classes": {
         "title": "Классы",
@@ -1151,7 +1154,8 @@
         "placePlaceholder": "например, Республиканский, Городской",
         "rolePlaceholder": "например, Президент клуба",
         "durationPlaceholder": "например, Сен 2025 – Май 2026",
-        "achievementDescriptionPlaceholder": "Опишите достижение..."
+        "achievementDescriptionPlaceholder": "Опишите достижение...",
+        "student": "Ученик"
     },
     "profile": {
         "title": "Профиль",
@@ -1295,7 +1299,8 @@
         "buildingRecommendations": "Формирование рекомендаций...",
         "finalizingReport": "Завершение отчёта...",
         "pdfFailed": "Не удалось скачать PDF",
-        "aiReports": "ИИ Отчёты"
+        "aiReports": "ИИ Отчёты",
+        "totalGrade": "Итоговая оценка"
     },
     "documentPreview": {
         "loading": "Загрузка предпросмотра…",

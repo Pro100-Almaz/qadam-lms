@@ -186,7 +186,9 @@
         "noComment": "Пікірлер жоқ",
         "parentOnly": "Бұл бет тек ата-аналарға қолжетімді.",
         "homeroomTeachersOnly": "Бұл бет тек сынып жетекшілеріне қолжетімді.",
-        "commandSearchPlaceholder": "Іздеу немесе команда енгізіңіз..."
+        "commandSearchPlaceholder": "Іздеу немесе команда енгізіңіз...",
+        "select": "Таңдаңыз",
+        "retry": "Қайталау"
     },
     "validation": {
         "required": "Бұл өріс міндетті",
@@ -927,7 +929,8 @@
             "kaz": "Қазақша",
             "rus": "Орысша",
             "eng": "Ағылшынша"
-        }
+        },
+        "subject": "Пән"
     },
     "classes": {
         "title": "Сыныптар",
@@ -1151,7 +1154,8 @@
         "placePlaceholder": "мысалы, Республикалық, Қалалық",
         "rolePlaceholder": "мысалы, Клуб президенті",
         "durationPlaceholder": "мысалы, Қыр 2025 – Мам 2026",
-        "achievementDescriptionPlaceholder": "Жетістікті сипаттаңыз..."
+        "achievementDescriptionPlaceholder": "Жетістікті сипаттаңыз...",
+        "student": "Оқушы"
     },
     "profile": {
         "title": "Профиль",
@@ -1295,7 +1299,8 @@
         "buildingRecommendations": "Ұсыныстарды қалыптастыру...",
         "finalizingReport": "Есепті аяқтау...",
         "pdfFailed": "PDF жүктеу мүмкін болмады",
-        "aiReports": "AI Есептер"
+        "aiReports": "AI Есептер",
+        "totalGrade": "Қорытынды баға"
     },
     "documentPreview": {
         "loading": "Алдын ала қарау жүктелуде…",

@@ -186,7 +186,9 @@
         "noComment": "No comments",
         "parentOnly": "This page is only available for parent users.",
         "homeroomTeachersOnly": "This page is only available for homeroom teachers.",
-        "commandSearchPlaceholder": "Search or type command..."
+        "commandSearchPlaceholder": "Search or type command...",
+        "select": "Select",
+        "retry": "Retry"
     },
     "validation": {
         "required": "This field is required",
@@ -927,7 +929,8 @@
             "kaz": "Kazakh",
             "rus": "Russian",
             "eng": "English"
-        }
+        },
+        "subject": "Subject"
     },
     "classes": {
         "title": "Classes",
@@ -1151,7 +1154,8 @@
         "placePlaceholder": "e.g. National, Regional",
         "rolePlaceholder": "e.g. Club President",
         "durationPlaceholder": "e.g. Sep 2025 – May 2026",
-        "achievementDescriptionPlaceholder": "Describe the achievement..."
+        "achievementDescriptionPlaceholder": "Describe the achievement...",
+        "student": "Student"
     },
     "profile": {
         "title": "Profile",
@@ -1295,7 +1299,8 @@
         "buildingRecommendations": "Building recommendations...",
         "finalizingReport": "Finalizing report...",
         "pdfFailed": "Failed to download PDF",
-        "aiReports": "AI Reports"
+        "aiReports": "AI Reports",
+        "totalGrade": "Final grade"
     },
     "documentPreview": {
         "loading": "Loading preview…",
