@@ -121,7 +121,10 @@ const selectRole = async (role: SelectableUserRole) => {
   }
   if (!setActiveRole(role)) return
   closeDropdown()
-  await router.push(getRoleHome(role))
+  const home = getRoleHome(role)
+  // push to the current path is a no-op, so reload to drop the old role's data
+  if (router.currentRoute.value.path === home) router.go(0)
+  else await router.push(home)
 }
 
 const handleRoleChange = (value: number | string | null) => {

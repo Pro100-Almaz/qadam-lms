@@ -152,6 +152,7 @@ import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import AdminLayout from '@/components/layout/AdminLayout.vue'
 import { getTeacherWorkloadApi } from '@/api/teacherDashboard'
 import type { TeacherWorkload } from '@/types/teacherDashboard'
+import { toIsoDate } from '@/utils/attendanceWeeks'
 
 const { t } = useI18n()
 
@@ -167,10 +168,6 @@ function getMonday(offset: number): Date {
   return new Date(d.setDate(diff))
 }
 
-function formatISODate(d: Date): string {
-  return d.toISOString().split('T')[0]
-}
-
 async function fetchWorkload() {
   loading.value = true
   error.value = null
@@ -179,8 +176,8 @@ async function fetchWorkload() {
     const sunday = new Date(monday)
     sunday.setDate(sunday.getDate() + 6)
     const { data } = await getTeacherWorkloadApi({
-      week_start: formatISODate(monday),
-      week_end: formatISODate(sunday),
+      week_start: toIsoDate(monday),
+      week_end: toIsoDate(sunday),
     })
     workload.value = data
   } catch {

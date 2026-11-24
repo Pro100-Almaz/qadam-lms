@@ -561,6 +561,7 @@ import { useBackdropClose } from '@/composables/useBackdropClose'
 import type { SubjectDetail, SubjectGrades } from '@/types/subject'
 import { formatUserName } from '@/utils/userName'
 import { formatLanguageGroup } from '@/utils/subjectLanguage'
+import { toIsoDate } from '@/utils/attendanceWeeks'
 import { currentIntlLocale } from '@/i18n'
 import { useQuarterStore } from '@/stores/quarter'
 
@@ -647,7 +648,7 @@ function openAddLessonModal() {
   lessonForm.value = {
     offering: subject.value?.offerings[0]?.id ?? null,
     title: '',
-    date: new Date().toISOString().split('T')[0],
+    date: toIsoDate(new Date()),
     quarter: activeQuarter.value,
     unit: 1,
     order: 0,
@@ -665,7 +666,7 @@ async function openCopyLessonModal(lessonId: number) {
     lessonForm.value = {
       offering: null,
       title: data.title,
-      date: new Date().toISOString().split('T')[0],
+      date: toIsoDate(new Date()),
       quarter: data.quarter,
       unit: data.unit,
       order: data.order,

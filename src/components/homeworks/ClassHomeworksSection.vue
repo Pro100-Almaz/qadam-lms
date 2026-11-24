@@ -91,6 +91,7 @@ import HomeworkAttachmentList from '@/components/homeworks/HomeworkAttachmentLis
 import Pagination from '@/components/ui/Pagination.vue'
 import { attachmentsOf, getMyClassHomeworksApi, type Homework } from '@/api/homeworks'
 import { currentIntlLocale } from '@/i18n'
+import { toIsoDate } from '@/utils/attendanceWeeks'
 
 /**
  * Published homework of the caller's homeroom class, across every subject —
@@ -153,7 +154,7 @@ watch(
 
 function isOverdue(homework: Homework): boolean {
   if (!homework.due_date) return false
-  return homework.due_date.slice(0, 10) < new Date().toISOString().slice(0, 10)
+  return homework.due_date.slice(0, 10) < toIsoDate(new Date())
 }
 
 function formatDate(value: string): string {

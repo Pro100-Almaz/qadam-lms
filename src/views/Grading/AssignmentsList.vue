@@ -468,14 +468,14 @@ function writableAssignmentIds(offeringId: number): number[] {
  * the table appear or disappear.
  */
 async function reloadOffering(offeringId: number) {
-  const request = fetchSeq
+  const request = gradeSeq
   try {
     const [{ data }, grades] = await Promise.all([
       getTeacherOfferingsApi({ ...TABLE_PARAMS, quarter: filters.value.quarter }),
       getAllOfferingGradesApi(offeringId, gradeParams()),
     ])
     // A filter change since then has refetched everything; this is stale.
-    if (request !== fetchSeq) return
+    if (request !== gradeSeq) return
     tableOfferings.value = data.offerings
     offeringGrades.value = { ...offeringGrades.value, [offeringId]: grades }
   } catch {
@@ -720,8 +720,10 @@ function gradeParams() {
 /** The offerings with any assignment at all; the filters are not sent. */
 const TABLE_PARAMS = { include_empty: false }
 
-/** Bumped per filter change, so a slower response for old filters is dropped. */
+/** Bumped per table fetch, so a slower response for an old quarter is dropped. */
 let fetchSeq = 0
+/** Bumped per table fetch and grade-filter change, so stale grades are dropped. */
+let gradeSeq = 0
 
 /**
  * The offerings with assignments — one request, which is what decides the
@@ -729,6 +731,7 @@ let fetchSeq = 0
  */
 async function fetchTables() {
   const request = ++fetchSeq
+  gradeSeq++
   loading.value = true
   loadError.value = false
   offeringGrades.value = {}
@@ -752,7 +755,7 @@ async function fetchTables() {
   }
 }
 
-/** Offering id → the `fetchSeq` its grades request was sent under. */
+/** Offering id → the `gradeSeq` its grades request was sent under. */
 const pendingGrades = new Map<number, number>()
 
 /**
@@ -760,17 +763,17 @@ const pendingGrades = new Map<number, number>()
  * offering's grades are fetched once per filter set, so paging back is free.
  */
 function loadPageGrades() {
-  const request = fetchSeq
+  const request = gradeSeq
   const params = gradeParams()
   pagedGroups.value.forEach(({ offeringId }) => {
     if (offeringId in offeringGrades.value || pendingGrades.get(offeringId) === request) return
     pendingGrades.set(offeringId, request)
     getAllOfferingGradesApi(offeringId, params)
       .then(grades => {
-        if (request === fetchSeq) offeringGrades.value = { ...offeringGrades.value, [offeringId]: grades }
+        if (request === gradeSeq) offeringGrades.value = { ...offeringGrades.value, [offeringId]: grades }
       })
       .catch(() => {
-        if (request === fetchSeq) loadError.value = true
+        if (request === gradeSeq) loadError.value = true
       })
       .finally(() => {
         if (pendingGrades.get(offeringId) === request) pendingGrades.delete(offeringId)
@@ -798,7 +801,7 @@ watch(
 watch(
   () => [filters.value.category, filters.value.dateFrom, filters.value.dateTo],
   () => {
-    fetchSeq++
+    gradeSeq++
     offeringGrades.value = {}
     loadError.value = false
     currentPage.value = 1
