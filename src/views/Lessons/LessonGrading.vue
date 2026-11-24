@@ -6,7 +6,7 @@
       :crumbs="[
         {label: t('lessons.title'), to: '/lessons' },
         {label: lesson?.offering.subject_name || t('subjects.title'), to: lesson?.offering.subject_id ? `/subjects/${lesson.offering.subject_id}` : undefined},
-        {label: lesson?.title || t('lessonDetail.title')},
+        {label: lesson?.title || t('lessons.lessonDetail')},
         { label: t('grading.title') }]"
         />
 

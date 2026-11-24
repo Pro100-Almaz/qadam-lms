@@ -186,7 +186,9 @@
         "noComment": "No comments",
         "parentOnly": "This page is only available for parent users.",
         "homeroomTeachersOnly": "This page is only available for homeroom teachers.",
-        "commandSearchPlaceholder": "Search or type command..."
+        "commandSearchPlaceholder": "Search or type command...",
+        "select": "Select",
+        "retry": "Retry"
     },
     "validation": {
         "required": "This field is required",
@@ -927,7 +929,8 @@
             "kaz": "Kazakh",
             "rus": "Russian",
             "eng": "English"
-        }
+        },
+        "subject": "Subject"
     },
     "classes": {
         "title": "Classes",
@@ -1151,7 +1154,8 @@
         "placePlaceholder": "e.g. National, Regional",
         "rolePlaceholder": "e.g. Club President",
         "durationPlaceholder": "e.g. Sep 2025 – May 2026",
-        "achievementDescriptionPlaceholder": "Describe the achievement..."
+        "achievementDescriptionPlaceholder": "Describe the achievement...",
+        "student": "Student"
     },
     "profile": {
         "title": "Profile",
@@ -1295,7 +1299,8 @@
         "buildingRecommendations": "Building recommendations...",
         "finalizingReport": "Finalizing report...",
         "pdfFailed": "Failed to download PDF",
-        "aiReports": "AI Reports"
+        "aiReports": "AI Reports",
+        "totalGrade": "Final grade"
     },
     "documentPreview": {
         "loading": "Loading preview…",
@@ -1342,5 +1347,135 @@
         "childDetail": "Child Detail",
         "childSubjectDetail": "Child Subject Detail",
         "psychStudentDetail": "Student Psych Detail"
+    },
+    "studentDetail": {
+        "overview": {
+            "signals": "Key signals",
+            "unavailable": "The overview summary is not available here. The report card and subject chart below use the grades already loaded.",
+            "loadFailed": "Could not load the overview.",
+            "average": "Average",
+            "attendance": "Attendance",
+            "homework": "Homework",
+            "wellbeing": "Latest wellbeing",
+            "classValue": "class {value}",
+            "vsQuarter": "{delta} vs Q{quarter}",
+            "vsClassPp": "{delta} pp vs class",
+            "absentCount": "{count} absences",
+            "overdueCount": "{count} overdue",
+            "pendingCount": "{count} pending",
+            "submittedOf": "{submitted} of {total} submitted",
+            "noWellbeing": "No entries yet",
+            "dir": {
+                "up": "up",
+                "down": "down",
+                "same": "no change"
+            },
+            "trajectory": "Grades by quarter",
+            "radar": "Subjects in Q{quarter}",
+            "showTable": "Show as table",
+            "showChart": "Show as chart",
+            "noQuarterData": "No grades for this period yet.",
+            "quarter": "Quarter",
+            "student": "Student",
+            "classMean": "Class average",
+            "subject": "Subject",
+            "reportCard": "Report card",
+            "final": "Final",
+            "trend": "Trend",
+            "empty": "No grades yet. Grades appear here once teachers enter them.",
+            "attentionTitle": "Needs attention",
+            "severity": {
+                "critical": "Critical",
+                "warning": "Warning"
+            },
+            "attention": {
+                "low_grade": "{subject}: grade 2 this quarter.",
+                "falling_grade": "{subject}: grade fell from {from} to {to}.",
+                "absence_streak": "Absent {days} days in a row.",
+                "low_attendance": "Attendance is {rate}%, below the expected level.",
+                "overdue_homework": "{count} homework assignments are overdue.",
+                "wellbeing_drop": "Latest wellbeing score is low or has dropped."
+            }
+        },
+        "wellbeing": {
+            "current": "Current states",
+            "history": "History",
+            "scoreOf": "{score} of 5",
+            "allStates": "All states",
+            "filterByState": "Filter by state",
+            "empty": "No wellbeing states have been recorded yet. Psychologists and teachers add them.",
+            "emptyCanEdit": "No wellbeing states recorded yet. Add the first one to start tracking.",
+            "emptyHistory": "The history is empty.",
+            "emptyFiltered": "No entries for this state.",
+            "colDate": "Date",
+            "colState": "State",
+            "colScore": "Score",
+            "colComment": "Comment",
+            "colAuthor": "Author",
+            "showMore": "Show more",
+            "showLess": "Show less",
+            "confirmDelete": "Delete this entry? This cannot be undone."
+        },
+        "achievements": {
+            "allYears": "All years",
+            "allCategories": "All categories",
+            "colYear": "Year",
+            "empty": "No achievements recorded yet. Teachers add them.",
+            "emptyCanEdit": "No achievements recorded yet. Add the first one.",
+            "emptyFiltered": "No achievements match these filters.",
+            "filesSelected": "Files selected: {count}",
+            "uploadFailed": "The achievement was saved, but the files could not be uploaded."
+        },
+        "reading": {
+            "colPeriod": "Month",
+            "empty": "No reading entries yet. Teachers add them.",
+            "emptyCanEdit": "No reading entries yet. Add the first book."
+        },
+        "reports": {
+            "colDate": "Created",
+            "open": "Open",
+            "empty": "No AI reports have been generated yet.",
+            "emptyCanGenerate": "No AI reports yet. Generate the first one for a quarter.",
+            "status": {
+                "pending": "Queued",
+                "generating": "Generating",
+                "completed": "Ready",
+                "failed": "Failed"
+            }
+        },
+        "attendance": {
+            "absencesTitle": "Absences",
+            "absencesNote": "Lessons the student missed in the selected quarter.",
+            "noAbsences": "No absences this quarter. Records appear when a teacher marks attendance in a lesson.",
+            "date": "Date",
+            "status": "Status",
+            "loadError": "Could not load the list of absences."
+        },
+        "personalInfo": {
+            "account": "Account",
+            "personal": "Personal",
+            "medical": "Medical",
+            "noParents": "No parents on file. The school administrator links them."
+        },
+        "page": {
+            "tabs": {
+                "overview": "Overview",
+                "attendance": "Attendance",
+                "wellbeing": "Wellbeing",
+                "achievements": "Achievements",
+                "reading": "Reading",
+                "reports": "Reports",
+                "personalInfo": "Personal info"
+            },
+            "invalidId": "Invalid student ID.",
+            "notFound": "Student not found.",
+            "childNotFound": "Child not found or not linked to your account.",
+            "loadFailed": "Could not load the student's data.",
+            "generateReport": "Generate report",
+            "refreshFailed": "Could not refresh the student's data."
+        },
+        "common": {
+            "quarterShort": "Q{n}"
+        }
     }
 }

@@ -257,6 +257,8 @@ const props = defineProps<{
   heading?: string
   /** Shown in the report dialog so the reader sees whose marks they are asking for. */
   studentName?: string
+  /** Opens with this subject already chosen in the filter. */
+  initialSubjectId?: number
 }>()
 
 const { t } = useI18n()
@@ -265,7 +267,7 @@ const grades = ref<SubjectGrade[]>([])
 const total = ref(0)
 const loading = ref(true)
 const loadError = ref(false)
-const selectedSubject = ref<number | string | null>(null)
+const selectedSubject = ref<number | string | null>(props.initialSubjectId ?? null)
 const selectedCategory = ref<number | string | null>(null)
 /** Both `YYYY-MM-DD`, matched against the assignment's academic date. */
 const dateFrom = ref('')

@@ -1,5 +1,6 @@
 import api from './client'
-import { type ListResponse, unwrapList } from './client'
+import { type ListResponse, unwrapList, unwrapPaginated } from './client'
+import type { PageParams } from './students'
 import type {
   Achievement,
   CreateAchievementRequest,
@@ -9,11 +10,6 @@ import type {
 } from '@/types/achievement'
 
 // ─── Achievements ──────────────────────────────────────────────────────────────
-
-export async function getAchievementsApi(studentPk: number, params?: { year?: number; category?: string }) {
-  const { data } = await api.get<ListResponse<Achievement>>(`/students/${studentPk}/achievements/`, { params })
-  return { data: unwrapList(data) }
-}
 
 export function createAchievementApi(studentPk: number, data: CreateAchievementRequest | FormData) {
   const isFormData = data instanceof FormData
@@ -38,11 +34,6 @@ export function downloadAchievementCertificateApi(id: number) {
 }
 
 // ─── Reading Entries ───────────────────────────────────────────────────────────
-
-export async function getReadingEntriesApi(studentPk: number, params?: { year?: number; month?: number }) {
-  const { data } = await api.get<ListResponse<ReadingEntry>>(`/students/${studentPk}/reading-entries/`, { params })
-  return { data: unwrapList(data) }
-}
 
 export function createReadingEntryApi(studentPk: number, data: CreateReadingEntryRequest | FormData) {
   const isFormData = data instanceof FormData
@@ -74,4 +65,20 @@ export function uploadAttachmentsApi(entryType: string, entryId: number, files: 
 
 export function deleteAttachmentApi(attachmentId: number) {
   return api.delete(`/attachments/${attachmentId}/`)
+}
+
+export async function getAchievementsPageApi(
+  studentPk: number,
+  params?: PageParams & { year?: number; category?: string },
+) {
+  const { data } = await api.get<ListResponse<Achievement>>(`/students/${studentPk}/achievements/`, { params })
+  return unwrapPaginated(data)
+}
+
+export async function getReadingEntriesPageApi(
+  studentPk: number,
+  params?: PageParams & { year?: number; month?: number },
+) {
+  const { data } = await api.get<ListResponse<ReadingEntry>>(`/students/${studentPk}/reading-entries/`, { params })
+  return unwrapPaginated(data)
 }

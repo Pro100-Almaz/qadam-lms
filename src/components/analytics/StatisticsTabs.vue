@@ -36,6 +36,8 @@
       :key="item.value"
       type="button"
       role="tab"
+      :id="idPrefix ? `${idPrefix}-tab-${item.value}` : undefined"
+      :aria-controls="idPrefix ? `${idPrefix}-panel` : undefined"
       :aria-selected="item.value === modelValue"
       class="-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition"
       :class="
@@ -74,6 +76,8 @@ withDefaults(
     modelValue: string
     items: StatisticsTabItem[]
     variant?: 'segmented' | 'underline'
+    /** Gives the underline tabs ids (`<prefix>-tab-<value>`) so a panel can be labelled by the active one. */
+    idPrefix?: string
   }>(),
   { variant: 'underline' },
 )

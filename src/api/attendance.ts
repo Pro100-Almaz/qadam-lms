@@ -1,5 +1,5 @@
 import api from './client'
-import { type ListResponse, unwrapList } from './client'
+import { type ListResponse, unwrapList, unwrapPaginated } from './client'
 
 export type AttendanceStatus = 'present' | 'absent'
 
@@ -85,5 +85,6 @@ export async function getStudentAttendanceApi(
     `/students/${studentId}/attendance/`,
     { params },
   )
-  return { data: unwrapList(data) }
+  // Paginated server-side (newest first, max page_size 200).
+  return unwrapPaginated(data)
 }
