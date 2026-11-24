@@ -1,4 +1,5 @@
-import api from './client'
+import api, { unwrapPaginated, type ListResponse } from './client'
+import type { PageParams } from './students'
 import type {
   GenerateReportRequest,
   StudentReport,
@@ -21,20 +22,14 @@ export async function getReportApi(reportId: number): Promise<StudentReport> {
   return data
 }
 
-export async function getStudentReportsApi(
-  studentId: number,
-): Promise<StudentReportListItem[]> {
-  const { data } = await api.get(
-    `/students/${studentId}/reports/`,
-  )
-  if (Array.isArray(data)) return data
-  if (data && Array.isArray(data.results)) return data.results
-  return []
-}
-
 export async function downloadReportPdfApi(reportId: number): Promise<Blob> {
   const { data } = await api.get(`/reports/${reportId}/pdf/`, {
     responseType: 'blob',
   })
   return data
+}
+
+export async function getStudentReportsPageApi(studentId: number, params?: PageParams) {
+  const { data } = await api.get<ListResponse<StudentReportListItem>>(`/students/${studentId}/reports/`, { params })
+  return unwrapPaginated(data)
 }

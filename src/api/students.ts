@@ -1,4 +1,5 @@
-import api, { unwrapList, type ListResponse } from './client'
+import api, { unwrapList, unwrapPaginated, type ListResponse } from './client'
+import type { StudentOverview } from '@/types/studentOverview'
 import { type PaginatedResponse } from './client'
 import type { Student, StudentDetail, UpdateStudentRequest, CreatePsychologicalStateRequest, PsychologicalState, PsychologicalStateTemplate } from '@/types/student'
 
@@ -72,4 +73,30 @@ export function deletePsychologicalStateApi(stateId: number) {
 export async function getPsychologicalStateTemplatesApi() {
   const { data } = await api.get<ListResponse<PsychologicalStateTemplate>>('/psychological-state-templates/')
   return { data: unwrapList(data) }
+}
+
+// ─── Student detail redesign ───────────────────────────────────────────────────
+
+export interface PageParams {
+  page?: number
+  page_size?: number
+}
+
+export async function getStudentOverviewApi(userId: number, quarter?: number) {
+  const { data } = await api.get<StudentOverview>(`/students/${userId}/overview/`, {
+    params: quarter ? { quarter } : undefined,
+  })
+  return data
+}
+
+/** Wellbeing history, newest first. `name` filters to one state (e.g. "Mood"). */
+export async function getPsychologicalStateHistoryApi(
+  studentPk: number,
+  params?: PageParams & { name?: string },
+) {
+  const { data } = await api.get<ListResponse<PsychologicalState>>(
+    `/students/${studentPk}/psychological-states/`,
+    { params },
+  )
+  return unwrapPaginated(data)
 }
