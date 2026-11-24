@@ -66,16 +66,29 @@ src/
 
 1. **Login** (`POST /auth/login/`) returns `{ tokens: { access, refresh }, user }`
 2. Access token stored in Axios headers; refresh token in `localStorage`
-3. `useAuth` composable manages auth state globally (reactive `user` ref)
-4. On app init, `initSession()` loads from localStorage and fetches `/auth/me/`
-5. Axios interceptor catches 401, refreshes token via `/auth/token/refresh/`
-6. On refresh failure, clears state and redirects to `/signin`
+3. Auth state lives in the Pinia store `useAuthStore` (`src/stores/auth.ts`); `useAuth()` is a thin `storeToRefs` wrapper over it
+4. On app init, `initSession()` loads the refresh token from localStorage and fetches `/auth/me/`
+5. After login / `/auth/me/`, `reconcileActiveRole()` picks the **active role**: the stored pick for this user, else the primary role, else the first available
+6. Every request carries an `X-Active-Role` header (`src/api/client.ts`); role-scoped endpoints answer 403 without it
+7. Axios interceptor catches 401, refreshes token via `/auth/token/refresh/`
+8. On refresh failure, clears state and redirects to `/signin`
 
 ### Composable API
 
 ```typescript
-const { user, isAuthenticated, isSessionLoading, login, logout, updateProfile, uploadAvatar } = useAuth()
+const {
+  user, assignedRoles, availableRoles, activeRole, activeRoles,
+  isAuthenticated, isSessionLoading,
+  login, logout, initSession, fetchCurrentUser, updateProfile, uploadAvatar, setActiveRole,
+} = useAuth()
 ```
+
+### Active Role Switching
+
+- A user has several `roles`; they act as exactly one at a time (`activeRole`), switched from the header `UserMenu`
+- The pick is persisted to localStorage (keyed by user id) so it survives reloads
+- `homeroom_teacher` is not selectable: picking `teacher` also grants `homeroom_teacher` if assigned (`getActiveRoles` in `src/utils/roles.ts`)
+- Switching to a role whose home is the current page triggers a full reload so the page refetches under the new role
 
 ---
 
@@ -84,8 +97,11 @@ const { user, isAuthenticated, isSessionLoading, login, logout, updateProfile, u
 ### User Roles
 
 ```typescript
-type UserRole = 'admin' | 'teacher' | 'homeroom_teacher' | 'student' | 'supervisor' | 'principal' | 'parent'
+type UserRole = 'admin' | 'teacher' | 'homeroom_teacher' | 'student' | 'supervisor' | 'principal' | 'parent' | 'clubmanager' | 'psychologist'
+type SelectableUserRole = Exclude<UserRole, 'homeroom_teacher'>
 ```
+
+Access checks use the **active** roles (`activeRoles`), not every assigned role.
 
 ### Role Groups (Router)
 
@@ -100,7 +116,11 @@ type UserRole = 'admin' | 'teacher' | 'homeroom_teacher' | 'student' | 'supervis
 |------|-----------|
 | student | `/my-subjects` |
 | parent | `/my-children` |
-| staff | `/subjects/active` |
+| clubmanager | `/clubs` |
+| psychologist | `/students` |
+| admin, teacher, supervisor, principal | `/subjects/active` |
+
+Source: `getRoleHome()` in `src/utils/roles.ts`.
 
 ### Route Access Matrix
 
@@ -144,7 +164,7 @@ type UserRole = 'admin' | 'teacher' | 'homeroom_teacher' | 'student' | 'supervis
 - Bearer token in `Authorization` header
 - 401 interceptor with token refresh and retry queue
 
-### API Modules (13 files)
+### API Modules (24 files)
 
 | Module | Endpoints | Description |
 |--------|-----------|-------------|
@@ -161,6 +181,17 @@ type UserRole = 'admin' | 'teacher' | 'homeroom_teacher' | 'student' | 'supervis
 | `dashboard.ts` | getDashboardStats | Dashboard metrics |
 | `notifications.ts` | getNotifications, getNotification, getCount, delete | User notifications |
 | `enrollments.ts` | getEnrollments | Student enrollment data |
+| `analytics.ts` | student/assignment trajectories, topic heatmap, subject radar, assignment & attendance summaries | Analytics charts |
+| `attendance.ts` | session attendance get/create, attendance record CRUD, student attendance | Attendance sheet |
+| `clubs.ts` | clubs CRUD, members, available students, student clubs & club attendance | Clubs |
+| `gradeReports.ts` | downloadClassGroupGradeReport, downloadStudentGradeReport | Grade report exports |
+| `homeworks.ts` | homework CRUD (quarter required), homework grades CRUD, student / my-class / teacher homework lists | Homeworks |
+| `quarterGrades.ts` | quarter grades CRUD | Quarter (2-5) grades |
+| `reports.ts` | generateReport, getReport, getStudentReports, downloadReportPdf | AI student reports |
+| `schedule.ts` | subject schedules CRUD, schedule sessions CRUD | Timetable |
+| `subjectAssignments.ts` | assignment categories, subject assignments CRUD (quarter required) | Gradebook assignments |
+| `teacherDashboard.ts` | teacher/psychologist dashboards, homeroom class, workload, my classes, `/teacher/offerings/` | Teacher-facing pages |
+| `teachingAssignments.ts` | teaching assignments list/create/update (quarter-scoped, server `can_edit`) | Teaching assignments |
 
 ### Response Handling Pattern
 
@@ -370,6 +401,10 @@ interface UseAuth {
 }
 ```
 
+### `useQuarterStore()` (`src/stores/quarter.ts`)
+
+The quarter picked in any quarter picker, shared across pages (attendance, grading, homeworks). Persisted in sessionStorage, so it survives reloads in the tab but a new tab or sign-in starts from the current quarter. Resets when the signed-in user changes.
+
 ### `useSidebar()`
 
 Sidebar UI state with provide/inject pattern.
@@ -401,11 +436,11 @@ return { data: (Array.isArray(data) ? data : data.results ?? []) as Type[] }
 ### Role-Based UI Visibility
 
 ```typescript
-const { user } = useAuth()
-const isAdmin = computed(() =>
-  ['admin', 'supervisor', 'teacher', 'homeroom_teacher', 'principal'].includes(user.value?.role || '')
-)
-// In template: v-if="isAdmin"
+// Role flags come from the auth store and follow the ACTIVE role
+const auth = useAuthStore()
+// auth.isAdmin  -> admin | supervisor | principal
+// auth.isStaff  -> admin | teacher | homeroom_teacher | supervisor | principal
+// In template: v-if="auth.isAdmin"
 ```
 
 ### Breadcrumb Navigation
